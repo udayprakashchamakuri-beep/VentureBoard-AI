@@ -303,6 +303,7 @@ function App() {
           agentMeta={AGENT_META}
           result={result}
           loading={loading}
+          error={error}
           chatMessages={chatMessages}
           chatDraft={chatDraft}
           focusedAgentNames={focusedAgentNames}

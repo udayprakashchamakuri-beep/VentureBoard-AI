@@ -5,6 +5,7 @@ function SimulationView({
   agentMeta,
   result,
   loading,
+  error,
   chatMessages,
   chatDraft,
   focusedAgentNames,
@@ -197,6 +198,16 @@ function SimulationView({
                   <button type="button" className="footer-link" onClick={onClearAgentConversation}>
                     Show all advisors
                   </button>
+                </div>
+              </div>
+            ) : null}
+
+            {error ? (
+              <div className="conversation-error-banner" role="alert">
+                <span className="material-symbols-outlined">error</span>
+                <div>
+                  <strong>We could not get a reply just now.</strong>
+                  <p>{error}</p>
                 </div>
               </div>
             ) : null}

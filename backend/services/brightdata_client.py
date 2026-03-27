@@ -16,7 +16,7 @@ class BrightDataClient:
         self.endpoint = os.getenv("BRIGHTDATA_API_ENDPOINT", "https://api.brightdata.com/request")
         self.zone = os.getenv("BRIGHTDATA_ZONE", "")
         self.country = os.getenv("BRIGHTDATA_COUNTRY", "us")
-        self.timeout = float(os.getenv("BRIGHTDATA_TIMEOUT", "30"))
+        self.timeout = float(os.getenv("BRIGHTDATA_TIMEOUT", "4"))
 
     def is_configured(self) -> bool:
         return bool(self.api_key and self.endpoint and self.zone)

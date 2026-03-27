@@ -15,7 +15,7 @@ class FeatherlessClient:
         self.api_key = os.getenv("FEATHERLESS_API_KEY", "")
         self.model = os.getenv("FEATHERLESS_MODEL", "")
         self.base_url = os.getenv("FEATHERLESS_BASE_URL", "https://api.featherless.ai/v1").rstrip("/")
-        self.timeout = float(os.getenv("FEATHERLESS_TIMEOUT", "30"))
+        self.timeout = float(os.getenv("FEATHERLESS_TIMEOUT", "4"))
 
     def is_configured(self) -> bool:
         return bool(self.api_key and self.model)

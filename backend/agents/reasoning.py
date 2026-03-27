@@ -999,6 +999,9 @@ class StrategicReasoner:
         memory_references: List[str],
         fallback_message: str,
     ) -> str:
+        if round_number < 3 or profile.definition.name != "CEO Agent":
+            return fallback_message
+
         if not self.featherless_client.is_configured():
             return fallback_message
 

@@ -3277,6 +3277,35 @@ a {
   background: rgba(7, 13, 31, 0.4);
 }
 
+.conversation-error-banner {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+  border: 1px solid rgba(255, 143, 143, 0.24);
+  border-radius: 18px;
+  background: rgba(147, 0, 10, 0.16);
+  padding: 14px 16px;
+}
+
+.conversation-error-banner .material-symbols-outlined {
+  color: var(--danger);
+}
+
+.conversation-error-banner strong {
+  display: block;
+  margin-bottom: 4px;
+  font-family: "Manrope", sans-serif;
+  color: #ffdad6;
+}
+
+.conversation-error-banner p {
+  margin: 0;
+  color: rgba(255, 218, 214, 0.86);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
 .conversation-end-anchor {
   height: 1px;
   scroll-margin-bottom: 140px;
