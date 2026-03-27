@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import CommandConsoleDrawer from "./components/CommandConsoleDrawer";
 import { AGENT_META, API_BASE, NAV_ITEMS, defaultTimeline, sampleProblem } from "./dashboardData";
+import { toPlainText } from "./plainLanguage";
 import AgentsView from "./views/AgentsView";
 import IntelligenceView from "./views/IntelligenceView";
 import RiskView from "./views/RiskView";
@@ -40,11 +41,6 @@ function App() {
     return Array.from(grouped.entries());
   }, [result]);
 
-  const agentDefinitionsMap = useMemo(
-    () => Object.fromEntries((result?.agent_definitions ?? []).map((entry) => [entry.name, entry])),
-    [result],
-  );
-
   const conversation = result?.conversation ?? [];
   const timeline = result?.round_summaries?.length ? result.round_summaries : defaultTimeline;
   const activeTypingAgent = Object.keys(AGENT_META)[typingIndex];
@@ -53,11 +49,11 @@ function App() {
   const displayedRounds = result?.round_summaries?.length ?? 3;
   const currentRound = loading ? Math.min(3, Math.floor((typingIndex / 3) % 3) + 1) : lastTurn?.round ?? 0;
   const scenarioTitle = result?.company_name ?? form.company_name;
-  const highestRisk = result?.final_output?.risks?.[0] ?? "Awaiting board debate.";
+  const highestRisk = result?.final_output?.risks?.[0] ?? "Waiting for the team to review the case.";
   const recommendedDirective =
     result?.final_output?.recommended_actions?.[0] ??
     result?.actions?.execution_plan?.[0]?.step ??
-    "Awaiting executive directive.";
+    "Waiting for a recommendation.";
 
   const topConflictByRound = useMemo(() => {
     const map = new Map();
@@ -72,10 +68,7 @@ function App() {
   const intelligenceMetrics = useMemo(() => buildIntelligenceMetrics({ result, loading }), [result, loading]);
   const semanticStream = useMemo(() => buildSemanticStream({ result }), [result]);
   const timelinePoints = useMemo(() => buildInferenceTimeline({ result, timeline }), [result, timeline]);
-  const agentCards = useMemo(
-    () => buildAgentCards({ result, agentDefinitionsMap, speakingAgent, loading }),
-    [result, agentDefinitionsMap, speakingAgent, loading],
-  );
+  const agentCards = useMemo(() => buildAgentCards({ result, speakingAgent, loading }), [result, speakingAgent, loading]);
   const matrixStats = useMemo(() => buildMatrixStats({ result, loading }), [result, loading]);
   const riskAlerts = useMemo(() => buildRiskAlerts({ result }), [result]);
   const riskMetrics = useMemo(() => buildRiskMetrics({ result, highestRisk }), [result, highestRisk]);
@@ -172,7 +165,7 @@ function App() {
     <div className={`obsidian-app app-view-${activeView}`}>
       <nav className="obsidian-nav global-nav">
         <div className="nav-left">
-          <span className="brand">OBSIDIAN COMMAND</span>
+          <span className="brand">BUSINESS AGENT</span>
           <div className="nav-links">
             {NAV_ITEMS.map((item) => (
               <button
@@ -193,13 +186,13 @@ function App() {
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="QUERY_SYSTEM..."
-              aria-label="Search command console data"
+              placeholder="Search"
+              aria-label="Search page content"
             />
           </div>
           <div className="live-pill">
             <span className="status-dot" />
-            <span>SYSTEM LIVE: NODE_01</span>
+            <span>LIVE ANALYSIS</span>
           </div>
           <div className="nav-icon-row">
             <IconButton icon="account_tree" />
@@ -207,16 +200,15 @@ function App() {
             <IconButton icon="settings" />
           </div>
           <button type="button" className="deploy-button" onClick={toggleConsole}>
-            Launch Board
+            Start Analysis
           </button>
-          <div className="avatar-badge">UC</div>
+          <div className="avatar-badge">BA</div>
         </div>
       </nav>
 
       {activeView === "simulation" ? (
         <SimulationView
           agentMeta={AGENT_META}
-          agentDefinitionsMap={agentDefinitionsMap}
           result={result}
           loading={loading}
           activeTypingAgent={activeTypingAgent}
@@ -244,8 +236,8 @@ function App() {
                 <span className="material-symbols-outlined">memory</span>
               </div>
               <div>
-                <strong>COMMAND_01</strong>
-                <span>ACTIVE_SIMULATION</span>
+                <strong>Workspace</strong>
+                <span>Business decision assistant</span>
               </div>
             </div>
 
@@ -265,15 +257,15 @@ function App() {
 
             <div className="side-nav-footer">
               <button type="button" className="side-nav-deploy" onClick={toggleConsole}>
-                Deploy Agent
+                Start Analysis
               </button>
               <button type="button" className="side-nav-utility">
                 <span className="material-symbols-outlined">contact_support</span>
-                Support
+                Help
               </button>
               <button type="button" className="side-nav-utility">
                 <span className="material-symbols-outlined">memory</span>
-                Diagnostics
+                System Status
               </button>
             </div>
           </aside>
@@ -328,10 +320,10 @@ function buildIntelligenceMetrics({ result, loading }) {
   const scenarioCount = result?.scenario_results?.length ?? 2;
 
   return {
-    throughput: (turns * 11.9 + scenarioCount * 7.2).toFixed(1),
-    accuracy: Math.min(99.98, 72 + confidence * 0.28).toFixed(2),
+    throughput: Math.round(turns + scenarioCount * 2),
+    accuracy: Math.min(99.98, 72 + confidence * 0.28).toFixed(0),
     activeAgents: result?.agent_definitions?.length ?? Object.keys(AGENT_META).length,
-    riskVector: (conflicts * 0.02 + scenarioCount * 0.01 + (loading ? 0.03 : 0.01)).toFixed(2),
+    riskVector: result?.conflicts?.length ?? 0,
     latency: loading ? "18MS" : "14MS",
     activeNodes: 1320 + turns * 9 + scenarioCount * 18,
     bottlenecks: Math.max(0, conflicts - 1),
@@ -343,18 +335,18 @@ function buildIntelligenceMetrics({ result, loading }) {
 function buildSemanticStream({ result }) {
   const conflicts = (result?.conflicts ?? []).slice(0, 2).map((conflict, index) => ({
     id: `conflict-${index}`,
-    label: `Conflict_R${conflict.round}`,
-    timestamp: `R${conflict.round} · BOARD`,
+    label: `Disagreement ${conflict.round}`,
+    timestamp: `Round ${conflict.round}`,
     tone: "danger",
-    message: conflict.description,
+    message: toPlainText(conflict.description),
   }));
 
   const turns = (result?.conversation ?? []).slice(-5).reverse().map((turn, index) => ({
     id: `turn-${index}`,
     label: (AGENT_META[turn.agent_name] ?? AGENT_META["CEO Agent"]).label,
-    timestamp: `R${turn.round} · ${turn.confidence}%`,
+    timestamp: `Round ${turn.round} - ${turn.confidence}% confidence`,
     tone: toneFromStance(turn.stance),
-    message: truncate(turn.message, 126),
+    message: truncate(toPlainText(turn.message), 126),
   }));
 
   if (conflicts.length || turns.length) {
@@ -364,38 +356,38 @@ function buildSemanticStream({ result }) {
   return [
     {
       id: "semantic-1",
-      label: "Process_9912",
-      timestamp: "12:04:22:01",
+      label: "Recent update",
+      timestamp: "Just now",
       tone: "success",
-      message: "Cross-referencing market volatility vectors with recent executive sentiment shifts.",
+      message: "Reviewing new market signals and recent team feedback.",
     },
     {
       id: "semantic-2",
-      label: "Override_001",
-      timestamp: "12:04:21:58",
+      label: "Risk update",
+      timestamp: "Moments ago",
       tone: "accent",
-      message: "Risk mitigation protocol triggered in the finance domain. Adjusting hedge ratios.",
+      message: "The system found a risk worth watching and is adjusting the recommendation.",
     },
     {
       id: "semantic-3",
-      label: "System_Sync",
-      timestamp: "12:04:20:44",
+      label: "System sync",
+      timestamp: "Moments ago",
       tone: "neutral",
-      message: "Agent mesh is waiting for the next scenario and current board context is cached.",
+      message: "The team is ready for another scenario and has saved the current discussion.",
     },
     {
       id: "semantic-4",
-      label: "Process_9913",
-      timestamp: "12:04:18:21",
+      label: "Market scan",
+      timestamp: "A minute ago",
       tone: "success",
-      message: "Analyzing semantic clusters in global trade discourse. Probability shift +0.02.",
+      message: "Looking at outside market signals and checking whether demand is changing.",
     },
     {
       id: "semantic-5",
-      label: "Marketing_Feed",
-      timestamp: "12:04:15:02",
+      label: "Marketing update",
+      timestamp: "A minute ago",
       tone: "tertiary",
-      message: "Competitor narrative patterns detected. Campaign efficiency is currently above baseline.",
+      message: "The system found competitor messaging patterns and compared current campaign results.",
     },
   ];
 }
@@ -410,7 +402,7 @@ function buildInferenceTimeline({ result, timeline }) {
     );
 
     return {
-      label: `R0${entry.round}`,
+      label: `Round ${entry.round}`,
       predicted: Math.max(20, Math.min(90, Math.round(confidence - 8 + index * 4))),
       actual: Math.max(22, Math.min(95, Math.round(confidence + index * 2))),
     };
@@ -419,7 +411,7 @@ function buildInferenceTimeline({ result, timeline }) {
   while (roundSummaries.length < 5) {
     const index = roundSummaries.length;
     roundSummaries.push({
-      label: ["06:00", "10:00", "14:00", "18:00", "22:00"][index] ?? `T${index + 1}`,
+      label: ["Step 1", "Step 2", "Step 3", "Step 4", "Step 5"][index] ?? `Step ${index + 1}`,
       predicted: 28 + index * 10,
       actual: 36 + index * 9,
     });
@@ -428,7 +420,7 @@ function buildInferenceTimeline({ result, timeline }) {
   return roundSummaries.slice(0, 5);
 }
 
-function buildAgentCards({ result, agentDefinitionsMap, speakingAgent, loading }) {
+function buildAgentCards({ result, speakingAgent, loading }) {
   return Object.entries(AGENT_META).map(([name, meta], index) => {
     const turns = (result?.conversation ?? []).filter((turn) => turn.agent_name === name);
     const avgConfidence = average(turns.map((turn) => Number(turn.confidence)), 76 + index);
@@ -445,14 +437,14 @@ function buildAgentCards({ result, agentDefinitionsMap, speakingAgent, loading }
       accent: meta.accent,
       symbol: meta.symbol,
       label: meta.label,
-      role: agentDefinitionsMap[name]?.role ?? meta.boardRole,
+      role: meta.boardRole,
       badgeLabel: cardProfile.badgeLabel,
-      badgeValue: isSpeaking && !loading ? "SPEAKING" : cardProfile.badgeValue(avgConfidence, turns.length),
+      badgeValue: isSpeaking && !loading ? "Speaking now" : cardProfile.badgeValue(avgConfidence, turns.length),
       health: `${healthValue.toFixed(1)}%`,
-      load: `${loadValue.toFixed(1)} Tflops`,
+      load: `${loadValue.toFixed(0)}% busy`,
       historyLabel: cardProfile.historyLabel,
       historyBars,
-      status: isSpeaking ? "Live Directive Channel" : cardProfile.status(turns, avgConfidence),
+      status: isSpeaking ? "Currently speaking" : cardProfile.status(turns, avgConfidence),
       footerIcon: isSpeaking ? "settings_motion_mode" : cardProfile.footerIcon,
       visualIcon: cardProfile.visualIcon,
       visualLabel: cardProfile.visualLabel,
@@ -468,11 +460,11 @@ function buildMatrixStats({ result, loading }) {
     networkLoad: `${Math.min(96, 62 + conflicts * 8).toFixed(1)}%`,
     performanceBars: ["40%", "60%", "45%", "80%", "95%", "65%", "50%", "75%", "40%", "60%"],
     overrides: [
-      { label: "Deep Simulation Mode", detail: "Full Recursive Learning", enabled: true, tone: "accent" },
-      { label: "Legacy Protocol", detail: "Deterministic Processing", enabled: false, tone: "neutral" },
+      { label: "Detailed analysis mode", detail: "Looks deeper before deciding", enabled: true, tone: "accent" },
+      { label: "Simple analysis mode", detail: "Uses a lighter review process", enabled: false, tone: "neutral" },
       {
-        label: "Neural Firewall",
-        detail: loading ? "Isolation Warming" : "Active Isolation",
+        label: "Safety guardrails",
+        detail: loading ? "Warming up" : "Active",
         enabled: true,
         tone: "danger",
       },
@@ -483,19 +475,19 @@ function buildMatrixStats({ result, loading }) {
 function buildRiskAlerts({ result }) {
   const risks = (result?.final_output?.risks ?? []).slice(0, 3).map((risk, index) => ({
     id: `risk-${index}`,
-    timestamp: `R${index + 1} · UTC`,
-    severity: "Severity: High",
-    title: truncate(risk, 48),
-    body: risk,
+    timestamp: `Round ${index + 1}`,
+    severity: "High priority",
+    title: truncate(toPlainText(risk), 48),
+    body: toPlainText(risk),
     tone: "danger",
   }));
 
   const conflicts = (result?.conflicts ?? []).slice(0, 2).map((conflict, index) => ({
     id: `conflict-risk-${index}`,
-    timestamp: `R${conflict.round} · UTC`,
-    severity: "Observation",
-    title: conflict.topic ?? `Contradiction in round ${conflict.round}`,
-    body: conflict.description,
+    timestamp: `Round ${conflict.round}`,
+    severity: "Watch item",
+    title: toPlainText(conflict.topic ?? `Disagreement in round ${conflict.round}`),
+    body: toPlainText(conflict.description),
     tone: "accent",
   }));
 
@@ -506,34 +498,34 @@ function buildRiskAlerts({ result }) {
   return [
     {
       id: "alert-1",
-      timestamp: "14:22:01 UTC",
-      severity: "Severity: High",
-      title: "Sudden Liquidity Drain in Sector-7G",
-      body: "System detected unusual capital flight patterns resembling Black Swan precursor Alpha.",
+      timestamp: "Just now",
+      severity: "High priority",
+      title: "Rapid cash pressure",
+      body: "The system noticed unusually fast money leaving this market.",
       tone: "danger",
     },
     {
       id: "alert-2",
-      timestamp: "14:18:45 UTC",
-      severity: "Observation",
-      title: "Neural Drift in Agent Specter",
-      body: "Risk simulation agent is reporting 4.2% deviance from core directive parameters.",
+      timestamp: "Moments ago",
+      severity: "Watch item",
+      title: "Risk model changed direction",
+      body: "The risk review is now more cautious than before.",
       tone: "accent",
     },
     {
       id: "alert-3",
-      timestamp: "14:05:12 UTC",
+      timestamp: "Earlier",
       severity: "Stable",
-      title: "Finance Node Sync Complete",
-      body: "All regional finance ledgers synchronized. Consensus reached in 12ms.",
+      title: "Finance review completed",
+      body: "The finance checks have finished and are now part of the team decision.",
       tone: "success",
     },
     {
       id: "alert-4",
-      timestamp: "13:58:22 UTC",
-      severity: "Severity: High",
-      title: "Atmospheric Volatility Spike",
-      body: "Predictive models indicate high probability of supply chain fracture in Zone-B.",
+      timestamp: "Earlier",
+      severity: "High priority",
+      title: "Supply risk increased",
+      body: "The model expects delivery problems if conditions get worse.",
       tone: "danger",
     },
   ];
@@ -545,20 +537,20 @@ function buildRiskMetrics({ result, highestRisk }) {
 
   return {
     globalIndex: stability.toFixed(2),
-    delta: conflicts > 1 ? "▼ 1.4%" : "▲ 0.6%",
-    activeThreat: formatRiskLabel(highestRisk, 24),
-    observation: formatRiskLabel(result?.conflicts?.[0]?.topic ?? "AS PAC VOLATILITY", 24),
+    delta: conflicts > 1 ? "-1.4%" : "+0.6%",
+    activeThreat: formatRiskLabel(toPlainText(highestRisk), 24),
+    observation: formatRiskLabel(toPlainText(result?.conflicts?.[0]?.topic ?? "Market change"), 24),
     stats: [
-      { label: "Max Drift", value: `${(conflicts * 3.1 + 6.2).toFixed(1)}%` },
-      { label: "Avg Latency", value: `${12 + conflicts * 2}ms` },
-      { label: "Node Load", value: conflicts > 2 ? "WATCH" : "OPTIMAL", tone: "success" },
-      { label: "Shock Resist", value: (98.2 - conflicts * 0.8).toFixed(1) },
+      { label: "Risk change", value: `${(conflicts * 3.1 + 6.2).toFixed(1)}%` },
+      { label: "Response speed", value: `${12 + conflicts * 2}ms` },
+      { label: "System load", value: conflicts > 2 ? "Watch" : "Healthy", tone: "success" },
+      { label: "Resilience score", value: (98.2 - conflicts * 0.8).toFixed(1) },
     ],
     indicators: [
-      { label: "Signal Integrity", value: `${(99.98 - conflicts * 0.12).toFixed(2)}%`, tone: "primary" },
-      { label: "Threat Velocity", value: `${(1.2 + conflicts * 0.14).toFixed(1)}m/s`, tone: "danger" },
-      { label: "Mitigation Rate", value: `${(94.1 - conflicts * 1.4).toFixed(1)}%`, tone: "success" },
-      { label: "Quantum Entropy", value: `Δ ${(0.003 + conflicts * 0.001).toFixed(3)}`, tone: "tertiary" },
+      { label: "Signal quality", value: `${(99.98 - conflicts * 0.12).toFixed(2)}%`, tone: "primary" },
+      { label: "Risk speed", value: `${(1.2 + conflicts * 0.14).toFixed(1)}m/s`, tone: "danger" },
+      { label: "Mitigation rate", value: `${(94.1 - conflicts * 1.4).toFixed(1)}%`, tone: "success" },
+      { label: "Change level", value: `Delta ${(0.003 + conflicts * 0.001).toFixed(3)}`, tone: "tertiary" },
     ],
   };
 }
@@ -567,57 +559,57 @@ function getAgentProfile(name, meta) {
   switch (name) {
     case "CEO Agent":
       return {
-        badgeLabel: "Uptime",
+        badgeLabel: "Availability",
         badgeValue: () => "99.99%",
-        historyLabel: "History",
-        status: () => "Core Module Active",
+        historyLabel: "Recent activity",
+        status: () => "Leading the review",
         footerIcon: "settings_motion_mode",
         visualIcon: "radar",
-        visualLabel: "Decision Bias",
+        visualLabel: "Decision view",
         tone: "gold",
       };
     case "Finance Agent":
       return {
-        badgeLabel: "Throughput",
-        badgeValue: (_, turns) => `${Math.max(1.4, turns * 0.8 + 1.6).toFixed(1)}M/s`,
-        historyLabel: "Market Sync",
-        status: () => "Transaction Ready",
+        badgeLabel: "Review speed",
+        badgeValue: (_, turns) => `${Math.max(1.4, turns * 0.8 + 1.6).toFixed(1)}x`,
+        historyLabel: "Recent checks",
+        status: () => "Budget review ready",
         footerIcon: "check_circle",
         visualIcon: "analytics",
-        visualLabel: "Arbitrage Delta",
+        visualLabel: "Budget view",
         tone: "success",
       };
     case "Risk Agent":
       return {
-        badgeLabel: "Threats",
-        badgeValue: () => "ACTIVE_SCAN",
-        historyLabel: "Attack Vector",
-        status: () => "Anomaly Detected",
+        badgeLabel: "Risk scan",
+        badgeValue: () => "RUNNING",
+        historyLabel: "Recent alerts",
+        status: () => "Issue found",
         footerIcon: "warning",
         visualIcon: "crisis_alert",
-        visualLabel: "Stability Index",
+        visualLabel: "Risk view",
         tone: "danger",
       };
     case "Marketing Agent":
       return {
-        badgeLabel: "Sentiment",
+        badgeLabel: "Audience signal",
         badgeValue: (confidence) => `+${Math.round(confidence / 2)}%`,
-        historyLabel: "Reach_Index",
-        status: () => "Campaign Syncing",
+        historyLabel: "Recent reach",
+        status: () => "Message review ready",
         footerIcon: "sync",
         visualIcon: "hub",
-        visualLabel: "Node Coverage",
+        visualLabel: "Audience view",
         tone: "tertiary",
       };
     default:
       return {
         badgeLabel: "Confidence",
         badgeValue: (confidence) => `${Math.round(confidence)}%`,
-        historyLabel: "Activity",
-        status: () => `${meta.boardRole} Active`,
+        historyLabel: "Recent activity",
+        status: () => `${meta.boardRole} ready`,
         footerIcon: "trending_up",
         visualIcon: meta.symbol,
-        visualLabel: "Ops View",
+        visualLabel: "Quick view",
         tone: "primary",
       };
   }
@@ -653,7 +645,7 @@ function truncate(value, max) {
     return value;
   }
 
-  return `${value.slice(0, max - 1)}…`;
+  return `${value.slice(0, max - 3)}...`;
 }
 
 function formatRiskLabel(value, max) {
@@ -739,22 +731,22 @@ function mergeStreamEvent(current, eventPayload) {
 function buildDefaultForm() {
   return {
     company_name: "HelixOps AI",
-    industry: "AI workflow SaaS",
+    industry: "Business software",
     region: "North America",
     company_stage: "Seed",
     business_problem: sampleProblem,
-    objectives: "Validate healthcare expansion, protect runway, design a realistic go-to-market plan",
-    current_constraints: "11 months runway, compliance complexity, lean sales team, limited implementation bandwidth",
+    objectives: "Check whether healthcare expansion makes sense, protect cash, create a realistic launch plan",
+    current_constraints: "11 months of cash left, compliance complexity, small sales team, limited delivery capacity",
     runway_months: "11",
     gross_margin: "68",
     cac_payback_months: "15",
     price_point: "28000",
-    variation_name: "Healthcare Downside Shock",
+    variation_name: "Healthcare downside case",
     variation_budget_change_pct: "-20",
     variation_market_condition: "bearish",
     variation_competition_level: "high",
     variation_pricing_change_pct: "-10",
-    variation_notes: "Stress test the plan under tighter budgets and stronger incumbents.",
+    variation_notes: "Test the plan with smaller budgets and stronger competitors.",
   };
 }
 

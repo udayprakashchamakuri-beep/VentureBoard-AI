@@ -9,14 +9,14 @@ function RiskView({ riskMetrics, riskAlerts }) {
       <header className="view-header risk-header">
         <div>
           <div className="view-kicker-row">
-            <span className="status-chip danger">SECURITY LEVEL: OMEGA</span>
+            <span className="status-chip danger">HIGH ATTENTION</span>
             <span className="risk-line" />
           </div>
-          <h1>Risk Monitor</h1>
+          <h1>Risks To Watch</h1>
         </div>
 
         <div className="risk-score">
-          <span>Global Stability Index</span>
+          <span>Overall stability score</span>
           <strong>
             {riskMetrics.globalIndex}
             <small>{riskMetrics.delta}</small>
@@ -28,11 +28,11 @@ function RiskView({ riskMetrics, riskAlerts }) {
         <section className="panel threat-map-panel">
           <div className="map-overlay map-overlay-top">
             <article className="threat-badge danger">
-              <span>Active Threat</span>
+              <span>Main risk</span>
               <strong>{riskMetrics.activeThreat}</strong>
             </article>
             <article className="threat-badge accent">
-              <span>Observation</span>
+              <span>Watch item</span>
               <strong>{riskMetrics.observation}</strong>
             </article>
           </div>
@@ -48,17 +48,17 @@ function RiskView({ riskMetrics, riskAlerts }) {
           <div className="map-overlay map-overlay-bottom">
             <button type="button">Zoom In</button>
             <button type="button">Zoom Out</button>
-            <button type="button">Layer Satellite</button>
+            <button type="button">Change view</button>
           </div>
         </section>
 
         <section className="risk-feed">
           <div className="panel-topline">
             <div>
-              <h2>Critical Alerts</h2>
+              <h2>Important Alerts</h2>
               <p>Live feed</p>
             </div>
-            <span className="live-feed-dot">LIVE_FEED</span>
+            <span className="live-feed-dot">LIVE</span>
           </div>
 
           <div className="risk-alert-list">
@@ -78,8 +78,8 @@ function RiskView({ riskMetrics, riskAlerts }) {
         <section className="panel volatility-panel">
           <div className="panel-topline">
             <div>
-              <h2>Volatility Index</h2>
-              <p>Real-time predictive delta</p>
+              <h2>Risk Trend</h2>
+              <p>How risk is changing over time</p>
             </div>
             <div className="legend-row">
               <span className="status-chip outline">1H</span>
@@ -123,8 +123,8 @@ function RiskView({ riskMetrics, riskAlerts }) {
         <section className="panel sandbox-panel">
           <div className="panel-topline">
             <div>
-              <h2>Simulation Sandbox</h2>
-              <p>Hypothetical shock controls</p>
+              <h2>Scenario Tester</h2>
+              <p>Try different conditions before deciding</p>
             </div>
             <span className="material-symbols-outlined tertiary-icon">science</span>
           </div>
@@ -132,7 +132,7 @@ function RiskView({ riskMetrics, riskAlerts }) {
           <div className="sandbox-stack">
             <label className="slider-block">
               <div>
-                <span>Market Shock Intensity</span>
+                <span>How difficult the market becomes</span>
                 <strong>{shockIntensity}%</strong>
               </div>
               <input
@@ -146,7 +146,7 @@ function RiskView({ riskMetrics, riskAlerts }) {
 
             <div className="choice-block">
               <div>
-                <span>Agent Autonomy Level</span>
+                <span>How much freedom the advisors have</span>
                 <strong>{autonomyMode}</strong>
               </div>
               <div className="choice-row">
@@ -164,18 +164,18 @@ function RiskView({ riskMetrics, riskAlerts }) {
             </div>
 
             <article className="active-scenario">
-              <span>Active Scenario</span>
+              <span>Current test case</span>
               <div>
                 <i className="material-symbols-outlined">emergency_share</i>
                 <div>
-                  <strong>Total Grid De-synchronization</strong>
-                  <p>Estimated Recovery: 144 Hours</p>
+                  <strong>Major operating disruption</strong>
+                  <p>Estimated recovery time: 144 hours</p>
                 </div>
               </div>
             </article>
 
             <button type="button" className="execute-shock">
-              Execute Hypothetical Shock
+              Run this test case
             </button>
           </div>
         </section>
@@ -194,13 +194,13 @@ function RiskView({ riskMetrics, riskAlerts }) {
         <div>
           <span className="command-footer-live">
             <i />
-            System_Nominal
+            System healthy
           </span>
           <span>Lat: 34.0522 deg N | Long: 118.2437 deg W</span>
         </div>
         <div>
-          <span>Encrypted_Session: 88-X-19</span>
-          <span>v.4.0.8-CMD</span>
+          <span>Session: 88-X-19</span>
+          <span>v4.0.8</span>
         </div>
       </footer>
     </div>

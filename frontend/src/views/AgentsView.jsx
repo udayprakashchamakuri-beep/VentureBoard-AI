@@ -4,23 +4,23 @@ function AgentsView({ agentCards, loading, matrixStats }) {
       <header className="view-header">
         <div>
           <div className="view-kicker-row">
-            <span className="status-chip success">SYSTEM LIVE</span>
-            <span className="muted-code">ACTIVE_SIMULATION</span>
+            <span className="status-chip success">LIVE</span>
+            <span className="muted-code">Advisors ready</span>
           </div>
-          <h1>Agent Matrix</h1>
+          <h1>Advisory Team</h1>
           <p>
-            Real-time synchronization of the AI workforce. Monitor neural integrity, decision variance, and deployment
-            distribution across all active simulation nodes.
+            Meet the specialists reviewing your case. This page shows what each advisor focuses on and how active they
+            are right now.
           </p>
         </div>
 
         <div className="header-callouts">
           <article className="alert-card danger">
-            <span>Global Override</span>
-            <button type="button">Initialize Kill Switch</button>
+            <span>Admin controls</span>
+            <button type="button">Pause review</button>
           </article>
           <article className="alert-card accent">
-            <span>Network Load</span>
+            <span>Overall activity</span>
             <strong>{matrixStats.networkLoad}</strong>
           </article>
         </div>
@@ -48,7 +48,7 @@ function AgentsView({ agentCards, loading, matrixStats }) {
 
               <div className="matrix-health">
                 <div>
-                  <span>Neural Health</span>
+                  <span>System health</span>
                   <strong>{agent.health}</strong>
                 </div>
                 <div className="matrix-health-track">
@@ -63,7 +63,7 @@ function AgentsView({ agentCards, loading, matrixStats }) {
                 </div>
                 <div className="matrix-side-metrics">
                   <div>
-                    <span>Current Load</span>
+                    <span>Current activity</span>
                     <strong>{agent.load}</strong>
                   </div>
                   <div>
@@ -89,8 +89,8 @@ function AgentsView({ agentCards, loading, matrixStats }) {
           <div className="deploy-orb">
             <span className="material-symbols-outlined">add</span>
           </div>
-          <h3>Deploy New Agent</h3>
-          <p>Initialize Core_Fragment_011</p>
+          <h3>Add New Advisor</h3>
+          <p>Create another specialist role</p>
         </article>
       </section>
 
@@ -98,8 +98,8 @@ function AgentsView({ agentCards, loading, matrixStats }) {
         <div className="panel history-panel">
           <div className="panel-topline">
             <div>
-              <h2>Historical Performance</h2>
-              <p>Aggregated neural throughput (petaflops)</p>
+              <h2>Recent Activity</h2>
+              <p>How active the team has been over time</p>
             </div>
             <div className="legend-row">
               <span className="status-chip outline">24H</span>
@@ -114,17 +114,17 @@ function AgentsView({ agentCards, loading, matrixStats }) {
           </div>
 
           <div className="panel-footer spread-row">
-            <span>12:00 UTC</span>
-            <span>Aggregated Neural Throughput</span>
-            <span>Current Time</span>
+            <span>Earlier</span>
+            <span>Team activity</span>
+            <span>Now</span>
           </div>
         </div>
 
         <div className="panel override-panel">
           <div className="panel-topline">
             <div>
-              <h2>System Overrides</h2>
-              <p>Board level protocol toggles</p>
+              <h2>System Settings</h2>
+              <p>High-level controls for the review process</p>
             </div>
           </div>
 
@@ -143,7 +143,7 @@ function AgentsView({ agentCards, loading, matrixStats }) {
           </div>
 
           <button type="button" className="wide-secondary">
-            View All Protocols
+            View all settings
           </button>
         </div>
       </section>

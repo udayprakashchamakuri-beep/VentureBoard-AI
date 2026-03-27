@@ -13,21 +13,21 @@ function IntelligenceView({
       <header className="view-header intelligence-header">
         <div>
           <div className="view-kicker-row">
-            <span className="status-chip success">{loading ? "SYSTEM_ROUTING" : "SYSTEM_STABLE"}</span>
-            <span className="muted-code">LATENCY: {intelligenceMetrics.latency}</span>
+            <span className="status-chip success">{loading ? "UPDATING" : "LIVE"}</span>
+            <span className="muted-code">RESPONSE TIME: {intelligenceMetrics.latency}</span>
           </div>
-          <h1>Intelligence Hub</h1>
+          <h1>Overview</h1>
           <p>
-            Real-time telemetry for the enterprise boardroom. Monitor semantic flow, neural convergence, and how the
-            debate is moving the company toward a directive for {scenarioTitle}.
+            A plain-language view of what the advisory team is seeing, discussing, and learning while reviewing{" "}
+            {scenarioTitle}.
           </p>
         </div>
 
         <div className="metric-strip">
-          <MetricCard label="Throughput" value={intelligenceMetrics.throughput} accent="finance" suffix="TB/S" />
-          <MetricCard label="Accuracy" value={intelligenceMetrics.accuracy} accent="accent" suffix="%" />
-          <MetricCard label="Active Agents" value={intelligenceMetrics.activeAgents} accent="tertiary" suffix="U" />
-          <MetricCard label="Risk Vector" value={intelligenceMetrics.riskVector} accent="danger" suffix="DELTA" />
+          <MetricCard label="Updates reviewed" value={intelligenceMetrics.throughput} accent="finance" suffix="" />
+          <MetricCard label="Decision confidence" value={intelligenceMetrics.accuracy} accent="accent" suffix="%" />
+          <MetricCard label="Advisors" value={intelligenceMetrics.activeAgents} accent="tertiary" suffix="" />
+          <MetricCard label="Open risks" value={intelligenceMetrics.riskVector} accent="danger" suffix="" />
         </div>
       </header>
 
@@ -35,8 +35,8 @@ function IntelligenceView({
         <section className="panel intelligence-hero">
           <div className="panel-topline">
             <div>
-              <h2>Neural Map</h2>
-              <p>LIVE_VIEW_04</p>
+              <h2>Team Activity Map</h2>
+              <p>Team activity map</p>
             </div>
             <div className="hero-actions">
               <button type="button" className="icon-button subtle">
@@ -68,9 +68,9 @@ function IntelligenceView({
                 className={index === 0 ? "neural-callout callout-left" : "neural-callout callout-right"}
                 style={{ "--node-accent": node.accent }}
               >
-                <p>{index === 0 ? "Node_Primary" : "Subroutine_Alpha"}</p>
+                <p>{index === 0 ? "Main advisor" : "Supporting advisor"}</p>
                 <strong>{node.label}</strong>
-                <span>{index === 0 ? `LOAD: ${node.load}` : `STABILITY: ${node.health}`}</span>
+                <span>{index === 0 ? `Workload: ${node.load}` : `Health: ${node.health}`}</span>
               </article>
             ))}
           </div>
@@ -78,13 +78,13 @@ function IntelligenceView({
           <div className="panel-footer status-row">
             <span>
               <i />
-              ACTIVE_NODES: {intelligenceMetrics.activeNodes}
+              ACTIVE ADVISOR LINKS: {intelligenceMetrics.activeNodes}
             </span>
             <span>
               <i className="accent" />
-              BOTTLENECKS: {intelligenceMetrics.bottlenecks}
+              SLOWDOWNS: {intelligenceMetrics.bottlenecks}
             </span>
-            <strong>REFRESH_RATE: 60HZ</strong>
+            <strong>REFRESH RATE: 60HZ</strong>
           </div>
         </section>
 
@@ -92,8 +92,8 @@ function IntelligenceView({
           <div className="panel semantic-panel">
             <div className="panel-topline">
               <div>
-                <h2>Semantic Stream</h2>
-                <p>Live process feed</p>
+                <h2>Key Updates</h2>
+                <p>Live summary feed</p>
               </div>
               <span className="material-symbols-outlined telemetry-icon">sensors</span>
             </div>
@@ -111,7 +111,7 @@ function IntelligenceView({
             </div>
 
             <div className="panel-footer center-link">
-              <button type="button">View All Intelligence</button>
+              <button type="button">View all updates</button>
             </div>
           </div>
 
@@ -131,12 +131,12 @@ function IntelligenceView({
         <section className="panel timeline-panel">
           <div className="panel-topline">
             <div>
-              <h2>Inference Timeline</h2>
-              <p>Historical prediction accuracy vs realized outcomes</p>
+              <h2>Decision Timeline</h2>
+              <p>How the team view changed over each round</p>
             </div>
             <div className="legend-row">
-              <span className="legend-item prediction">Prediction</span>
-              <span className="legend-item actual">Actual</span>
+              <span className="legend-item prediction">Early view</span>
+              <span className="legend-item actual">Final view</span>
             </div>
           </div>
 

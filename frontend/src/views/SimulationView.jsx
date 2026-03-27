@@ -1,6 +1,7 @@
+import { formatDecisionLabel, toPlainText } from "../plainLanguage";
+
 function SimulationView({
   agentMeta,
-  agentDefinitionsMap,
   result,
   loading,
   activeTypingAgent,
@@ -27,15 +28,14 @@ function SimulationView({
       <main className="obsidian-main">
         <aside className="obsidian-sidebar">
           <div className="sidebar-header">
-            <h2>Active Matrix</h2>
-            <span>{Object.keys(agentMeta).length} ONLINE</span>
+            <h2>Advisory Team</h2>
+            <span>{Object.keys(agentMeta).length} READY</span>
           </div>
 
           <div className="agent-stack">
             {Object.entries(agentMeta).map(([name, meta]) => {
               const isActive = name === speakingAgent;
               const isCalculating = loading && name === activeTypingAgent;
-              const definition = agentDefinitionsMap[name];
 
               return (
                 <article
@@ -47,7 +47,7 @@ function SimulationView({
                     <span className="material-symbols-outlined">{meta.symbol}</span>
                     {isActive ? (
                       <div className="agent-status-speaking">
-                        <span>Speaking</span>
+                        <span>Talking</span>
                         <div className="signal-bar">
                           <div />
                         </div>
@@ -56,24 +56,24 @@ function SimulationView({
                     {!isActive && isCalculating ? <span className="material-symbols-outlined spin">sync</span> : null}
                   </div>
                   <h3>{meta.label}</h3>
-                  <p>{definition?.decision_style ?? meta.title}</p>
+                  <p>{meta.title}</p>
                 </article>
               );
             })}
           </div>
 
           <div className="sidebar-module">
-            <div className="module-label">Command Intake</div>
+            <div className="module-label">How It Works</div>
             <p>
-              Feed the simulator a live business problem, constraints, metrics, and what-if scenario. The board will
-              turn that into a directive plus an execution plan.
+              Enter your business question, key limits, and numbers. The advisory team will discuss it and return a
+              recommendation, risks, and next steps.
             </p>
             <div className="module-actions">
               <button type="button" className="secondary-action" onClick={onApplySample}>
-                Load Sample
+                Use Example
               </button>
               <button type="button" className="primary-action" onClick={onToggleConsole}>
-                Open Console
+                Start Analysis
               </button>
             </div>
           </div>
@@ -83,7 +83,7 @@ function SimulationView({
           <header className="stream-header">
             <div>
               <div className="header-kicker">
-                <span>Simulation Active</span>
+                <span>Analysis Running</span>
                 <span className="status-dot small" />
               </div>
               <h1>{scenarioTitle}</h1>
@@ -105,8 +105,8 @@ function SimulationView({
             {!result && !loading ? (
               <div className="stream-empty">
                 <span className="material-symbols-outlined">terminal</span>
-                <h2>Ready For Input</h2>
-                <p>Open the command console and send a strategic problem into the boardroom.</p>
+                <h2>Ready To Start</h2>
+                <p>Open the form and enter a business decision you want help with.</p>
               </div>
             ) : null}
 
@@ -122,10 +122,10 @@ function SimulationView({
                   <div className="conflict-cluster">
                     <div className="conflict-badge">
                       <span className="material-symbols-outlined">warning</span>
-                      Direct Contradiction
+                      Key Disagreement
                     </div>
                     <div className="conflict-thread">
-                      <p>{topConflictByRound.get(round).description}</p>
+                      <p>{toPlainText(topConflictByRound.get(round).description)}</p>
                     </div>
                   </div>
                 ) : null}
@@ -145,11 +145,11 @@ function SimulationView({
                       <div className="message-content">
                         <div className="message-meta">
                           <span className="message-name">{meta.label}</span>
-                          <span className="message-time">
-                            Round {turn.round} - {turn.confidence}% confidence
-                          </span>
+                          <span className="message-time">Round {turn.round} - {turn.confidence}% confidence</span>
                         </div>
-                        <div className={turn.stance === "NO GO" ? "message-bubble danger" : "message-bubble"}>{turn.message}</div>
+                        <div className={turn.stance === "NO GO" ? "message-bubble danger" : "message-bubble"}>
+                          {toPlainText(turn.message)}
+                        </div>
                       </div>
                     </article>
                   );
@@ -166,7 +166,7 @@ function SimulationView({
                   <span />
                   <span />
                   <span />
-                  <strong>{speakingMeta.label} is calculating...</strong>
+                  <strong>{speakingMeta.label} is thinking...</strong>
                 </div>
               </div>
             ) : null}
@@ -176,15 +176,15 @@ function SimulationView({
             <div className="footer-actions">
               <button type="button" className="footer-link" onClick={onToggleConsole}>
                 <span className="material-symbols-outlined">terminal</span>
-                Open Console
+                Open Form
               </button>
               <button type="button" className="footer-link" onClick={onApplySample}>
                 <span className="material-symbols-outlined">history</span>
-                Load Sample Scenario
+                Use Example Case
               </button>
             </div>
             <div className="footer-metrics">
-              <span>Simulation Fidelity: {result ? "98.4%" : "Standby"}</span>
+              <span>System status: {result ? "Live" : "Waiting"}</span>
               <div className="footer-bars">
                 <div />
                 <div />
@@ -200,14 +200,16 @@ function SimulationView({
             <div className="directive-mark">
               <span className="material-symbols-outlined">gavel</span>
             </div>
-            <h2>Final Intelligence Directive</h2>
+            <h2>Final Recommendation</h2>
             <div className="directive-body">
               <p className="directive-title">
-                {result?.final_output ? `${result.final_output.decision}: ${recommendedDirective}` : "Awaiting board synthesis"}
+                {result?.final_output
+                  ? `${formatDecisionLabel(result.final_output.decision)}: ${toPlainText(recommendedDirective)}`
+                  : "Waiting for the team to finish its review"}
               </p>
               <div className="directive-score">
                 <div>
-                  <span>Confidence Score</span>
+                  <span>Confidence</span>
                   <strong>{result?.final_output?.confidence ?? 0}%</strong>
                 </div>
                 <div className="meter-track">
@@ -218,46 +220,46 @@ function SimulationView({
           </div>
 
           <section className="insight-section">
-            <h3>Key Drivers & Risks</h3>
+            <h3>Main Reasons And Risks</h3>
             <div className="insight-grid">
               <InsightCard
                 icon="lightbulb"
                 accent="#ddb7ff"
-                title="Lead Directive"
-                body={result?.final_output?.key_reasons?.[0] ?? "The simulator is waiting for a boardroom run."}
+                title="Main Reason"
+                body={toPlainText(result?.final_output?.key_reasons?.[0] ?? "The team is waiting to review your case.")}
               />
               <InsightCard
                 icon="dangerous"
                 accent="#ff8f8f"
-                title="Primary Risk"
-                body={highestRisk}
+                title="Biggest Risk"
+                body={toPlainText(highestRisk)}
                 kicker={result?.final_output?.risks?.length ? "Critical" : ""}
               />
               <InsightCard
                 icon="account_balance"
                 accent="#00ff94"
-                title="Action Path"
-                body={result?.final_output?.recommended_actions?.[0] ?? "No execution path yet."}
+                title="Best Next Step"
+                body={toPlainText(result?.final_output?.recommended_actions?.[0] ?? "No action steps yet.")}
               />
             </div>
           </section>
 
           <section className="health-panel">
-            <h3>Action Engine</h3>
+            <h3>Action Plan</h3>
             <div className="execution-list">
               {(actionPlan?.execution_plan ?? []).slice(0, 4).map((step, index) => (
                 <div key={`${step.owner}-${index}`} className="execution-item">
                   <strong>{step.timeline}</strong>
                   <div>
-                    <p>{step.step}</p>
+                    <p>{toPlainText(step.step)}</p>
                     <span>
-                      {step.owner} · {step.success_metric}
+                      {step.owner} - {toPlainText(step.success_metric)}
                     </span>
                   </div>
                 </div>
               ))}
               {!actionPlan?.execution_plan?.length ? (
-                <p className="compact-placeholder">Execution steps appear once the CEO issues a directive.</p>
+                <p className="compact-placeholder">Action steps will appear after the team makes a recommendation.</p>
               ) : null}
             </div>
             <div className="scenario-grid">
@@ -265,61 +267,67 @@ function SimulationView({
                 <article key={scenario.scenario} className="scenario-card">
                   <div className="scenario-card-top">
                     <strong>{scenario.scenario}</strong>
-                    <span>{scenario.decision}</span>
+                    <span>{formatDecisionLabel(scenario.decision)}</span>
                   </div>
-                  <p>{scenario.difference_from_base}</p>
-                  <small>{scenario.reasoning_shift?.[0] ?? "Reasoning remained directionally stable."}</small>
+                  <p>{toPlainText(scenario.difference_from_base)}</p>
+                  <small>{toPlainText(scenario.reasoning_shift?.[0] ?? "The recommendation stayed mostly the same.")}</small>
                 </article>
               ))}
             </div>
           </section>
 
           <section className="health-panel">
-            <h3>Explainability & Memory</h3>
+            <h3>Why This Recommendation Was Made</h3>
             <div className="health-block">
               <div className="health-meta">
-                <span>Top Influencer</span>
+                <span>Most influential advisor</span>
                 <span>{explainability?.top_influencer ?? "Pending"}</span>
               </div>
               <p className="insight-paragraph">
-                {explainability?.final_reasoning_summary ?? "The board will summarize why the verdict landed where it did."}
+                {toPlainText(
+                  explainability?.final_reasoning_summary ??
+                    "The team will summarize why it reached this recommendation.",
+                )}
               </p>
             </div>
             <div className="health-block">
               <div className="health-meta">
-                <span>Recalled Simulations</span>
+                <span>Past similar cases</span>
                 <span>{memorySummary?.recalled_simulations ?? 0}</span>
               </div>
               <p className="insight-paragraph">
-                {memorySummary?.prior_failures?.[0] ?? "Persistent memory is ready to store and recall prior board outcomes."}
+                {toPlainText(
+                  memorySummary?.prior_failures?.[0] ??
+                    "The system can save past cases and use them in future recommendations.",
+                )}
               </p>
             </div>
             <div className="health-block">
               <div className="health-meta">
-                <span>Validation Check</span>
-                <span>{validation?.passed ? "PASS" : loading ? "RUNNING" : "PENDING"}</span>
+                <span>System checks</span>
+                <span>{validation?.passed ? "Passed" : loading ? "Running" : "Waiting"}</span>
               </div>
               <div className="validation-grid">
-                <ValidationPill label="Decisions" ok={validation?.decisions_made} />
+                <ValidationPill label="Decision" ok={validation?.decisions_made} />
                 <ValidationPill label="Scenarios" ok={validation?.multiple_scenarios_simulated} />
-                <ValidationPill label="Actions" ok={validation?.actions_generated} />
+                <ValidationPill label="Action plan" ok={validation?.actions_generated} />
                 <ValidationPill label="Memory" ok={validation?.memory_used} />
               </div>
             </div>
             <div className="health-block">
               <div className="health-meta">
-                <span>Contradictions</span>
+                <span>Disagreements</span>
                 <span>{result?.conflicts?.length ?? 0}</span>
               </div>
               <div className="conflict-compact-list">
                 {(result?.conflicts ?? []).slice(0, 3).map((conflict, index) => (
                   <div key={`${conflict.topic}-${index}`} className="conflict-compact-item">
-                    <strong>{conflict.conflict_type}</strong>
-                    <p>{conflict.description}</p>
+                    <strong>{toPlainText(conflict.conflict_type)}</strong>
+                    <p>{toPlainText(conflict.description)}</p>
                   </div>
                 ))}
                 {!result?.conflicts?.length ? (
-                  <p className="compact-placeholder">Contradictions appear here after debate begins.</p>
+                  <p className="compact-placeholder">Important disagreements will appear here after the discussion starts.</p>
                 ) : null}
               </div>
             </div>
@@ -327,7 +335,7 @@ function SimulationView({
 
           <div className="synapse-strip">
             <div className="synapse-top">
-              <span>Network Synapse</span>
+              <span>System status</span>
               <strong>{loading ? "5.8ms" : "2.4ms"} Latency</strong>
             </div>
             <div className="wave" />
@@ -339,22 +347,22 @@ function SimulationView({
         <div className="hud-item">
           <span className="material-symbols-outlined">database</span>
           <div>
-            <span>Dataset</span>
-            <strong>{result ? "LIVE_BOARD_V2" : "OBSIDIAN_V4"}</strong>
+            <span>Mode</span>
+            <strong>{result ? "Live analysis" : "Ready"}</strong>
           </div>
         </div>
         <div className="hud-divider" />
         <div className="hud-item">
           <span className="material-symbols-outlined">memory</span>
           <div>
-            <span>Processing</span>
-            <strong>{loading ? "18.8 TFLOPS" : "14.2 TFLOPS"}</strong>
+            <span>Activity</span>
+            <strong>{loading ? "Reviewing" : "Waiting"}</strong>
           </div>
         </div>
         <div className="hud-divider" />
         <button type="button" className="hud-input" onClick={onToggleConsole}>
           <span className="material-symbols-outlined">terminal</span>
-          Ready For Input...
+          Enter business case...
         </button>
       </div>
     </>

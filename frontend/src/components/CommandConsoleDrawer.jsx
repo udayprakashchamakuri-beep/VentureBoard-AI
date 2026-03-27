@@ -13,11 +13,11 @@ function CommandConsoleDrawer({
       <div className="console-shell">
         <div className="console-top">
           <div>
-            <span className="console-kicker">Command Console</span>
-            <h2>Inject a strategic problem into the simulator</h2>
+            <span className="console-kicker">Business Question Form</span>
+            <h2>Tell the advisory team what decision you need help with</h2>
           </div>
           <button type="button" className="secondary-action" onClick={onClose}>
-            Dismiss
+            Close
           </button>
         </div>
 
@@ -28,7 +28,7 @@ function CommandConsoleDrawer({
               <input value={form.company_name} onChange={(event) => onFieldChange("company_name", event.target.value)} />
             </label>
             <label>
-              Stage
+              Company stage
               <input value={form.company_stage} onChange={(event) => onFieldChange("company_stage", event.target.value)} />
             </label>
             <label>
@@ -42,7 +42,7 @@ function CommandConsoleDrawer({
           </div>
 
           <label>
-            Business problem
+            Business question
             <textarea
               rows="6"
               value={form.business_problem}
@@ -52,11 +52,11 @@ function CommandConsoleDrawer({
 
           <div className="console-grid two">
             <label>
-              Objectives
+              Goals
               <textarea rows="3" value={form.objectives} onChange={(event) => onFieldChange("objectives", event.target.value)} />
             </label>
             <label>
-              Constraints
+              Limits or concerns
               <textarea
                 rows="3"
                 value={form.current_constraints}
@@ -67,28 +67,28 @@ function CommandConsoleDrawer({
 
           <div className="console-grid four">
             <label>
-              Runway (months)
+              Cash runway (months)
               <input value={form.runway_months} onChange={(event) => onFieldChange("runway_months", event.target.value)} />
             </label>
             <label>
-              Gross margin
+              Profit margin (%)
               <input value={form.gross_margin} onChange={(event) => onFieldChange("gross_margin", event.target.value)} />
             </label>
             <label>
-              CAC payback
+              Months to earn back sales cost
               <input
                 value={form.cac_payback_months}
                 onChange={(event) => onFieldChange("cac_payback_months", event.target.value)}
               />
             </label>
             <label>
-              Price point
+              Price per customer
               <input value={form.price_point} onChange={(event) => onFieldChange("price_point", event.target.value)} />
             </label>
           </div>
 
           <div className="console-divider">
-            <span>What-If Scenario</span>
+            <span>Try another scenario</span>
           </div>
 
           <div className="console-grid two">
@@ -104,7 +104,7 @@ function CommandConsoleDrawer({
 
           <div className="console-grid four">
             <label>
-              Budget change %
+              Budget change (%)
               <input
                 value={form.variation_budget_change_pct}
                 onChange={(event) => onFieldChange("variation_budget_change_pct", event.target.value)}
@@ -116,13 +116,13 @@ function CommandConsoleDrawer({
                 value={form.variation_market_condition}
                 onChange={(event) => onFieldChange("variation_market_condition", event.target.value)}
               >
-                <option value="base">Base</option>
-                <option value="bearish">Bearish</option>
-                <option value="bullish">Bullish</option>
+                <option value="base">Normal</option>
+                <option value="bearish">Tough</option>
+                <option value="bullish">Strong</option>
               </select>
             </label>
             <label>
-              Competition
+              Competition level
               <select
                 value={form.variation_competition_level}
                 onChange={(event) => onFieldChange("variation_competition_level", event.target.value)}
@@ -133,7 +133,7 @@ function CommandConsoleDrawer({
               </select>
             </label>
             <label>
-              Pricing change %
+              Price change (%)
               <input
                 value={form.variation_pricing_change_pct}
                 onChange={(event) => onFieldChange("variation_pricing_change_pct", event.target.value)}
@@ -145,10 +145,10 @@ function CommandConsoleDrawer({
 
           <div className="console-actions">
             <button type="button" className="secondary-action" onClick={onApplySample}>
-              Load Sample
+              Use example
             </button>
             <button type="submit" className="primary-action" disabled={loading}>
-              {loading ? "Running board debate..." : "Launch simulation"}
+              {loading ? "Reviewing your case..." : "Start analysis"}
             </button>
           </div>
         </form>
