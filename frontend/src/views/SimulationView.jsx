@@ -42,6 +42,7 @@ function SimulationView({
         .map(([round, turns]) => [round, turns.filter((turn) => conversationAgentNames.includes(turn.agent_name))])
         .filter(([, turns]) => turns.length)
     : groupedConversation;
+  const hasAnyDiscussion = groupedConversation.some(([, turns]) => turns.length);
   const hasAdvisorMessages = filteredRounds.some(([, turns]) => turns.length);
   const visibleTurnCount = filteredRounds.reduce((count, [, turns]) => count + turns.length, 0);
   const latestUserMessage = chatMessages[chatMessages.length - 1] ?? null;
@@ -154,7 +155,7 @@ function SimulationView({
           </header>
 
           <div className="stream-body">
-            {!result && !loading && !chatMessages.length ? (
+            {!hasAnyDiscussion && !loading && !chatMessages.length ? (
               <div className="stream-empty">
                 <span className="material-symbols-outlined">terminal</span>
                 <h2>Ready To Start</h2>
@@ -304,19 +305,11 @@ function SimulationView({
               </section>
             ))}
 
-            {!hasAdvisorMessages && result && !loading ? (
-              <div className="stream-empty conversation-empty">
-                <span className="material-symbols-outlined">forum</span>
-                <h2>No Advisor Messages Found</h2>
-                <p>The decision finished, but the discussion feed came back empty. Send the case again and the team will rerun it.</p>
-              </div>
-            ) : null}
-
-            {conversationAgentNames.length && !filteredRounds.length && result ? (
+            {conversationAgentNames.length && hasAnyDiscussion && !filteredRounds.length && !loading ? (
               <div className="stream-empty conversation-empty">
                 <span className="material-symbols-outlined">{activeConversationMeta?.symbol ?? "groups"}</span>
-                <h2>No Comments Yet</h2>
-                <p>The selected advisors have not spoken yet in the current discussion.</p>
+                <h2>No visible replies yet</h2>
+                <p>The selected advisors do not have visible replies in this part of the discussion yet. Choose another advisor or show all advisors.</p>
               </div>
             ) : null}
 
@@ -367,12 +360,6 @@ function SimulationView({
                 onSubmitChat(chatDraft);
               }}
             >
-              <div className="composer-header">
-                <div>
-                  <strong>Ask in normal language</strong>
-                  <p>Type just like a chat. You can send your note to the whole team, one advisor, or a custom group of advisors.</p>
-                </div>
-              </div>
               <div className="composer-targets">
                 <span className="composer-target-label">Talk to</span>
                 <div className="composer-target-chips">

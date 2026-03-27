@@ -51,7 +51,7 @@ function App() {
   const activeTypingAgent = Object.keys(AGENT_META)[typingIndex];
   const lastTurn = conversation[conversation.length - 1] ?? null;
   const speakingAgent = loading ? activeTypingAgent : lastTurn?.agent_name ?? "CEO Agent";
-  const displayedRounds = result?.round_summaries?.length ?? 3;
+  const displayedRounds = result?.round_summaries?.length || 3;
   const currentRound = loading ? Math.min(3, Math.floor((typingIndex / 3) % 3) + 1) : lastTurn?.round ?? 0;
   const scenarioTitle = result?.company_name || form.company_name || "Business decision review";
   const highestRisk = result?.final_output?.risks?.[0] ?? "Waiting for the team to review the case.";
