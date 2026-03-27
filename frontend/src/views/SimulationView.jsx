@@ -20,6 +20,7 @@ function SimulationView({
   validation,
   onToggleConsole,
   onApplySample,
+  onOpenAgent,
 }) {
   const speakingMeta = agentMeta[speakingAgent] ?? agentMeta["CEO Agent"];
 
@@ -36,12 +37,16 @@ function SimulationView({
             {Object.entries(agentMeta).map(([name, meta]) => {
               const isActive = name === speakingAgent;
               const isCalculating = loading && name === activeTypingAgent;
+              const cardClassName = isActive ? "agent-card active agent-card-link" : isCalculating ? "agent-card thinking agent-card-link" : "agent-card agent-card-link";
 
               return (
-                <article
+                <button
                   key={name}
-                  className={isActive ? "agent-card active" : isCalculating ? "agent-card thinking" : "agent-card"}
+                  type="button"
+                  className={cardClassName}
                   style={{ "--agent-accent": meta.accent }}
+                  onClick={() => onOpenAgent(name)}
+                  aria-label={`Open ${meta.label} details`}
                 >
                   <div className="agent-card-head">
                     <span className="material-symbols-outlined">{meta.symbol}</span>
@@ -57,7 +62,8 @@ function SimulationView({
                   </div>
                   <h3>{meta.label}</h3>
                   <p>{meta.title}</p>
-                </article>
+                  <span className="agent-card-cta">Open advisor details</span>
+                </button>
               );
             })}
           </div>
@@ -68,6 +74,7 @@ function SimulationView({
               Enter your business question, key limits, and numbers. The advisory team will discuss it and return a
               recommendation, risks, and next steps.
             </p>
+            <p className="sidebar-helper-copy">Click any advisor card above to open that advisor directly.</p>
             <div className="module-actions">
               <button type="button" className="secondary-action" onClick={onApplySample}>
                 Use Example

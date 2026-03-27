@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import CommandConsoleDrawer from "./components/CommandConsoleDrawer";
 import { AGENT_META, API_BASE, NAV_ITEMS, defaultTimeline, sampleProblem } from "./dashboardData";
-import { toPlainText } from "./plainLanguage";
+import { formatDecisionLabel, toPlainText } from "./plainLanguage";
 import AgentsView from "./views/AgentsView";
 import IntelligenceView from "./views/IntelligenceView";
 import RiskView from "./views/RiskView";
@@ -16,6 +16,7 @@ function App() {
   const [typingIndex, setTypingIndex] = useState(0);
   const [consoleOpen, setConsoleOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [selectedAgentName, setSelectedAgentName] = useState("CEO Agent");
 
   useEffect(() => {
     if (!loading) {
@@ -84,7 +85,7 @@ function App() {
       industry: form.industry,
       region: form.region,
       company_stage: form.company_stage,
-      business_problem: form.business_problem,
+      business_problem: composeBusinessProblem(form),
       objectives: splitList(form.objectives),
       current_constraints: splitList(form.current_constraints),
       known_metrics: {
@@ -161,6 +162,11 @@ function App() {
     setConsoleOpen((current) => !current);
   }
 
+  function openAgentProfile(agentName) {
+    setSelectedAgentName(agentName);
+    setActiveView("agents");
+  }
+
   return (
     <div className={`obsidian-app app-view-${activeView}`}>
       <nav className="obsidian-nav global-nav">
@@ -227,6 +233,7 @@ function App() {
           validation={result?.validation}
           onToggleConsole={toggleConsole}
           onApplySample={applySample}
+          onOpenAgent={openAgentProfile}
         />
       ) : (
         <div className="command-shell">
@@ -283,7 +290,13 @@ function App() {
             ) : null}
 
             {activeView === "agents" ? (
-              <AgentsView agentCards={agentCards} loading={loading} matrixStats={matrixStats} />
+              <AgentsView
+                agentCards={agentCards}
+                loading={loading}
+                matrixStats={matrixStats}
+                selectedAgentName={selectedAgentName}
+                onSelectAgent={setSelectedAgentName}
+              />
             ) : null}
 
             {activeView === "risk" ? <RiskView riskMetrics={riskMetrics} riskAlerts={riskAlerts} /> : null}
@@ -421,10 +434,15 @@ function buildInferenceTimeline({ result, timeline }) {
 }
 
 function buildAgentCards({ result, speakingAgent, loading }) {
+  const definitionMap = new Map((result?.agent_definitions ?? []).map((definition) => [definition.name, definition]));
+
   return Object.entries(AGENT_META).map(([name, meta], index) => {
     const turns = (result?.conversation ?? []).filter((turn) => turn.agent_name === name);
+    const latestTurn = turns[turns.length - 1] ?? null;
+    const definition = definitionMap.get(name);
     const avgConfidence = average(turns.map((turn) => Number(turn.confidence)), 76 + index);
     const cardProfile = getAgentProfile(name, meta);
+    const explainer = getAgentExplainer(name);
     const isSpeaking = name === speakingAgent;
     const healthValue = clamp(74 + avgConfidence * 0.24 + turns.length * 1.8, 76, 99.9);
     const loadValue = clamp(10 + turns.length * 12.4 + avgConfidence / 5, 12, 94.2);
@@ -449,6 +467,16 @@ function buildAgentCards({ result, speakingAgent, loading }) {
       visualIcon: cardProfile.visualIcon,
       visualLabel: cardProfile.visualLabel,
       tone: cardProfile.tone,
+      shortSummary: explainer.summary,
+      decisionStyle: toPlainText(definition?.decision_style ?? explainer.decisionStyle),
+      focusAreas: formatAgentItems(definition?.priorities, explainer.focusAreas),
+      helpingWith: formatAgentItems(definition?.goals, explainer.helpingWith),
+      watchOuts: formatAgentItems(definition?.constraints, explainer.watchOuts),
+      challengePattern: toPlainText(definition?.challenge_pattern ?? explainer.challengePattern),
+      latestView: toPlainText(latestTurn?.message ?? explainer.defaultMessage),
+      latestConfidence: latestTurn ? `${latestTurn.confidence}% confidence` : isSpeaking && loading ? "Preparing advice" : "Waiting for your case",
+      latestDecision: latestTurn?.stance ? formatDecisionLabel(latestTurn.stance) : "No recommendation yet",
+      latestHighlights: formatAgentItems(latestTurn?.key_points, explainer.focusAreas),
     };
   });
 }
@@ -467,6 +495,18 @@ function buildMatrixStats({ result, loading }) {
         detail: loading ? "Warming up" : "Active",
         enabled: true,
         tone: "danger",
+      },
+      {
+        label: "Save past cases",
+        detail: "Lets the system learn from earlier analyses",
+        enabled: true,
+        tone: "success",
+      },
+      {
+        label: "What-if testing",
+        detail: "Runs extra scenario checks before the final answer",
+        enabled: true,
+        tone: "tertiary",
       },
     ],
   };
@@ -664,6 +704,17 @@ function splitList(value) {
     .filter(Boolean);
 }
 
+function composeBusinessProblem(form) {
+  const mainProblem = form.business_problem.trim();
+  const extraContext = form.extra_context.trim();
+
+  if (!extraContext) {
+    return mainProblem;
+  }
+
+  return `${mainProblem}\n\nAdditional background: ${extraContext}`;
+}
+
 function buildScenarioVariations(form) {
   if (!form.variation_name.trim()) {
     return [];
@@ -737,6 +788,7 @@ function buildDefaultForm() {
     business_problem: sampleProblem,
     objectives: "Check whether healthcare expansion makes sense, protect cash, create a realistic launch plan",
     current_constraints: "11 months of cash left, compliance complexity, small sales team, limited delivery capacity",
+    extra_context: "",
     runway_months: "11",
     gross_margin: "68",
     cac_payback_months: "15",
@@ -748,6 +800,126 @@ function buildDefaultForm() {
     variation_pricing_change_pct: "-10",
     variation_notes: "Test the plan with smaller budgets and stronger competitors.",
   };
+}
+
+function formatAgentItems(items, fallback) {
+  const cleaned = (items ?? []).map((item) => toPlainText(item)).filter(Boolean);
+  return cleaned.length ? cleaned.slice(0, 4) : fallback;
+}
+
+function getAgentExplainer(name) {
+  switch (name) {
+    case "CEO Agent":
+      return {
+        summary: "Looks at the full picture and makes the final call.",
+        decisionStyle: "Strategic and balanced",
+        focusAreas: ["Overall trade-offs", "Whether the company can truly execute", "How much risk is worth taking"],
+        helpingWith: ["Making the final choice", "Balancing upside and downside", "Turning team advice into one plan"],
+        watchOuts: ["Large avoidable risks", "Plans that are too vague to execute", "Disagreements the team has not settled"],
+        challengePattern: "Pushes optimistic people to prove the upside and cautious people to explain the cost of waiting.",
+        defaultMessage: "Will combine the team's advice into one final recommendation after the review ends.",
+      };
+    case "Startup Builder Agent":
+      return {
+        summary: "Focuses on moving fast and learning quickly without overbuilding.",
+        decisionStyle: "Fast-moving and practical",
+        focusAreas: ["Speed to market", "Simple first launch scope", "Fast customer learning"],
+        helpingWith: ["Choosing a small first version", "Finding the fastest path to traction", "Avoiding unnecessary complexity"],
+        watchOuts: ["Slow decision-making", "Trying to build too much at once", "Losing momentum"],
+        challengePattern: "Questions plans that take too long or depend on perfect conditions before launch.",
+        defaultMessage: "Wants a plan that gets to real customers quickly and learns from them fast.",
+      };
+    case "Market Research Agent":
+      return {
+        summary: "Checks whether real customers want this and whether the timing makes sense.",
+        decisionStyle: "Evidence-first",
+        focusAreas: ["Customer demand", "Market timing", "Who the best early buyers are"],
+        helpingWith: ["Finding the best customer group", "Checking demand signals", "Comparing market opportunities"],
+        watchOuts: ["Weak demand signals", "A fuzzy target customer", "Assumptions not backed by evidence"],
+        challengePattern: "Pushes the team to prove there is enough demand instead of relying on big market stories.",
+        defaultMessage: "Is looking for stronger evidence that customers will buy and that the timing is right.",
+      };
+    case "Finance Agent":
+      return {
+        summary: "Checks whether the plan makes financial sense and protects cash.",
+        decisionStyle: "Careful and numbers-driven",
+        focusAreas: ["Cash runway", "Profitability", "How long it takes to recover spending"],
+        helpingWith: ["Budget planning", "Revenue assumptions", "Checking whether the plan is affordable"],
+        watchOuts: ["Running out of cash", "Slow payback", "Expensive plans with weak returns"],
+        challengePattern: "Pushes back when growth ideas cost too much or take too long to pay back.",
+        defaultMessage: "Is testing whether the plan can work without putting the company under cash pressure.",
+      };
+    case "Marketing Agent":
+      return {
+        summary: "Looks at how to explain the product clearly and create demand.",
+        decisionStyle: "Bold but practical",
+        focusAreas: ["Positioning", "Channels", "Audience response"],
+        helpingWith: ["Clear messaging", "Launch campaigns", "Finding the best customer channels"],
+        watchOuts: ["Weak messaging", "Spending on the wrong channels", "Marketing plans built on vanity metrics"],
+        challengePattern: "Questions plans that assume customers will understand the value without a strong message.",
+        defaultMessage: "Is shaping how the product should be explained so the right customers pay attention.",
+      };
+    case "Pricing Agent":
+      return {
+        summary: "Checks whether the price is strong enough and still easy for customers to accept.",
+        decisionStyle: "Analytical",
+        focusAreas: ["Price level", "Packaging", "Customer willingness to pay"],
+        helpingWith: ["Choosing the right price", "Testing discounts carefully", "Matching price to value"],
+        watchOuts: ["Underpricing", "Prices that create buying friction", "Discounting too early"],
+        challengePattern: "Pushes back when the price is based on guesswork instead of customer value.",
+        defaultMessage: "Is comparing price, perceived value, and buying friction before recommending a move.",
+      };
+    case "Supply Chain Agent":
+      return {
+        summary: "Checks whether the company can deliver reliably after launch.",
+        decisionStyle: "Operational and careful",
+        focusAreas: ["Delivery readiness", "Dependencies", "Ability to scale"],
+        helpingWith: ["Operations planning", "Capacity checks", "Reducing delivery failures"],
+        watchOuts: ["Operational bottlenecks", "Vendor dependence", "Launching before delivery is ready"],
+        challengePattern: "Questions go-to-market plans that look good on paper but overload operations.",
+        defaultMessage: "Is reviewing whether the business can handle demand without delivery problems.",
+      };
+    case "Hiring Agent":
+      return {
+        summary: "Looks at whether the current team can support the plan and who to hire next.",
+        decisionStyle: "Balanced and realistic",
+        focusAreas: ["Team capacity", "Critical roles", "Hiring timing"],
+        helpingWith: ["Hiring plans", "Team workload", "Choosing the most urgent roles first"],
+        watchOuts: ["Relying on hires that are not in place yet", "Stretching a small team too thin", "Hiring too much too early"],
+        challengePattern: "Pushes the team to match the plan to the people actually available to execute it.",
+        defaultMessage: "Is checking whether the company has the people it needs to carry this plan successfully.",
+      };
+    case "Risk Agent":
+      return {
+        summary: "Looks for what could go wrong and how severe it might be.",
+        decisionStyle: "Cautious and defensive",
+        focusAreas: ["Downside scenarios", "Compliance risk", "Failure points"],
+        helpingWith: ["Risk planning", "Mitigation steps", "Deciding whether the downside is acceptable"],
+        watchOuts: ["Regulatory problems", "Big downside surprises", "Weak controls"],
+        challengePattern: "Challenges plans that ignore low-probability but high-impact risks.",
+        defaultMessage: "Is stress-testing the plan to find serious risks before the company commits.",
+      };
+    case "Sales Strategy Agent":
+      return {
+        summary: "Checks whether the company can actually win customers and close deals.",
+        decisionStyle: "Practical and customer-facing",
+        focusAreas: ["Sales motion", "Buyer friction", "Revenue path"],
+        helpingWith: ["Sales strategy", "Buyer journey planning", "Checking whether demand can turn into revenue"],
+        watchOuts: ["Long sales cycles", "Weak close rates", "Mistaking interest for real revenue"],
+        challengePattern: "Pushes back when the team assumes leads will automatically turn into paying customers.",
+        defaultMessage: "Is reviewing whether the offer, sales process, and target buyers line up well enough to close deals.",
+      };
+    default:
+      return {
+        summary: "Reviews the decision from a specialist point of view.",
+        decisionStyle: "Balanced",
+        focusAreas: ["Decision quality", "Execution readiness", "Business impact"],
+        helpingWith: ["Improving the plan", "Reducing surprises", "Highlighting the most important trade-offs"],
+        watchOuts: ["Weak assumptions", "Missing evidence", "Execution gaps"],
+        challengePattern: "Pushes back when the plan depends on assumptions that have not been proven.",
+        defaultMessage: "Will share a specialist view once the analysis starts.",
+      };
+  }
 }
 
 export default App;

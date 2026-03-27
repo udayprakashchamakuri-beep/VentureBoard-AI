@@ -278,6 +278,16 @@ a {
   transition: transform 180ms ease, background 180ms ease, border-color 180ms ease, opacity 180ms ease;
 }
 
+.agent-card-link {
+  width: 100%;
+  appearance: none;
+  border: 0;
+  border-left: 4px solid rgba(255, 255, 255, 0.18);
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
 .agent-card:hover {
   transform: translateX(3px);
   background: rgba(35, 41, 60, 0.84);
@@ -328,6 +338,17 @@ a {
 .console-error {
   margin: 0;
   color: var(--text-muted);
+}
+
+.agent-card-cta,
+.sidebar-helper-copy {
+  display: block;
+  margin-top: 10px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 225, 109, 0.72);
 }
 
 .agent-status-speaking {
@@ -1051,11 +1072,26 @@ a {
   margin-bottom: 18px;
 }
 
+.console-top > div {
+  display: grid;
+  gap: 8px;
+}
+
 .console-top h2 {
   margin: 6px 0 0;
   font-size: 1.4rem;
   font-weight: 800;
   letter-spacing: -0.04em;
+}
+
+.console-intro,
+.console-subtle-copy,
+.form-section-heading p,
+.field-help {
+  margin: 0;
+  color: rgba(220, 225, 251, 0.64);
+  font-size: 0.78rem;
+  line-height: 1.55;
 }
 
 .console-form,
@@ -1069,6 +1105,21 @@ a {
 
 .console-form {
   gap: 16px;
+}
+
+.form-section-heading {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.form-section-heading h3 {
+  margin: 0;
+  font-family: "Manrope", sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #dde3eb;
 }
 
 .console-grid {
@@ -1091,7 +1142,8 @@ a {
 }
 
 .console-form input,
-.console-form textarea {
+.console-form textarea,
+.console-form select {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
@@ -1102,9 +1154,19 @@ a {
 }
 
 .console-form input:focus,
-.console-form textarea:focus {
+.console-form textarea:focus,
+.console-form select:focus {
   outline: 1px solid rgba(255, 225, 109, 0.35);
   border-color: rgba(255, 225, 109, 0.25);
+}
+
+.console-form input::placeholder,
+.console-form textarea::placeholder {
+  color: rgba(220, 225, 251, 0.34);
+}
+
+.field-help {
+  margin-top: -2px;
 }
 
 .console-error {
@@ -2093,6 +2155,63 @@ a {
   gap: 20px;
 }
 
+.agent-picker-panel,
+.agent-detail-panel {
+  margin-bottom: 22px;
+}
+
+.agent-selector-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.agent-selector-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(7, 13, 31, 0.56);
+  padding: 10px 14px;
+  color: rgba(220, 225, 251, 0.78);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, color 180ms ease;
+}
+
+.agent-selector-chip:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--chip-accent, var(--accent)) 38%, rgba(255, 255, 255, 0.08));
+}
+
+.agent-selector-chip.active {
+  border-color: color-mix(in srgb, var(--chip-accent, var(--accent)) 44%, rgba(255, 255, 255, 0.08));
+  background: color-mix(in srgb, var(--chip-accent, var(--accent)) 14%, rgba(7, 13, 31, 0.72));
+  color: color-mix(in srgb, var(--chip-accent, var(--accent)) 75%, white 18%);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--chip-accent, var(--accent)) 22%, transparent);
+}
+
+.agent-card-button {
+  border: 0;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.agent-card-button:hover {
+  transform: translateY(-2px);
+}
+
+.agent-card-button.selected {
+  box-shadow: 0 0 24px color-mix(in srgb, var(--card-accent) 26%, transparent);
+}
+
 .agent-matrix-card {
   display: grid;
   overflow: hidden;
@@ -2246,6 +2365,98 @@ a {
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   padding: 14px 22px;
   color: var(--card-accent);
+}
+
+.agent-detail-status {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.agent-detail-status span,
+.agent-detail-meta span {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(193, 199, 207, 0.48);
+}
+
+.agent-detail-status strong,
+.agent-detail-meta strong {
+  font-family: "Manrope", sans-serif;
+  font-size: 0.94rem;
+  font-weight: 800;
+  color: #dde3eb;
+}
+
+.agent-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.agent-detail-card {
+  display: grid;
+  gap: 12px;
+  border-radius: 18px;
+  background: rgba(7, 13, 31, 0.56);
+  padding: 18px;
+}
+
+.agent-detail-card.latest {
+  grid-column: 1 / -1;
+}
+
+.agent-detail-card h3 {
+  margin: 0;
+  font-family: "Manrope", sans-serif;
+  font-size: 0.96rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #dde3eb;
+}
+
+.agent-detail-card p {
+  margin: 0;
+  color: rgba(220, 225, 251, 0.82);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.agent-detail-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agent-detail-list li {
+  position: relative;
+  padding-left: 18px;
+  color: rgba(220, 225, 251, 0.82);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.agent-detail-list li::before {
+  content: "";
+  position: absolute;
+  top: 9px;
+  left: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(255, 225, 109, 0.36);
+}
+
+.agent-detail-meta {
+  display: grid;
+  gap: 6px;
+  padding-top: 6px;
 }
 
 .deploy-card {
@@ -2728,15 +2939,6 @@ a {
   background: rgba(255, 255, 255, 0.08);
 }
 
-.console-form select {
-  width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  background: rgba(7, 13, 31, 0.84);
-  padding: 12px 14px;
-  color: var(--text);
-}
-
 .execution-list,
 .scenario-grid,
 .validation-grid {
@@ -2848,6 +3050,7 @@ a {
   }
 
   .intelligence-grid,
+  .agent-detail-grid,
   .matrix-bottom-grid,
   .risk-grid {
     grid-template-columns: 1fr;
@@ -2894,6 +3097,7 @@ a {
   .metric-strip,
   .side-nav-links,
   .agent-matrix-grid,
+  .agent-detail-grid,
   .risk-kpi-grid,
   .volatility-stats {
     grid-template-columns: 1fr;
@@ -2903,6 +3107,21 @@ a {
     left: 16px;
     right: 16px;
     flex-wrap: wrap;
+  }
+
+  .agent-selector-strip {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .agent-selector-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .agent-selector-chip {
+    flex: 0 0 auto;
   }
 }
 
