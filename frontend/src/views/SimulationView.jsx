@@ -20,9 +20,18 @@ function SimulationView({
   validation,
   onToggleConsole,
   onApplySample,
-  onOpenAgent,
+  conversationAgentName,
+  onOpenAgentConversation,
+  onOpenAgentProfile,
+  onClearAgentConversation,
 }) {
   const speakingMeta = agentMeta[speakingAgent] ?? agentMeta["CEO Agent"];
+  const activeConversationMeta = conversationAgentName ? agentMeta[conversationAgentName] ?? agentMeta["CEO Agent"] : null;
+  const filteredRounds = conversationAgentName
+    ? groupedConversation
+        .map(([round, turns]) => [round, turns.filter((turn) => turn.agent_name === conversationAgentName)])
+        .filter(([, turns]) => turns.length)
+    : groupedConversation;
 
   return (
     <>
@@ -45,7 +54,7 @@ function SimulationView({
                   type="button"
                   className={cardClassName}
                   style={{ "--agent-accent": meta.accent }}
-                  onClick={() => onOpenAgent(name)}
+                  onClick={() => onOpenAgentConversation(name)}
                   aria-label={`Open ${meta.label} details`}
                 >
                   <div className="agent-card-head">
@@ -62,7 +71,7 @@ function SimulationView({
                   </div>
                   <h3>{meta.label}</h3>
                   <p>{meta.title}</p>
-                  <span className="agent-card-cta">Open advisor details</span>
+                  <span className="agent-card-cta">Show this advisor's conversation</span>
                 </button>
               );
             })}
@@ -74,7 +83,7 @@ function SimulationView({
               Enter your business question, key limits, and numbers. The advisory team will discuss it and return a
               recommendation, risks, and next steps.
             </p>
-            <p className="sidebar-helper-copy">Click any advisor card above to open that advisor directly.</p>
+            <p className="sidebar-helper-copy">Click any advisor card above to see only that advisor's discussion.</p>
             <div className="module-actions">
               <button type="button" className="secondary-action" onClick={onApplySample}>
                 Use Example
@@ -117,7 +126,24 @@ function SimulationView({
               </div>
             ) : null}
 
-            {groupedConversation.map(([round, turns]) => (
+            {conversationAgentName ? (
+              <div className="conversation-filter-bar" style={{ "--agent-accent": activeConversationMeta?.accent ?? "#ffe16d" }}>
+                <div>
+                  <strong>{activeConversationMeta?.label ?? "Advisor"} conversation</strong>
+                  <p>Showing only what this advisor has said so far.</p>
+                </div>
+                <div className="conversation-filter-actions">
+                  <button type="button" className="footer-link" onClick={() => onOpenAgentProfile(conversationAgentName)}>
+                    Open advisor profile
+                  </button>
+                  <button type="button" className="footer-link" onClick={onClearAgentConversation}>
+                    Show all advisors
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {filteredRounds.map(([round, turns]) => (
               <section key={round} className="round-section">
                 <div className="round-divider">
                   <div />
@@ -163,6 +189,14 @@ function SimulationView({
                 })}
               </section>
             ))}
+
+            {conversationAgentName && !filteredRounds.length && result ? (
+              <div className="stream-empty conversation-empty">
+                <span className="material-symbols-outlined">{activeConversationMeta?.symbol ?? "groups"}</span>
+                <h2>No Comments Yet</h2>
+                <p>This advisor has not spoken yet in the current discussion.</p>
+              </div>
+            ) : null}
 
             {loading ? (
               <div className="typing-row">

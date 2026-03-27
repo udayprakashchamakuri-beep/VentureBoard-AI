@@ -83,6 +83,26 @@
   min-height: 138px;
 }
 
+.team-page .team-mini-diagram {
+  position: relative;
+  width: min(150px, 100%);
+  color: color-mix(in srgb, var(--card-accent) 82%, white 8%);
+}
+
+.team-page .team-mini-diagram svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.team-page .team-mini-icon {
+  position: absolute;
+  right: 6px;
+  top: 4px;
+  font-size: 1.15rem;
+  color: color-mix(in srgb, var(--card-accent) 72%, white 12%);
+}
+
 .team-page .team-side-metrics {
   min-width: 130px;
 }
@@ -117,6 +137,11 @@
 
 .team-page .agent-detail-card.latest {
   grid-column: 1 / -1;
+}
+
+.team-page .agent-detail-actions {
+  display: flex;
+  justify-content: flex-start;
 }
 
 .team-page .settings-helper-copy {

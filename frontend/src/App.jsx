@@ -17,6 +17,8 @@ function App() {
   const [consoleOpen, setConsoleOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedAgentName, setSelectedAgentName] = useState("CEO Agent");
+  const [conversationAgentName, setConversationAgentName] = useState("");
+  const [utilityPanel, setUtilityPanel] = useState("");
 
   useEffect(() => {
     if (!loading) {
@@ -73,12 +75,18 @@ function App() {
   const matrixStats = useMemo(() => buildMatrixStats({ result, loading }), [result, loading]);
   const riskAlerts = useMemo(() => buildRiskAlerts({ result }), [result]);
   const riskMetrics = useMemo(() => buildRiskMetrics({ result, highestRisk }), [result, highestRisk]);
+  const selectedAgentCard = useMemo(
+    () => agentCards.find((agent) => agent.name === selectedAgentName) ?? agentCards[0] ?? null,
+    [agentCards, selectedAgentName],
+  );
 
   async function handleSubmit(event) {
     event.preventDefault();
     setLoading(true);
     setError("");
     setActiveView("simulation");
+    setConversationAgentName("");
+    setSelectedAgentName("CEO Agent");
 
     const payload = {
       company_name: form.company_name,
@@ -167,6 +175,24 @@ function App() {
     setActiveView("agents");
   }
 
+  function openAgentConversation(agentName) {
+    setSelectedAgentName(agentName);
+    setConversationAgentName(agentName);
+    setActiveView("simulation");
+  }
+
+  function clearAgentConversation() {
+    setConversationAgentName("");
+  }
+
+  function openHelpPanel() {
+    setUtilityPanel("help");
+  }
+
+  function openStatusPanel() {
+    setUtilityPanel("status");
+  }
+
   return (
     <div className={`obsidian-app app-view-${activeView}`}>
       <nav className="obsidian-nav global-nav">
@@ -201,9 +227,9 @@ function App() {
             <span>LIVE ANALYSIS</span>
           </div>
           <div className="nav-icon-row">
-            <IconButton icon="account_tree" />
-            <IconButton icon="notifications" />
-            <IconButton icon="settings" />
+            <IconButton icon="account_tree" onClick={() => setActiveView("agents")} label="Open team page" />
+            <IconButton icon="notifications" onClick={() => setActiveView("intelligence")} label="Open overview page" />
+            <IconButton icon="settings" onClick={openStatusPanel} label="Open system status" />
           </div>
           <button type="button" className="deploy-button" onClick={toggleConsole}>
             Start Analysis
@@ -233,7 +259,10 @@ function App() {
           validation={result?.validation}
           onToggleConsole={toggleConsole}
           onApplySample={applySample}
-          onOpenAgent={openAgentProfile}
+          conversationAgentName={conversationAgentName}
+          onOpenAgentConversation={openAgentConversation}
+          onOpenAgentProfile={openAgentProfile}
+          onClearAgentConversation={clearAgentConversation}
         />
       ) : (
         <div className="command-shell">
@@ -266,11 +295,11 @@ function App() {
               <button type="button" className="side-nav-deploy" onClick={toggleConsole}>
                 Start Analysis
               </button>
-              <button type="button" className="side-nav-utility">
+              <button type="button" className="side-nav-utility" onClick={openHelpPanel}>
                 <span className="material-symbols-outlined">contact_support</span>
                 Help
               </button>
-              <button type="button" className="side-nav-utility">
+              <button type="button" className="side-nav-utility" onClick={openStatusPanel}>
                 <span className="material-symbols-outlined">memory</span>
                 System Status
               </button>
@@ -296,6 +325,7 @@ function App() {
                 matrixStats={matrixStats}
                 selectedAgentName={selectedAgentName}
                 onSelectAgent={setSelectedAgentName}
+                onOpenAgentConversation={openAgentConversation}
               />
             ) : null}
 
@@ -314,15 +344,96 @@ function App() {
         onApplySample={applySample}
         onFieldChange={updateFormField}
       />
+
+      {utilityPanel ? (
+        <UtilityPanel
+          mode={utilityPanel}
+          activeView={activeView}
+          loading={loading}
+          conversationAgentName={conversationAgentName}
+          selectedAgentCard={selectedAgentCard}
+          onClose={() => setUtilityPanel("")}
+          onOpenForm={() => {
+            setUtilityPanel("");
+            setConsoleOpen(true);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
 
-function IconButton({ icon }) {
+function IconButton({ icon, onClick, label }) {
   return (
-    <button type="button" className="icon-button">
+    <button type="button" className="icon-button" onClick={onClick} aria-label={label}>
       <span className="material-symbols-outlined">{icon}</span>
     </button>
+  );
+}
+
+function UtilityPanel({ mode, activeView, loading, conversationAgentName, selectedAgentCard, onClose, onOpenForm }) {
+  const isHelp = mode === "help";
+
+  return (
+    <div className="utility-overlay" role="dialog" aria-modal="true">
+      <div className="utility-panel panel">
+        <div className="panel-topline">
+          <div>
+            <h2>{isHelp ? "Help" : "System Status"}</h2>
+            <p>
+              {isHelp
+                ? "Simple guidance for using the advisory system."
+                : "A quick summary of what the app is doing right now."}
+            </p>
+          </div>
+          <button type="button" className="secondary-action" onClick={onClose}>
+            Close
+          </button>
+        </div>
+
+        {isHelp ? (
+          <div className="utility-grid">
+            <article className="utility-card">
+              <h3>1. Start with the form</h3>
+              <p>Open the form, describe your business decision, and add any numbers you already know.</p>
+            </article>
+            <article className="utility-card">
+              <h3>2. Open one advisor at a time</h3>
+              <p>On the Discussion page, click an advisor on the left to see only what that advisor has said.</p>
+            </article>
+            <article className="utility-card">
+              <h3>3. Compare the final answer</h3>
+              <p>Use Overview, Team, and Risks to understand why the team made its recommendation.</p>
+            </article>
+            <article className="utility-card">
+              <h3>Need a quick start?</h3>
+              <button type="button" className="wide-secondary" onClick={onOpenForm}>
+                Open the input form
+              </button>
+            </article>
+          </div>
+        ) : (
+          <div className="utility-grid">
+            <article className="utility-card">
+              <h3>Current page</h3>
+              <p>{activeView === "simulation" ? "Discussion" : activeView === "intelligence" ? "Overview" : activeView === "agents" ? "Team" : "Risks"}</p>
+            </article>
+            <article className="utility-card">
+              <h3>Review state</h3>
+              <p>{loading ? "The advisory team is actively reviewing the case." : "The team is idle and ready for a new case."}</p>
+            </article>
+            <article className="utility-card">
+              <h3>Advisor conversation</h3>
+              <p>{conversationAgentName ? `${selectedAgentCard?.label ?? conversationAgentName} is currently selected in the Discussion view.` : "All advisor messages are currently visible together."}</p>
+            </article>
+            <article className="utility-card">
+              <h3>Backend connection</h3>
+              <p>{API_BASE}</p>
+            </article>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

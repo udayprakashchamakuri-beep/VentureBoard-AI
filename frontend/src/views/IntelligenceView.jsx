@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 function IntelligenceView({
   scenarioTitle,
   loading,
@@ -6,7 +8,21 @@ function IntelligenceView({
   timelinePoints,
   agentTelemetry,
 }) {
-  const featuredNodes = agentTelemetry.slice(0, 2);
+  const [mapZoom, setMapZoom] = useState(1);
+  const [focusMode, setFocusMode] = useState("balanced");
+  const featuredNodes = focusMode === "active" ? agentTelemetry.slice(0, 3) : agentTelemetry.slice(0, 4);
+
+  function zoomIn() {
+    setMapZoom((current) => Math.min(1.6, Number((current + 0.15).toFixed(2))));
+  }
+
+  function zoomOut() {
+    setMapZoom((current) => Math.max(0.8, Number((current - 0.15).toFixed(2))));
+  }
+
+  function toggleFocusMode() {
+    setFocusMode((current) => (current === "balanced" ? "active" : "balanced"));
+  }
 
   return (
     <div className="command-canvas">
@@ -36,41 +52,46 @@ function IntelligenceView({
           <div className="panel-topline">
             <div>
               <h2>Team Activity Map</h2>
-              <p>Team activity map</p>
+              <p>{focusMode === "balanced" ? "A balanced view of the whole team" : "A closer look at the busiest advisors"}</p>
             </div>
             <div className="hero-actions">
-              <button type="button" className="icon-button subtle">
+              <button type="button" className="icon-button subtle" onClick={zoomIn} aria-label="Zoom in">
                 <span className="material-symbols-outlined">zoom_in</span>
               </button>
-              <button type="button" className="icon-button subtle">
+              <button type="button" className="icon-button subtle" onClick={zoomOut} aria-label="Zoom out">
+                <span className="material-symbols-outlined">zoom_out</span>
+              </button>
+              <button type="button" className="icon-button subtle" onClick={toggleFocusMode} aria-label="Change map focus">
                 <span className="material-symbols-outlined">filter_list</span>
               </button>
             </div>
           </div>
 
           <div className="neural-map">
-            <div className="neural-rings" />
-            <div className="neural-rings secondary" />
-            <div className="neural-center" />
-            <div className="neural-node node-a" />
-            <div className="neural-node node-b" />
-            <div className="neural-node node-c" />
-            <div className="neural-node node-d" />
-            <div className="neural-node node-e" />
-            <div className="neural-connection connection-a" />
-            <div className="neural-connection connection-b" />
-            <div className="neural-connection connection-c" />
-            <div className="neural-connection connection-d" />
+            <div className="neural-map-inner" style={{ transform: `scale(${mapZoom})` }}>
+              <div className="neural-rings" />
+              <div className="neural-rings secondary" />
+              <div className="neural-center" />
+              <div className="neural-node node-a" />
+              <div className="neural-node node-b" />
+              <div className="neural-node node-c" />
+              <div className="neural-node node-d" />
+              <div className="neural-node node-e" />
+              <div className="neural-connection connection-a" />
+              <div className="neural-connection connection-b" />
+              <div className="neural-connection connection-c" />
+              <div className="neural-connection connection-d" />
+            </div>
 
             {featuredNodes.map((node, index) => (
               <article
-                key={node.name}
-                className={index === 0 ? "neural-callout callout-left" : "neural-callout callout-right"}
+                key={`${node.name}-${index}`}
+                className={calloutClassName(index)}
                 style={{ "--node-accent": node.accent }}
               >
-                <p>{index === 0 ? "Main advisor" : "Supporting advisor"}</p>
+                <p>{index === 0 ? "Main advisor" : index === 1 ? "Supporting advisor" : "Team signal"}</p>
                 <strong>{node.label}</strong>
-                <span>{index === 0 ? `Workload: ${node.load}` : `Health: ${node.health}`}</span>
+                <span>{index % 2 === 0 ? `Workload: ${node.load}` : `Health: ${node.health}`}</span>
               </article>
             ))}
           </div>
@@ -155,6 +176,19 @@ function IntelligenceView({
       </div>
     </div>
   );
+}
+
+function calloutClassName(index) {
+  if (index === 0) {
+    return "neural-callout callout-left";
+  }
+  if (index === 1) {
+    return "neural-callout callout-right";
+  }
+  if (index === 2) {
+    return "neural-callout callout-bottom-left";
+  }
+  return "neural-callout callout-bottom-right";
 }
 
 function MetricCard({ label, value, accent, suffix }) {

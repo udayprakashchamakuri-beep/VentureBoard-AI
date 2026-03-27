@@ -1782,6 +1782,13 @@ a {
     linear-gradient(135deg, rgba(7, 13, 31, 0.96), rgba(12, 19, 36, 0.88));
 }
 
+.neural-map-inner {
+  position: absolute;
+  inset: 0;
+  transform-origin: center;
+  transition: transform 180ms ease;
+}
+
 .neural-rings,
 .neural-rings.secondary {
   position: absolute;
@@ -1887,6 +1894,16 @@ a {
 .callout-right {
   right: 16%;
   bottom: 24%;
+}
+
+.callout-bottom-left {
+  left: 14%;
+  bottom: 12%;
+}
+
+.callout-bottom-right {
+  right: 12%;
+  top: 16%;
 }
 
 .neural-callout p,
@@ -2685,6 +2702,21 @@ a {
     linear-gradient(140deg, rgba(7, 13, 31, 0.96), rgba(12, 19, 36, 0.88));
 }
 
+.threat-map-inner {
+  position: absolute;
+  inset: 0;
+  transform-origin: center;
+  transition: transform 180ms ease;
+}
+
+.threat-map-inner.view-hotspots {
+  filter: saturate(1.2) brightness(1.05);
+}
+
+.threat-map-inner.view-supply {
+  filter: hue-rotate(-20deg) brightness(1.08);
+}
+
 .scan-layer,
 .threat-grid-lines {
   position: absolute;
@@ -2884,6 +2916,13 @@ a {
   text-transform: uppercase;
 }
 
+.sandbox-result {
+  margin: 14px 0 0;
+  color: rgba(220, 225, 251, 0.72);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
 .risk-kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -3042,6 +3081,90 @@ a {
   color: var(--finance);
 }
 
+.conversation-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+  border-left: 3px solid var(--agent-accent, var(--accent));
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--agent-accent, var(--accent)) 10%, rgba(21, 27, 45, 0.8));
+  padding: 16px 18px;
+}
+
+.conversation-filter-bar strong {
+  font-family: "Manrope", sans-serif;
+  font-size: 1rem;
+  color: #dde3eb;
+}
+
+.conversation-filter-bar p {
+  margin: 6px 0 0;
+  color: rgba(220, 225, 251, 0.68);
+  font-size: 0.82rem;
+}
+
+.conversation-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.conversation-empty {
+  margin-top: 20px;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  background: rgba(7, 13, 31, 0.4);
+}
+
+.utility-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: rgba(7, 13, 31, 0.58);
+  backdrop-filter: blur(10px);
+  padding: 24px;
+}
+
+.utility-panel {
+  width: min(780px, 100%);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.32);
+}
+
+.utility-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.utility-card {
+  display: grid;
+  gap: 10px;
+  border-radius: 18px;
+  background: rgba(7, 13, 31, 0.56);
+  padding: 18px;
+}
+
+.utility-card h3 {
+  margin: 0;
+  font-family: "Manrope", sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #dde3eb;
+}
+
+.utility-card p {
+  margin: 0;
+  color: rgba(220, 225, 251, 0.74);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
 @media (max-width: 1360px) {
   .metric-strip,
   .agent-matrix-grid,
@@ -3101,6 +3224,15 @@ a {
   .risk-kpi-grid,
   .volatility-stats {
     grid-template-columns: 1fr;
+  }
+
+  .utility-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .conversation-filter-bar {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .map-overlay-bottom {
@@ -3230,7 +3362,9 @@ a {
   }
 
   .callout-right,
-  .callout-left {
+  .callout-left,
+  .callout-bottom-left,
+  .callout-bottom-right {
     width: 148px;
   }
 
@@ -3242,5 +3376,15 @@ a {
   .callout-right {
     right: 10px;
     bottom: 18px;
+  }
+
+  .callout-bottom-left {
+    left: 10px;
+    bottom: 90px;
+  }
+
+  .callout-bottom-right {
+    right: 10px;
+    top: 86px;
   }
 }

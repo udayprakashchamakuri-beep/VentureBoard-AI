@@ -3,6 +3,25 @@ import { useState } from "react";
 function RiskView({ riskMetrics, riskAlerts }) {
   const [shockIntensity, setShockIntensity] = useState(75);
   const [autonomyMode, setAutonomyMode] = useState("balanced");
+  const [mapZoom, setMapZoom] = useState(1);
+  const [mapView, setMapView] = useState("world");
+  const [lastSimulation, setLastSimulation] = useState("");
+
+  function zoomIn() {
+    setMapZoom((current) => Math.min(1.6, Number((current + 0.15).toFixed(2))));
+  }
+
+  function zoomOut() {
+    setMapZoom((current) => Math.max(0.8, Number((current - 0.15).toFixed(2))));
+  }
+
+  function changeView() {
+    setMapView((current) => (current === "world" ? "hotspots" : current === "hotspots" ? "supply" : "world"));
+  }
+
+  function runSimulation() {
+    setLastSimulation(`Ran a ${shockIntensity}% stress test with ${autonomyMode} advisor freedom on the ${mapView} map view.`);
+  }
 
   return (
     <div className="command-canvas">
@@ -38,17 +57,19 @@ function RiskView({ riskMetrics, riskAlerts }) {
           </div>
 
           <div className="threat-map">
-            <div className="scan-layer" />
-            <div className="threat-orb orb-a" />
-            <div className="threat-orb orb-b" />
-            <div className="threat-orb orb-c" />
-            <div className="threat-grid-lines" />
+            <div className={`threat-map-inner view-${mapView}`} style={{ transform: `scale(${mapZoom})` }}>
+              <div className="scan-layer" />
+              <div className="threat-orb orb-a" />
+              <div className="threat-orb orb-b" />
+              <div className="threat-orb orb-c" />
+              <div className="threat-grid-lines" />
+            </div>
           </div>
 
           <div className="map-overlay map-overlay-bottom">
-            <button type="button">Zoom In</button>
-            <button type="button">Zoom Out</button>
-            <button type="button">Change view</button>
+            <button type="button" onClick={zoomIn}>Zoom In</button>
+            <button type="button" onClick={zoomOut}>Zoom Out</button>
+            <button type="button" onClick={changeView}>Change view</button>
           </div>
         </section>
 
@@ -174,9 +195,10 @@ function RiskView({ riskMetrics, riskAlerts }) {
               </div>
             </article>
 
-            <button type="button" className="execute-shock">
+            <button type="button" className="execute-shock" onClick={runSimulation}>
               Run this test case
             </button>
+            {lastSimulation ? <p className="sandbox-result">{lastSimulation}</p> : null}
           </div>
         </section>
       </div>

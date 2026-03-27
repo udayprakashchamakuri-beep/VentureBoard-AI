@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import "../teamPage.css";
 
-function AgentsView({ agentCards, loading, matrixStats, selectedAgentName, onSelectAgent }) {
+function AgentsView({ agentCards, loading, matrixStats, selectedAgentName, onSelectAgent, onOpenAgentConversation }) {
   const safeSelectedAgentName = agentCards.some((agent) => agent.name === selectedAgentName)
     ? selectedAgentName
     : agentCards[0]?.name ?? "";
@@ -126,7 +126,7 @@ function AgentsView({ agentCards, loading, matrixStats, selectedAgentName, onSel
 
               <div className="matrix-body team-body">
                 <div className="matrix-visual team-visual">
-                  <span className="material-symbols-outlined">{agent.visualIcon}</span>
+                  <MiniAgentDiagram bars={agent.historyBars} icon={agent.visualIcon} />
                   <small>{agent.visualLabel}</small>
                 </div>
                 <div className="matrix-side-metrics team-side-metrics">
@@ -213,6 +213,11 @@ function AgentsView({ agentCards, loading, matrixStats, selectedAgentName, onSel
                 <span>Recent highlights</span>
                 <strong>{selectedAgent.latestHighlights.join(" | ")}</strong>
               </div>
+              <div className="agent-detail-actions">
+                <button type="button" className="wide-secondary" onClick={() => onOpenAgentConversation(selectedAgent.name)}>
+                  View conversation
+                </button>
+              </div>
             </article>
           </div>
         </section>
@@ -288,6 +293,38 @@ function AgentsView({ agentCards, loading, matrixStats, selectedAgentName, onSel
           </button>
         </div>
       </section>
+    </div>
+  );
+}
+
+function MiniAgentDiagram({ bars, icon }) {
+  const points = bars
+    .map((height, index) => {
+      const numeric = Number.parseFloat(height);
+      const x = 16 + index * 22;
+      const y = 80 - numeric * 0.52;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  return (
+    <div className="team-mini-diagram">
+      <svg viewBox="0 0 120 88" aria-hidden="true">
+        <defs>
+          <linearGradient id={`team-line-${icon}`} x1="0%" x2="100%" y1="0%" y2="0%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.16)" />
+            <stop offset="100%" stopColor="currentColor" />
+          </linearGradient>
+        </defs>
+        <polyline points={points} fill="none" stroke={`url(#team-line-${icon})`} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        {bars.map((height, index) => {
+          const numeric = Number.parseFloat(height);
+          const x = 16 + index * 22;
+          const y = 80 - numeric * 0.52;
+          return <circle key={`${icon}-${index}`} cx={x} cy={y} r="3.5" fill="currentColor" />;
+        })}
+      </svg>
+      <span className="material-symbols-outlined team-mini-icon">{icon}</span>
     </div>
   );
 }
