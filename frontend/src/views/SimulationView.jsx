@@ -26,6 +26,10 @@ function SimulationView({
   highestRisk,
   recommendedDirective,
   actionPlan,
+  explainability,
+  memorySummary,
+  scenarioResults,
+  validation,
   onToggleConsole,
   onApplySample,
   onChatDraftChange,
@@ -457,78 +461,154 @@ function SimulationView({
               </div>
             </form>
           </footer>
-          <section className="discussion-summary">
-            <div className="discussion-summary-grid">
-              <div className="directive-card summary-hero">
-                <div className="directive-mark">
-                  <span className="material-symbols-outlined">gavel</span>
+        </section>
+
+        <aside className="obsidian-insights">
+          <div className="directive-card">
+            <div className="directive-mark">
+              <span className="material-symbols-outlined">gavel</span>
+            </div>
+            <h2>Final Recommendation</h2>
+            <div className="directive-body">
+              <p className="directive-title">
+                {result?.final_output
+                  ? `${formatDecisionLabel(result.final_output.decision)}: ${toPlainText(recommendedDirective)}`
+                  : "Waiting for the team to finish its review"}
+              </p>
+              <div className="directive-score">
+                <div>
+                  <span>Confidence</span>
+                  <strong>{result?.final_output?.confidence ?? 0}%</strong>
                 </div>
-                <h2>Final Recommendation</h2>
-                <div className="directive-body">
-                  <p className="directive-title">
-                    {result?.final_output
-                      ? `${formatDecisionLabel(result.final_output.decision)}: ${toPlainText(recommendedDirective)}`
-                      : "Waiting for the team to finish its review"}
-                  </p>
-                  <div className="directive-score">
-                    <div>
-                      <span>Confidence</span>
-                      <strong>{result?.final_output?.confidence ?? 0}%</strong>
-                    </div>
-                    <div className="meter-track">
-                      <div className="meter-fill" style={{ width: `${result?.final_output?.confidence ?? 0}%` }} />
-                    </div>
-                  </div>
+                <div className="meter-track">
+                  <div className="meter-fill" style={{ width: `${result?.final_output?.confidence ?? 0}%` }} />
                 </div>
               </div>
-
-              <section className="health-panel summary-panel">
-                <h3>Quick Summary</h3>
-                <div className="insight-grid compact">
-                  <InsightCard
-                    icon="lightbulb"
-                    accent="#ddb7ff"
-                    title="Main Reason"
-                    body={toPlainText(result?.final_output?.key_reasons?.[0] ?? "The team is waiting to review your case.")}
-                  />
-                  <InsightCard
-                    icon="dangerous"
-                    accent="#ff8f8f"
-                    title="Biggest Risk"
-                    body={toPlainText(highestRisk)}
-                    kicker={result?.final_output?.risks?.length ? "Critical" : ""}
-                  />
-                  <InsightCard
-                    icon="flag"
-                    accent="#00ff94"
-                    title="Best Next Step"
-                    body={toPlainText(result?.final_output?.recommended_actions?.[0] ?? "No next step yet.")}
-                  />
-                </div>
-              </section>
             </div>
+          </div>
 
-            <section className="health-panel summary-actions-panel">
-              <h3>Action Plan</h3>
-              <div className="execution-list">
-                {(actionPlan?.execution_plan ?? []).slice(0, 3).map((step, index) => (
-                  <div key={`${step.owner}-${index}`} className="execution-item">
-                    <strong>{step.timeline}</strong>
-                    <div>
-                      <p>{toPlainText(step.step)}</p>
-                      <span>
-                        {step.owner} - {toPlainText(step.success_metric)}
-                      </span>
-                    </div>
+          <section className="insight-section">
+            <h3>Main Reasons And Risks</h3>
+            <div className="insight-grid">
+              <InsightCard
+                icon="lightbulb"
+                accent="#ddb7ff"
+                title="Main Reason"
+                body={toPlainText(result?.final_output?.key_reasons?.[0] ?? "The team is waiting to review your case.")}
+              />
+              <InsightCard
+                icon="dangerous"
+                accent="#ff8f8f"
+                title="Biggest Risk"
+                body={toPlainText(highestRisk)}
+                kicker={result?.final_output?.risks?.length ? "Critical" : ""}
+              />
+              <InsightCard
+                icon="account_balance"
+                accent="#00ff94"
+                title="Best Next Step"
+                body={toPlainText(result?.final_output?.recommended_actions?.[0] ?? "No action steps yet.")}
+              />
+            </div>
+          </section>
+
+          <section className="health-panel">
+            <h3>Action Plan</h3>
+            <div className="execution-list">
+              {(actionPlan?.execution_plan ?? []).slice(0, 4).map((step, index) => (
+                <div key={`${step.owner}-${index}`} className="execution-item">
+                  <strong>{step.timeline}</strong>
+                  <div>
+                    <p>{toPlainText(step.step)}</p>
+                    <span>
+                      {step.owner} - {toPlainText(step.success_metric)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {!actionPlan?.execution_plan?.length ? (
+                <p className="compact-placeholder">Action steps will appear after the team makes a recommendation.</p>
+              ) : null}
+            </div>
+            <div className="scenario-grid">
+              {(scenarioResults ?? []).map((scenario) => (
+                <article key={scenario.scenario} className="scenario-card">
+                  <div className="scenario-card-top">
+                    <strong>{scenario.scenario}</strong>
+                    <span>{formatDecisionLabel(scenario.decision)}</span>
+                  </div>
+                  <p>{toPlainText(scenario.difference_from_base)}</p>
+                  <small>{toPlainText(scenario.reasoning_shift?.[0] ?? "The recommendation stayed mostly the same.")}</small>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="health-panel">
+            <h3>Why This Recommendation Was Made</h3>
+            <div className="health-block">
+              <div className="health-meta">
+                <span>Most influential advisor</span>
+                <span>{explainability?.top_influencer ?? "Pending"}</span>
+              </div>
+              <p className="insight-paragraph">
+                {toPlainText(
+                  explainability?.final_reasoning_summary ??
+                    "The team will summarize why it reached this recommendation.",
+                )}
+              </p>
+            </div>
+            <div className="health-block">
+              <div className="health-meta">
+                <span>Past similar cases</span>
+                <span>{memorySummary?.recalled_simulations ?? 0}</span>
+              </div>
+              <p className="insight-paragraph">
+                {toPlainText(
+                  memorySummary?.prior_failures?.[0] ??
+                    "The system can save past cases and use them in future recommendations.",
+                )}
+              </p>
+            </div>
+            <div className="health-block">
+              <div className="health-meta">
+                <span>System checks</span>
+                <span>{validation?.passed ? "Passed" : loading ? "Running" : "Waiting"}</span>
+              </div>
+              <div className="validation-grid">
+                <ValidationPill label="Decision" ok={validation?.decisions_made} />
+                <ValidationPill label="Scenarios" ok={validation?.multiple_scenarios_simulated} />
+                <ValidationPill label="Action plan" ok={validation?.actions_generated} />
+                <ValidationPill label="Memory" ok={validation?.memory_used} />
+              </div>
+            </div>
+            <div className="health-block">
+              <div className="health-meta">
+                <span>Disagreements</span>
+                <span>{result?.conflicts?.length ?? 0}</span>
+              </div>
+              <div className="conflict-compact-list">
+                {(result?.conflicts ?? []).slice(0, 3).map((conflict, index) => (
+                  <div key={`${conflict.topic}-${index}`} className="conflict-compact-item">
+                    <strong>{toPlainText(conflict.conflict_type)}</strong>
+                    <p>{toPlainText(conflict.description)}</p>
                   </div>
                 ))}
-                {!actionPlan?.execution_plan?.length ? (
-                  <p className="compact-placeholder">Action steps will appear after the team makes a recommendation.</p>
+                {!result?.conflicts?.length ? (
+                  <p className="compact-placeholder">Important disagreements will appear here after the discussion starts.</p>
                 ) : null}
               </div>
-            </section>
+            </div>
           </section>
-        </section>
+
+          <div className="synapse-strip">
+            <div className="synapse-top">
+              <span>System status</span>
+              <strong>{loading ? "5.8ms" : "2.4ms"} Latency</strong>
+            </div>
+            <div className="wave" />
+          </div>
+        </aside>
       </main>
 
     </>
@@ -562,6 +642,10 @@ function InsightCard({ icon, accent, title, body, kicker }) {
       <p>{body}</p>
     </article>
   );
+}
+
+function ValidationPill({ label, ok }) {
+  return <span className={ok ? "validation-pill ok" : "validation-pill"}>{label}</span>;
 }
 
 export default SimulationView;
