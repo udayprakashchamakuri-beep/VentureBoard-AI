@@ -8,7 +8,7 @@ from typing import Dict, Iterable, List, Tuple
 
 from backend.agents.base import AgentProfile
 from backend.controller.schemas import AgentTurn, AnalyzeRequest, ConflictRecord, DecisionStatus, RoundSummary
-from backend.services.brightdata_client import BrightDataClient
+from backend.services.brightdata_client import BrightDataClient, BrightDataResearch
 from backend.services.featherless_client import FeatherlessClient
 
 
@@ -38,6 +38,7 @@ class BusinessSignals:
     numeric_metrics: Dict[str, float]
     derived_metrics: Dict[str, float]
     evidence: List[str]
+    external_research: BrightDataResearch = field(default_factory=BrightDataResearch)
 
     def snapshot(self) -> Dict[str, int]:
         return {
@@ -80,6 +81,7 @@ class StrategicReasoner:
         numeric_metrics = self._extract_numeric_metrics(problem, request.known_metrics)
         channel = self._detect_channel(problem)
         business_model = self._detect_business_model(problem)
+        external_research = self._fetch_external_research(request)
 
         market_attractiveness = 50
         growth_potential = 50
@@ -160,6 +162,14 @@ class StrategicReasoner:
         market_condition = str(request.known_metrics.get("scenario_market_condition", "base")).lower()
         competition_level = str(request.known_metrics.get("scenario_competition_level", "medium")).lower()
 
+        research_price_point = self._infer_price_point_from_research(external_research)
+        if price_point is None and research_price_point is not None:
+            numeric_metrics["price_point"] = research_price_point
+            price_point = research_price_point
+            evidence.append(
+                f"Bright Data pricing scan suggests an entry price around ${research_price_point:,.0f} for similar offers."
+            )
+
         if runway is not None:
             if runway >= 18:
                 financial_viability += 15
@@ -237,18 +247,28 @@ class StrategicReasoner:
             growth_potential += 6
             financial_viability += 4
 
-        external_evidence = self._fetch_external_evidence(request)
-        if external_evidence:
-            evidence.extend(external_evidence)
-            joined = " ".join(external_evidence).lower()
-            if any(keyword in joined for keyword in ["regulation", "compliance", "privacy", "lawsuit"]):
-                compliance_risk += 4
-            if any(keyword in joined for keyword in ["competition", "crowded", "incumbent", "price war"]):
-                differentiation_pressure += 5
-                pricing_power -= 3
-            if any(keyword in joined for keyword in ["growth", "expansion", "demand", "adoption", "spending"]):
-                market_attractiveness += 4
-                growth_potential += 3
+        (
+            market_attractiveness,
+            growth_potential,
+            financial_viability,
+            operational_complexity,
+            compliance_risk,
+            pricing_power,
+            sales_friction,
+            differentiation_pressure,
+            evidence,
+        ) = self._apply_external_research(
+            external_research=external_research,
+            market_attractiveness=market_attractiveness,
+            growth_potential=growth_potential,
+            financial_viability=financial_viability,
+            operational_complexity=operational_complexity,
+            compliance_risk=compliance_risk,
+            pricing_power=pricing_power,
+            sales_friction=sales_friction,
+            differentiation_pressure=differentiation_pressure,
+            evidence=evidence,
+        )
 
         market_attractiveness = self._clamp(market_attractiveness)
         growth_potential = self._clamp(growth_potential)
@@ -272,6 +292,7 @@ class StrategicReasoner:
             sales_friction=sales_friction,
             differentiation_pressure=differentiation_pressure,
             numeric_metrics=numeric_metrics,
+            external_research=external_research,
         )
 
         signals = BusinessSignals(
@@ -289,6 +310,7 @@ class StrategicReasoner:
             numeric_metrics=numeric_metrics,
             derived_metrics=derived_metrics,
             evidence=evidence,
+            external_research=external_research,
         )
         self.signal_cache[cache_key] = signals
         return signals
@@ -313,6 +335,7 @@ class StrategicReasoner:
         estimated_metrics = self._build_estimated_metrics(profile.definition.name, signals)
         calculations = self._build_calculations(profile.definition.name, estimated_metrics)
         memory_references = self._build_memory_references(agent_memory, request.scenario_name)
+        research_points = self._build_research_points(profile.definition.name, signals.external_research)
         message = self._compose_message(
             profile=profile,
             selected=selected,
@@ -325,6 +348,7 @@ class StrategicReasoner:
             estimated_metrics=estimated_metrics,
             calculations=calculations,
             memory_references=memory_references,
+            research_points=research_points,
             scenario_name=request.scenario_name,
         )
         message = self._enhance_message_with_featherless(
@@ -367,6 +391,7 @@ class StrategicReasoner:
             estimated_metrics=estimated_metrics,
             calculations=calculations,
             memory_references=memory_references,
+            research_points=research_points,
         )
 
     def _build_agent_insights(
@@ -733,6 +758,7 @@ class StrategicReasoner:
         estimated_metrics: Dict[str, float],
         calculations: List[str],
         memory_references: List[str],
+        research_points: List[str],
         scenario_name: str,
     ) -> str:
         opening = {
@@ -748,6 +774,7 @@ class StrategicReasoner:
             f"${estimated_metrics.get('launch_budget', 0):,.0f}."
         )
         calculation_sentence = calculations[0] if calculations else ""
+        research_sentence = research_points[0] if research_points else ""
 
         if reference_names:
             if challenged_agents:
@@ -772,7 +799,7 @@ class StrategicReasoner:
 
         return (
             f"[{profile.definition.name} | Round {round_number}]: {opening} at {confidence}% confidence. "
-            f"{evidence_sentence} {metric_sentence} {calculation_sentence} {reference_sentence} "
+            f"{evidence_sentence} {research_sentence} {metric_sentence} {calculation_sentence} {reference_sentence} "
             f"{memory_sentence} {action_sentence} {closing}"
         )
 
@@ -834,6 +861,7 @@ class StrategicReasoner:
         sales_friction: int,
         differentiation_pressure: int,
         numeric_metrics: Dict[str, float],
+        external_research: BrightDataResearch,
     ) -> Dict[str, float]:
         runway = numeric_metrics.get("runway_months", 12.0)
         gross_margin_pct = numeric_metrics.get("gross_margin", 62.0)
@@ -850,6 +878,9 @@ class StrategicReasoner:
                 40,
                 round((market_attractiveness + growth_potential + pricing_power - sales_friction) * 2.6),
             )
+
+        demand_multiplier = self._research_demand_multiplier(external_research)
+        expected_customers = max(1, round(expected_customers * demand_multiplier))
 
         win_rate_pct = self._clamp(18 + (market_attractiveness + pricing_power - sales_friction - differentiation_pressure) / 3, 8, 62)
         monthly_leads = max(24, round(expected_customers / max(win_rate_pct / 100, 0.08)))
@@ -887,6 +918,7 @@ class StrategicReasoner:
             "runway_months": float(runway),
             "gross_margin_pct": float(gross_margin_pct),
             "price_point": round(price_point, 2),
+            "external_signal_count": float(len(external_research.all_hits())),
         }
 
     def _build_estimated_metrics(self, agent_name: str, signals: BusinessSignals) -> Dict[str, float]:
@@ -973,19 +1005,258 @@ class StrategicReasoner:
 
         return references[:2]
 
-    def _fetch_external_evidence(self, request: AnalyzeRequest) -> List[str]:
-        query_parts = [
-            request.company_name,
-            request.industry or "",
-            request.region or "",
-            request.business_problem,
-        ]
-        query = " ".join(part for part in query_parts if part).strip()
-        if not query:
+    def _fetch_external_research(self, request: AnalyzeRequest) -> BrightDataResearch:
+        query_specs = self._build_research_queries(request)
+        if not query_specs:
+            return BrightDataResearch()
+        return self.brightdata_client.fetch_market_research(query_specs)
+
+    def _build_research_queries(self, request: AnalyzeRequest) -> List[Tuple[str, str]]:
+        topic_seed = self._research_subject(request)
+        if not topic_seed:
             return []
 
-        snippets = self.brightdata_client.fetch_market_context(query)
-        return [f"Bright Data signal: {snippet}" for snippet in snippets]
+        region = "" if not request.region or request.region.lower() == "global" else request.region
+        scope = f"{topic_seed} {region}".strip()
+        lower_problem = request.business_problem.lower()
+        local_business = any(
+            keyword in lower_problem
+            for keyword in [
+                "near",
+                "college",
+                "campus",
+                "store",
+                "shop",
+                "restaurant",
+                "cafe",
+                "gym",
+                "arcade",
+                "game center",
+                "gaming center",
+                "salon",
+                "lounge",
+            ]
+        )
+        regulated = any(
+            keyword in lower_problem
+            for keyword in ["healthcare", "fintech", "insurance", "payments", "compliance", "privacy", "regulated"]
+        )
+
+        queries: List[Tuple[str, str]] = [
+            ("demand", f"{scope} customer demand market size trends"),
+            ("competition", f"{scope} competitors alternatives market leaders"),
+            ("pricing", f"{scope} pricing rates memberships cost to customers"),
+        ]
+        if local_business:
+            queries.append(("location", f"{scope} students foot traffic campus demand local market"))
+        else:
+            queries.append(("location", f"{scope} local demand adoption buyer interest"))
+
+        risk_query = (
+            f"{scope} regulations permits compliance operating costs"
+            if regulated or local_business
+            else f"{scope} operating risks switching costs implementation barriers"
+        )
+        queries.append(("risk", risk_query))
+        return queries[:5]
+
+    def _research_subject(self, request: AnalyzeRequest) -> str:
+        subject = " ".join(filter(None, [request.industry or "", request.business_problem]))
+        subject = re.sub(r"conversation with the user:|additional background:", " ", subject, flags=re.IGNORECASE)
+        subject = re.sub(r"message\s+\d+\s+to\s+[^:]+:\s*", " ", subject, flags=re.IGNORECASE)
+        subject = re.sub(r"\s+", " ", subject).strip()
+        return subject[:160]
+
+    def _apply_external_research(
+        self,
+        external_research: BrightDataResearch,
+        market_attractiveness: int,
+        growth_potential: int,
+        financial_viability: int,
+        operational_complexity: int,
+        compliance_risk: int,
+        pricing_power: int,
+        sales_friction: int,
+        differentiation_pressure: int,
+        evidence: List[str],
+    ) -> Tuple[int, int, int, int, int, int, int, int, List[str]]:
+        if not external_research.has_hits():
+            return (
+                market_attractiveness,
+                growth_potential,
+                financial_viability,
+                operational_complexity,
+                compliance_risk,
+                pricing_power,
+                sales_friction,
+                differentiation_pressure,
+                evidence,
+            )
+
+        demand_text = " ".join(external_research.summaries("demand", limit=3)).lower()
+        competition_text = " ".join(external_research.summaries("competition", limit=3)).lower()
+        pricing_text = " ".join(external_research.summaries("pricing", limit=3)).lower()
+        risk_text = " ".join(external_research.summaries("risk", limit=3)).lower()
+        location_text = " ".join(external_research.summaries("location", limit=3)).lower()
+
+        demand_signal = self._keyword_balance(
+            demand_text,
+            positive=["growing", "growth", "rising", "popular", "demand", "adoption", "student", "traffic", "expansion"],
+            negative=["decline", "slow", "weak", "drop", "closing", "downturn"],
+        )
+        competition_signal = self._keyword_balance(
+            competition_text,
+            positive=["crowded", "competitive", "saturated", "incumbent", "many competitors", "price war"],
+            negative=["underserved", "whitespace", "few competitors", "limited options"],
+        )
+        pricing_signal = self._keyword_balance(
+            pricing_text,
+            positive=["premium", "membership", "ticket", "hourly", "package", "pricing"],
+            negative=["cheap", "discount", "free", "low-cost"],
+        )
+        risk_signal = self._keyword_balance(
+            risk_text,
+            positive=["regulation", "permit", "license", "compliance", "safety", "lawsuit", "cost"],
+            negative=["simple", "low barrier", "easy to start"],
+        )
+        location_signal = self._keyword_balance(
+            location_text,
+            positive=["campus", "students", "foot traffic", "walkable", "college town", "busy"],
+            negative=["remote", "low traffic", "quiet"],
+        )
+
+        market_attractiveness += len(external_research.get("demand")) * 2 + max(-6, min(8, demand_signal * 2))
+        growth_potential += max(-5, min(7, demand_signal * 2 + location_signal))
+        differentiation_pressure += len(external_research.get("competition")) * 3 + max(0, competition_signal * 2)
+        pricing_power += max(-8, min(7, pricing_signal * 2 - max(0, competition_signal)))
+        sales_friction += max(0, competition_signal * 2) + max(0, risk_signal)
+        compliance_risk += len(external_research.get("risk")) * 2 + max(0, risk_signal * 2)
+        operational_complexity += max(0, risk_signal * 2) + max(0, -location_signal)
+        financial_viability += max(-8, min(8, demand_signal + pricing_signal - risk_signal - max(0, competition_signal)))
+
+        for topic in ["demand", "competition", "pricing", "location", "risk"]:
+            summary = self._summarize_research_topic(external_research, topic)
+            if summary:
+                evidence.append(f"Bright Data {topic} scan: {summary}.")
+
+        return (
+            market_attractiveness,
+            growth_potential,
+            financial_viability,
+            operational_complexity,
+            compliance_risk,
+            pricing_power,
+            sales_friction,
+            differentiation_pressure,
+            evidence,
+        )
+
+    def _infer_price_point_from_research(self, external_research: BrightDataResearch) -> float | None:
+        values: List[float] = []
+        for hit in external_research.get("pricing"):
+            values.extend(self._extract_currency_values(f"{hit.title} {hit.snippet}"))
+
+        filtered = [value for value in values if 5 <= value <= 250000]
+        if not filtered:
+            return None
+
+        filtered.sort()
+        if len(filtered) > 4:
+            filtered = filtered[1:-1]
+        return round(mean(filtered), 2)
+
+    def _extract_currency_values(self, text: str) -> List[float]:
+        values: List[float] = []
+        patterns = [
+            r"[$€£₹]\s*([\d,]+(?:\.\d+)?)",
+            r"\b(?:usd|inr|rs\.?|eur|gbp)\s*([\d,]+(?:\.\d+)?)",
+        ]
+        for pattern in patterns:
+            for match in re.findall(pattern, text, flags=re.IGNORECASE):
+                try:
+                    values.append(float(match.replace(",", "")))
+                except ValueError:
+                    continue
+        return values
+
+    def _build_research_points(self, agent_name: str, external_research: BrightDataResearch) -> List[str]:
+        if not external_research.has_hits():
+            return []
+
+        labels = {
+            "demand": "customer demand",
+            "competition": "competition",
+            "pricing": "pricing",
+            "location": "the local market",
+            "risk": "operating risk",
+        }
+        points: List[str] = []
+        for topic in self._research_topics_for_agent(agent_name):
+            summary = self._summarize_research_topic(external_research, topic)
+            if summary:
+                points.append(f"Recent web research on {labels.get(topic, topic)} suggests {summary}.")
+
+        if not points:
+            fallback = self._summarize_research_topic(external_research, external_research.topics()[0])
+            if fallback:
+                points.append(f"Recent web research suggests {fallback}.")
+        return points[:2]
+
+    def _research_topics_for_agent(self, agent_name: str) -> List[str]:
+        mapping = {
+            "CEO Agent": ["demand", "competition", "risk"],
+            "Startup Builder Agent": ["demand", "location"],
+            "Market Research Agent": ["demand", "competition", "location"],
+            "Finance Agent": ["pricing", "competition", "risk"],
+            "Marketing Agent": ["demand", "competition"],
+            "Pricing Agent": ["pricing", "competition"],
+            "Supply Chain Agent": ["risk", "location"],
+            "Hiring Agent": ["demand", "location"],
+            "Risk Agent": ["risk", "competition"],
+            "Sales Strategy Agent": ["pricing", "demand", "competition"],
+        }
+        return mapping.get(agent_name, ["demand", "competition"])
+
+    def _summarize_research_topic(self, external_research: BrightDataResearch, topic: str) -> str:
+        summaries = external_research.summaries(topic, limit=1)
+        if not summaries:
+            return ""
+        summary = summaries[0]
+        return summary[:220].rstrip(".")
+
+    def _keyword_balance(self, text: str, positive: List[str], negative: List[str]) -> int:
+        positive_hits = sum(text.count(keyword) for keyword in positive)
+        negative_hits = sum(text.count(keyword) for keyword in negative)
+        return positive_hits - negative_hits
+
+    def _research_demand_multiplier(self, external_research: BrightDataResearch) -> float:
+        if not external_research.has_hits():
+            return 1.0
+
+        demand_text = " ".join(external_research.summaries("demand", limit=3)).lower()
+        location_text = " ".join(external_research.summaries("location", limit=3)).lower()
+        competition_text = " ".join(external_research.summaries("competition", limit=3)).lower()
+
+        demand_balance = self._keyword_balance(
+            demand_text,
+            positive=["growing", "growth", "rising", "popular", "demand", "student", "busy", "expansion"],
+            negative=["decline", "weak", "slowing", "drop", "closing"],
+        )
+        location_balance = self._keyword_balance(
+            location_text,
+            positive=["students", "foot traffic", "campus", "walkable", "busy"],
+            negative=["remote", "low traffic", "quiet"],
+        )
+        competition_penalty = max(
+            0,
+            self._keyword_balance(
+                competition_text,
+                positive=["crowded", "competitive", "saturated", "many competitors"],
+                negative=["underserved", "few competitors"],
+            ),
+        )
+        multiplier = 1 + demand_balance * 0.04 + location_balance * 0.03 - competition_penalty * 0.02
+        return max(0.7, min(1.45, multiplier))
 
     def _enhance_message_with_featherless(
         self,

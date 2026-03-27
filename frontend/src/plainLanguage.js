@@ -61,11 +61,12 @@ export function buildRoundSummary(turn) {
   }
 
   const stanceLine = buildStanceLine(turn);
+  const researchLine = buildResearchLine(turn);
   const metricLine = buildMetricLine(turn, inferQuestionIntent(""));
   const actions = (turn.key_points ?? []).map((item) => toPlainText(item)).filter(Boolean);
   const actionLine = actions[0] ? normalizeSentence(actions[0]) : "";
 
-  return [stanceLine, metricLine, actionLine].filter(Boolean).join(" ");
+  return [stanceLine, researchLine, metricLine, actionLine].filter(Boolean).join(" ");
 }
 
 export function buildDirectAdvisorReply(turn, question = "") {
@@ -76,20 +77,27 @@ export function buildDirectAdvisorReply(turn, question = "") {
   const intent = inferQuestionIntent(question);
   const isDecisionQuestion = shouldShowAdvisorStanceBadge(question);
   const stanceLine = buildStanceLine(turn);
+  const researchLine = buildResearchLine(turn);
   const metricLine = buildMetricLine(turn, intent);
   const actions = (turn.key_points ?? []).map((item) => toPlainText(item)).filter(Boolean);
   const supportingLine = actions[0] ? normalizeSentence(actions[0]) : "";
   const cautionLine = actions[1] ? normalizeSentence(actions[1]) : "";
 
   if (metricLine && supportingLine) {
-    return [metricLine, supportingLine, cautionLine].filter(Boolean).join(" ");
+    return [researchLine, metricLine, supportingLine, cautionLine].filter(Boolean).join(" ");
   }
 
   if (isDecisionQuestion) {
-    return [stanceLine, metricLine, supportingLine, cautionLine].filter(Boolean).join(" ");
+    return [stanceLine, researchLine, metricLine, supportingLine, cautionLine].filter(Boolean).join(" ");
   }
 
-  return [metricLine, supportingLine, cautionLine].filter(Boolean).join(" ") || supportingLine || cautionLine || metricLine;
+  return (
+    [researchLine, metricLine, supportingLine, cautionLine].filter(Boolean).join(" ") ||
+    researchLine ||
+    supportingLine ||
+    cautionLine ||
+    metricLine
+  );
 }
 
 export function shouldShowAdvisorStanceBadge(question = "") {
@@ -200,6 +208,14 @@ function buildMetricLine(turn, intent) {
   }
 
   return "";
+}
+
+function buildResearchLine(turn) {
+  const points = (turn?.research_points ?? []).map((item) => toPlainText(item)).filter(Boolean);
+  if (!points.length) {
+    return "";
+  }
+  return normalizeSentence(points[0]);
 }
 
 function normalizeSentence(text) {

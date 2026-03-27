@@ -69,6 +69,7 @@ class AgentTurn(BaseModel):
     estimated_metrics: Dict[str, float] = Field(default_factory=dict)
     calculations: List[str] = Field(default_factory=list)
     memory_references: List[str] = Field(default_factory=list)
+    research_points: List[str] = Field(default_factory=list)
 
 
 class ConflictRecord(BaseModel):
