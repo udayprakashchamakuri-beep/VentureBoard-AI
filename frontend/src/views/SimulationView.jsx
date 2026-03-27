@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-import { formatDecisionLabel, toPlainText } from "../plainLanguage";
+import { buildDirectAdvisorReply, buildRoundSummary, formatDecisionLabel, toPlainText } from "../plainLanguage";
 
 function SimulationView({
   agentMeta,
@@ -42,13 +42,26 @@ function SimulationView({
         .map(([round, turns]) => [round, turns.filter((turn) => conversationAgentNames.includes(turn.agent_name))])
         .filter(([, turns]) => turns.length)
     : groupedConversation;
+  const latestTurnsByAgent = useMemo(() => {
+    const map = new Map();
+    groupedConversation.forEach(([, turns]) => {
+      turns.forEach((turn) => {
+        map.set(turn.agent_name, turn);
+      });
+    });
+    return map;
+  }, [groupedConversation]);
+  const advisorReplyTurns = useMemo(
+    () => conversationAgentNames.map((name) => latestTurnsByAgent.get(name)).filter(Boolean),
+    [conversationAgentNames, latestTurnsByAgent],
+  );
   const hasAnyDiscussion = groupedConversation.some(([, turns]) => turns.length);
-  const hasAdvisorMessages = filteredRounds.some(([, turns]) => turns.length);
   const visibleTurnCount = filteredRounds.reduce((count, [, turns]) => count + turns.length, 0);
   const latestUserMessage = chatMessages[chatMessages.length - 1] ?? null;
   const earlierUserMessages = useMemo(() => chatMessages.slice(0, -1), [chatMessages]);
   const selectedAdvisorLabels = conversationAgentNames.map((name) => agentMeta[name]?.label ?? name);
   const chatTargetLabels = focusedAgentNames.map((name) => agentMeta[name]?.label ?? name);
+  const showingFocusedReplies = conversationAgentNames.length > 0;
 
   useEffect(() => {
     if (!conversationEndRef.current) {
@@ -250,68 +263,103 @@ function SimulationView({
               </section>
             ) : null}
 
-            {filteredRounds.map(([round, turns]) => (
-              <section key={round} className="round-section">
-                <div className="round-divider">
-                  <div />
-                  <span>Round {String(round).padStart(2, "0")}</span>
-                  <div />
-                </div>
-
-                {topConflictByRound.has(round) ? (
-                  <div className="conflict-cluster">
-                    <div className="conflict-badge">
-                      <span className="material-symbols-outlined">warning</span>
-                      Key Disagreement
-                    </div>
-                    <div className="conflict-thread">
-                      <p>{toPlainText(topConflictByRound.get(round).description)}</p>
-                    </div>
+            {showingFocusedReplies ? (
+              advisorReplyTurns.length ? (
+                <section className="round-section advisor-reply-section">
+                  <div className="round-divider">
+                    <div />
+                    <span>{advisorReplyTurns.length === 1 ? "Advisor answer" : "Advisor answers"}</span>
+                    <div />
                   </div>
-                ) : null}
 
-                {turns.map((turn) => {
-                  const meta = agentMeta[turn.agent_name] ?? agentMeta["CEO Agent"];
-                  const referenceLabels = formatAgentNames(turn.references, agentMeta);
-                  const challengedLabels = formatAgentNames(turn.challenged_agents, agentMeta);
-                  const stanceClassName = getStanceClassName(turn.stance);
+                  {advisorReplyTurns.map((turn) => {
+                    const meta = agentMeta[turn.agent_name] ?? agentMeta["CEO Agent"];
+                    const stanceClassName = getStanceClassName(turn.stance);
 
-                  return (
-                    <article
-                      key={`${turn.agent_name}-${turn.round}`}
-                      className={turn.agent_name === speakingAgent && !loading ? "debate-message active" : "debate-message"}
-                      style={{ "--agent-accent": meta.accent }}
-                    >
-                      <div className="message-icon">
-                        <span className="material-symbols-outlined">{meta.symbol}</span>
+                    return (
+                      <article
+                        key={`${turn.agent_name}-${turn.round}-direct`}
+                        className={turn.agent_name === speakingAgent && !loading ? "debate-message active" : "debate-message"}
+                        style={{ "--agent-accent": meta.accent }}
+                      >
+                        <div className="message-icon">
+                          <span className="material-symbols-outlined">{meta.symbol}</span>
+                        </div>
+                        <div className="message-content">
+                          <div className="message-meta">
+                            <span className="message-name">{meta.label}</span>
+                            <span className="message-time">Latest reply</span>
+                          </div>
+                          <div className={turn.stance === "NO GO" ? "message-bubble danger" : "message-bubble"}>
+                            {buildDirectAdvisorReply(turn, latestUserMessage?.content ?? "")}
+                          </div>
+                          <div className="message-tags">
+                            <span className={`message-tag ${stanceClassName}`}>{formatDecisionLabel(turn.stance)}</span>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </section>
+              ) : hasAnyDiscussion && !loading ? (
+                <div className="stream-empty conversation-empty">
+                  <span className="material-symbols-outlined">{activeConversationMeta?.symbol ?? "groups"}</span>
+                  <h2>Waiting for advisor replies</h2>
+                  <p>The selected advisors have not replied yet. Send your question and their answers will appear here.</p>
+                </div>
+              ) : null
+            ) : (
+              filteredRounds.map(([round, turns]) => (
+                <section key={round} className="round-section">
+                  <div className="round-divider">
+                    <div />
+                    <span>Round {String(round).padStart(2, "0")}</span>
+                    <div />
+                  </div>
+
+                  {topConflictByRound.has(round) ? (
+                    <div className="conflict-cluster">
+                      <div className="conflict-badge">
+                        <span className="material-symbols-outlined">warning</span>
+                        Key Disagreement
                       </div>
-                      <div className="message-content">
-                        <div className="message-meta">
-                          <span className="message-name">{meta.label}</span>
-                          <span className="message-time">Round {turn.round} - {turn.confidence}% confidence</span>
-                        </div>
-                        <div className={turn.stance === "NO GO" ? "message-bubble danger" : "message-bubble"}>
-                          {toPlainText(turn.message)}
-                        </div>
-                        <div className="message-tags">
-                          <span className={`message-tag ${stanceClassName}`}>{formatDecisionLabel(turn.stance)}</span>
-                          {referenceLabels.length ? <span className="message-tag soft">Responds to {referenceLabels.join(", ")}</span> : null}
-                          {challengedLabels.length ? <span className="message-tag soft">Challenges {challengedLabels.join(", ")}</span> : null}
-                        </div>
+                      <div className="conflict-thread">
+                        <p>{toPlainText(topConflictByRound.get(round).description)}</p>
                       </div>
-                    </article>
-                  );
-                })}
-              </section>
-            ))}
+                    </div>
+                  ) : null}
 
-            {conversationAgentNames.length && hasAnyDiscussion && !filteredRounds.length && !loading ? (
-              <div className="stream-empty conversation-empty">
-                <span className="material-symbols-outlined">{activeConversationMeta?.symbol ?? "groups"}</span>
-                <h2>No visible replies yet</h2>
-                <p>The selected advisors do not have visible replies in this part of the discussion yet. Choose another advisor or show all advisors.</p>
-              </div>
-            ) : null}
+                  {turns.map((turn) => {
+                    const meta = agentMeta[turn.agent_name] ?? agentMeta["CEO Agent"];
+                    const stanceClassName = getStanceClassName(turn.stance);
+
+                    return (
+                      <article
+                        key={`${turn.agent_name}-${turn.round}`}
+                        className={turn.agent_name === speakingAgent && !loading ? "debate-message active" : "debate-message"}
+                        style={{ "--agent-accent": meta.accent }}
+                      >
+                        <div className="message-icon">
+                          <span className="material-symbols-outlined">{meta.symbol}</span>
+                        </div>
+                        <div className="message-content">
+                          <div className="message-meta">
+                            <span className="message-name">{meta.label}</span>
+                            <span className="message-time">Round {turn.round}</span>
+                          </div>
+                          <div className={turn.stance === "NO GO" ? "message-bubble danger" : "message-bubble"}>
+                            {buildRoundSummary(turn)}
+                          </div>
+                          <div className="message-tags">
+                            <span className={`message-tag ${stanceClassName}`}>{formatDecisionLabel(turn.stance)}</span>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </section>
+              ))
+            )}
 
             {loading ? (
               <div className="typing-row">
@@ -364,7 +412,7 @@ function SimulationView({
               </div>
               <textarea
                 className="composer-textarea"
-                rows="4"
+                rows="3"
                 placeholder={
                   focusedAgentNames.length === 1
                     ? `Ask ${agentMeta[focusedAgentNames[0]]?.label ?? "this advisor"} something in plain language...`
