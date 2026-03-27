@@ -22,6 +22,11 @@ const REPLACEMENTS = [
   [/\bsegment\b/gi, "customer group"],
   [/\bboardroom\b/gi, "advisory team"],
   [/\bboard\b/gi, "team"],
+  [/\blearning milestones\b/gi, "weekly checkpoints"],
+  [/\bbuyer pain\b/gi, "customer need"],
+  [/\bsharpest\b/gi, "most urgent"],
+  [/\bstarting focus area\b/gi, "small first version"],
+  [/\blaunch a 90-day\b/gi, "Start with a 90-day"],
 ];
 
 const DECISION_LABELS = {
@@ -102,6 +107,7 @@ export function inferQuestionIntent(question) {
   const lower = String(question).toLowerCase();
 
   return {
+    asksForNumbers: /\bhow much\b|\bestimate\b|\bexpected\b|\bforecast\b|\bnumbers?\b|\bprojection\b/.test(lower),
     asksAboutSales: /\bsales|revenue|income|forecast|bookings|customers\b/.test(lower),
     asksAboutBudget: /\bbudget|cost|spend|expense|cash|runway|payback\b/.test(lower),
     asksAboutPricing: /\bprice|pricing|discount|charge\b/.test(lower),
@@ -181,15 +187,15 @@ function buildMetricLine(turn, intent) {
     return `To support this plan, marketing and sales would likely need about ${formatCount(leads)} good leads each month at roughly a ${formatPercent(winRate)} win rate.`;
   }
 
-  if (pipelineValue) {
+  if (intent.asksForNumbers && pipelineValue) {
     return `The current sales model points to about ${formatCurrency(pipelineValue)} in active pipeline value.`;
   }
 
-  if (annualRevenue && launchBudget) {
+  if (intent.asksForNumbers && annualRevenue && launchBudget) {
     return `Right now, the model points to about ${formatCurrency(annualRevenue)} in yearly sales against about ${formatCurrency(launchBudget)} in launch spending.`;
   }
 
-  if (grossMargin) {
+  if (intent.asksForNumbers && grossMargin) {
     return `The current plan assumes about ${formatPercent(grossMargin)} gross margin.`;
   }
 
