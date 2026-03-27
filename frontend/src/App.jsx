@@ -10,6 +10,8 @@ import SimulationView from "./views/SimulationView";
 function App() {
   const [activeView, setActiveView] = useState("simulation");
   const [form, setForm] = useState(buildDefaultForm());
+  const [chatDraft, setChatDraft] = useState("");
+  const [chatMessages, setChatMessages] = useState([]);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -41,7 +43,7 @@ function App() {
       grouped.set(turn.round, existing);
     });
 
-    return Array.from(grouped.entries());
+    return Array.from(grouped.entries()).sort(([left], [right]) => Number(left) - Number(right));
   }, [result]);
 
   const conversation = result?.conversation ?? [];
@@ -51,7 +53,7 @@ function App() {
   const speakingAgent = loading ? activeTypingAgent : lastTurn?.agent_name ?? "CEO Agent";
   const displayedRounds = result?.round_summaries?.length ?? 3;
   const currentRound = loading ? Math.min(3, Math.floor((typingIndex / 3) % 3) + 1) : lastTurn?.round ?? 0;
-  const scenarioTitle = result?.company_name ?? form.company_name;
+  const scenarioTitle = result?.company_name || form.company_name || "Business decision review";
   const highestRisk = result?.final_output?.risks?.[0] ?? "Waiting for the team to review the case.";
   const recommendedDirective =
     result?.final_output?.recommended_actions?.[0] ??
@@ -80,33 +82,16 @@ function App() {
     [agentCards, selectedAgentName],
   );
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  async function runAnalysis(payload, options = {}) {
+    const { closeConsole = false } = options;
     setLoading(true);
     setError("");
     setActiveView("simulation");
     setConversationAgentName("");
     setSelectedAgentName("CEO Agent");
 
-    const payload = {
-      company_name: form.company_name,
-      industry: form.industry,
-      region: form.region,
-      company_stage: form.company_stage,
-      business_problem: composeBusinessProblem(form),
-      objectives: splitList(form.objectives),
-      current_constraints: splitList(form.current_constraints),
-      known_metrics: {
-        runway_months: Number(form.runway_months),
-        gross_margin: Number(form.gross_margin),
-        cac_payback_months: Number(form.cac_payback_months),
-        price_point: Number(form.price_point),
-      },
-      scenario_variations: buildScenarioVariations(form),
-    };
-
     try {
-      setResult(createEmptyResult(form.company_name));
+      setResult(createEmptyResult(payload.company_name));
 
       const response = await fetch(`${API_BASE}/analyze/stream`, {
         method: "POST",
@@ -145,11 +130,13 @@ function App() {
             setResult(payloadLine.result);
             continue;
           }
-          setResult((current) => mergeStreamEvent(current ?? createEmptyResult(form.company_name), payloadLine));
+          setResult((current) => mergeStreamEvent(current ?? createEmptyResult(payload.company_name), payloadLine));
         }
       }
 
-      setConsoleOpen(false);
+      if (closeConsole) {
+        setConsoleOpen(false);
+      }
     } catch (submissionError) {
       setError(submissionError.message || "Unable to analyze the business problem.");
     } finally {
@@ -157,9 +144,50 @@ function App() {
     }
   }
 
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    const normalizedForm = normalizeForm(form);
+    const formChatMessages = normalizedForm.business_problem.trim()
+      ? [createChatMessage(normalizedForm.business_problem.trim())]
+      : [];
+
+    const problemText = composeBusinessProblem(normalizedForm).trim();
+    if (problemText.length < 20) {
+      setError("Please describe the business decision in a little more detail before starting the review.");
+      return;
+    }
+
+    setForm(normalizedForm);
+    setChatMessages(formChatMessages);
+
+    await runAnalysis(buildAnalysisPayload(normalizedForm), { closeConsole: true });
+  }
+
+  async function handleQuickChatSubmit(rawMessage) {
+    const trimmedMessage = rawMessage.trim();
+    if (trimmedMessage.length < 20) {
+      setError("Please type at least one full sentence so the advisors have enough context to review your case.");
+      return;
+    }
+
+    const nextMessages = [...chatMessages, createChatMessage(trimmedMessage)];
+    const derivedForm = deriveFormFromChat(form, nextMessages);
+
+    setChatMessages(nextMessages);
+    setChatDraft("");
+    setForm(derivedForm);
+
+    await runAnalysis(buildAnalysisPayload(derivedForm, nextMessages));
+  }
+
   function applySample() {
-    setForm(buildDefaultForm());
-    setConsoleOpen(true);
+    const sampleForm = buildSampleForm();
+    setForm(sampleForm);
+    setChatDraft(sampleForm.business_problem);
+    setChatMessages([createChatMessage(sampleForm.business_problem)]);
+    setError("");
+    setActiveView("simulation");
   }
 
   function updateFormField(key, value) {
@@ -243,6 +271,8 @@ function App() {
           agentMeta={AGENT_META}
           result={result}
           loading={loading}
+          chatMessages={chatMessages}
+          chatDraft={chatDraft}
           activeTypingAgent={activeTypingAgent}
           speakingAgent={speakingAgent}
           groupedConversation={groupedConversation}
@@ -259,6 +289,8 @@ function App() {
           validation={result?.validation}
           onToggleConsole={toggleConsole}
           onApplySample={applySample}
+          onChatDraftChange={setChatDraft}
+          onSubmitChat={handleQuickChatSubmit}
           conversationAgentName={conversationAgentName}
           onOpenAgentConversation={openAgentConversation}
           onOpenAgentProfile={openAgentProfile}
@@ -394,8 +426,8 @@ function UtilityPanel({ mode, activeView, loading, conversationAgentName, select
         {isHelp ? (
           <div className="utility-grid">
             <article className="utility-card">
-              <h3>1. Start with the form</h3>
-              <p>Open the form, describe your business decision, and add any numbers you already know.</p>
+              <h3>1. Start with a message or the form</h3>
+              <p>Type your business question directly on the Discussion page, or open the form if you want to add more detail.</p>
             </article>
             <article className="utility-card">
               <h3>2. Open one advisor at a time</h3>
@@ -838,7 +870,18 @@ function splitList(value) {
     .filter(Boolean);
 }
 
-function composeBusinessProblem(form) {
+function composeBusinessProblem(form, chatMessages = []) {
+  if (chatMessages.length) {
+    const transcript = chatMessages
+      .map((message, index) => `Message ${index + 1}: ${message.content.trim()}`)
+      .join("\n");
+    const sections = [`Conversation with the user:\n${transcript}`];
+    if (form.extra_context.trim()) {
+      sections.push(`Additional background: ${form.extra_context.trim()}`);
+    }
+    return sections.join("\n\n");
+  }
+
   const mainProblem = form.business_problem.trim();
   const extraContext = form.extra_context.trim();
 
@@ -882,6 +925,128 @@ function createEmptyResult(companyName) {
   };
 }
 
+function createChatMessage(content) {
+  return {
+    id: `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    content,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+function buildAnalysisPayload(form, chatMessages = []) {
+  const normalizedForm = normalizeForm(form);
+
+  return {
+    company_name: normalizedForm.company_name,
+    industry: normalizedForm.industry,
+    region: normalizedForm.region,
+    company_stage: normalizedForm.company_stage,
+    business_problem: composeBusinessProblem(normalizedForm, chatMessages),
+    objectives: splitList(normalizedForm.objectives),
+    current_constraints: splitList(normalizedForm.current_constraints),
+    known_metrics: buildKnownMetrics(normalizedForm),
+    scenario_variations: buildScenarioVariations(normalizedForm),
+  };
+}
+
+function buildKnownMetrics(form) {
+  return compactObject({
+    runway_months: numericValue(form.runway_months),
+    gross_margin: numericValue(form.gross_margin),
+    cac_payback_months: numericValue(form.cac_payback_months),
+    price_point: numericValue(form.price_point),
+  });
+}
+
+function normalizeForm(form) {
+  return {
+    ...form,
+    company_name: form.company_name.trim() || "Your business case",
+    industry: form.industry.trim() || "General business",
+    region: form.region || "Global",
+    company_stage: form.company_stage || "Idea",
+  };
+}
+
+function deriveFormFromChat(currentForm, chatMessages) {
+  const latestMessage = chatMessages[chatMessages.length - 1]?.content ?? "";
+  const extracted = extractChatClues(latestMessage);
+
+  return {
+    ...currentForm,
+    company_name: currentForm.company_name.trim() || "Your business case",
+    industry: currentForm.industry.trim() || "General business",
+    region: extracted.region || currentForm.region || "Global",
+    company_stage: extracted.company_stage || currentForm.company_stage || "Idea",
+    business_problem: latestMessage,
+    runway_months: extracted.runway_months ?? currentForm.runway_months,
+    gross_margin: extracted.gross_margin ?? currentForm.gross_margin,
+    cac_payback_months: extracted.cac_payback_months ?? currentForm.cac_payback_months,
+    price_point: extracted.price_point ?? currentForm.price_point,
+  };
+}
+
+function extractChatClues(message) {
+  const lower = message.toLowerCase();
+  const regionMatchers = [
+    ["North America", ["north america", "us", "usa", "canada"]],
+    ["Europe", ["europe", "eu", "uk"]],
+    ["India", ["india"]],
+    ["Asia-Pacific", ["asia-pacific", "apac", "asia pacific", "australia", "singapore"]],
+    ["Latin America", ["latin america", "latam"]],
+    ["Middle East & Africa", ["middle east", "africa", "mea"]],
+    ["Global", ["global", "worldwide", "international"]],
+  ];
+  const stageMatchers = [
+    ["Idea", ["idea stage", "idea"]],
+    ["Pre-seed", ["pre-seed", "pre seed"]],
+    ["Seed", ["seed"]],
+    ["Series A", ["series a"]],
+    ["Series B+", ["series b", "series c", "growth stage"]],
+    ["Established business", ["established", "profitable", "mature business"]],
+  ];
+
+  const runwayMatch =
+    message.match(/(\d+(?:\.\d+)?)\s*(?:months?|mos?)\s+(?:of\s+)?(?:cash|runway)/i) ||
+    message.match(/(?:cash|runway)[^\d]{0,12}(\d+(?:\.\d+)?)\s*(?:months?|mos?)/i);
+  const marginMatch =
+    message.match(/(\d+(?:\.\d+)?)\s*%\s*(?:gross\s+)?margin/i) ||
+    message.match(/(?:gross\s+)?margin[^\d]{0,12}(\d+(?:\.\d+)?)\s*%/i);
+  const paybackMatch =
+    message.match(/(\d+(?:\.\d+)?)\s*(?:months?|mos?)\s*(?:to\s*)?(?:recover|payback)/i) ||
+    message.match(/payback[^\d]{0,12}(\d+(?:\.\d+)?)\s*(?:months?|mos?)/i);
+  const priceMatch =
+    message.match(/[$₹€£]\s?([\d,]+(?:\.\d+)?)/) ||
+    message.match(/price[^\d]{0,12}([\d,]+(?:\.\d+)?)/i);
+
+  return {
+    region: matchFirstLabel(regionMatchers, lower),
+    company_stage: matchFirstLabel(stageMatchers, lower),
+    runway_months: runwayMatch?.[1],
+    gross_margin: marginMatch?.[1],
+    cac_payback_months: paybackMatch?.[1],
+    price_point: priceMatch?.[1]?.replaceAll(",", ""),
+  };
+}
+
+function matchFirstLabel(options, value) {
+  const match = options.find(([, aliases]) => aliases.some((alias) => value.includes(alias)));
+  return match?.[0];
+}
+
+function numericValue(value) {
+  if (value === "" || value === null || value === undefined) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function compactObject(object) {
+  return Object.fromEntries(Object.entries(object).filter(([, value]) => value !== undefined));
+}
+
 function mergeStreamEvent(current, eventPayload) {
   switch (eventPayload.type) {
     case "turn":
@@ -914,6 +1079,29 @@ function mergeStreamEvent(current, eventPayload) {
 }
 
 function buildDefaultForm() {
+  return {
+    company_name: "",
+    industry: "",
+    region: "Global",
+    company_stage: "Idea",
+    business_problem: "",
+    objectives: "",
+    current_constraints: "",
+    extra_context: "",
+    runway_months: "",
+    gross_margin: "",
+    cac_payback_months: "",
+    price_point: "",
+    variation_name: "",
+    variation_budget_change_pct: "",
+    variation_market_condition: "base",
+    variation_competition_level: "medium",
+    variation_pricing_change_pct: "",
+    variation_notes: "",
+  };
+}
+
+function buildSampleForm() {
   return {
     company_name: "HelixOps AI",
     industry: "Business software",

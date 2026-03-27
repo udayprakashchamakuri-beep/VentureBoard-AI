@@ -605,6 +605,11 @@ a {
   max-width: 920px;
 }
 
+.debate-message.user {
+  margin-left: auto;
+  flex-direction: row-reverse;
+}
+
 .debate-message.active .message-icon {
   box-shadow: 0 0 16px color-mix(in srgb, var(--agent-accent) 45%, transparent);
 }
@@ -625,13 +630,27 @@ a {
   animation: gentlePulse 1.8s infinite;
 }
 
+.message-icon.user {
+  border-color: rgba(255, 225, 109, 0.24);
+  background: rgba(255, 225, 109, 0.1);
+  color: var(--accent);
+}
+
 .message-content {
   display: grid;
   gap: 8px;
 }
 
+.debate-message.user .message-content {
+  justify-items: end;
+}
+
 .message-meta {
   gap: 12px;
+}
+
+.debate-message.user .message-meta {
+  justify-content: flex-end;
 }
 
 .message-name {
@@ -661,6 +680,59 @@ a {
 .message-bubble.danger {
   border-color: rgba(255, 180, 171, 0.16);
   background: rgba(147, 0, 10, 0.15);
+}
+
+.message-bubble.user {
+  border-color: rgba(255, 225, 109, 0.24);
+  border-radius: 18px 18px 6px 18px;
+  background: rgba(255, 225, 109, 0.1);
+}
+
+.message-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.debate-message.user .message-tags {
+  justify-content: flex-end;
+}
+
+.message-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(7, 13, 31, 0.45);
+  padding: 6px 10px;
+  color: rgba(220, 225, 251, 0.72);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.56rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.message-tag.soft {
+  color: rgba(220, 225, 251, 0.62);
+}
+
+.message-tag.tone-go {
+  border-color: rgba(0, 255, 148, 0.24);
+  background: rgba(0, 255, 148, 0.1);
+  color: var(--finance);
+}
+
+.message-tag.tone-modify {
+  border-color: rgba(221, 183, 255, 0.24);
+  background: rgba(221, 183, 255, 0.1);
+  color: var(--tertiary);
+}
+
+.message-tag.tone-no-go {
+  border-color: rgba(255, 180, 171, 0.24);
+  background: rgba(255, 180, 171, 0.1);
+  color: var(--danger);
 }
 
 .typing-row {
@@ -704,9 +776,18 @@ a {
 }
 
 .stream-footer {
+  display: grid;
+  gap: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   background: rgba(21, 27, 45, 0.88);
   padding: 16px 20px;
+}
+
+.footer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .footer-actions {
@@ -750,6 +831,59 @@ a {
 .footer-bars div:nth-child(3),
 .footer-bars div:nth-child(4) {
   height: 14px;
+}
+
+.discussion-composer {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  background: rgba(7, 13, 31, 0.56);
+  padding: 16px;
+}
+
+.composer-header strong {
+  display: block;
+  font-family: "Manrope", sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #dde3eb;
+}
+
+.composer-header p,
+.composer-hint {
+  margin: 6px 0 0;
+  color: rgba(220, 225, 251, 0.68);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.composer-textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(12, 19, 36, 0.9);
+  padding: 14px 16px;
+  color: #dde3eb;
+  min-height: 110px;
+}
+
+.composer-textarea:focus {
+  outline: 1px solid rgba(255, 225, 109, 0.38);
+  border-color: rgba(255, 225, 109, 0.28);
+}
+
+.composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.composer-hint {
+  max-width: 70%;
+  margin: 0;
 }
 
 .obsidian-insights {
@@ -3233,6 +3367,16 @@ a {
   .conversation-filter-bar {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .footer-top,
+  .composer-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .composer-hint {
+    max-width: 100%;
   }
 
   .map-overlay-bottom {

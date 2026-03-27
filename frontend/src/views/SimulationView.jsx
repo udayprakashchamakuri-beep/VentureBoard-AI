@@ -4,6 +4,8 @@ function SimulationView({
   agentMeta,
   result,
   loading,
+  chatMessages,
+  chatDraft,
   activeTypingAgent,
   speakingAgent,
   groupedConversation,
@@ -20,6 +22,8 @@ function SimulationView({
   validation,
   onToggleConsole,
   onApplySample,
+  onChatDraftChange,
+  onSubmitChat,
   conversationAgentName,
   onOpenAgentConversation,
   onOpenAgentProfile,
@@ -32,6 +36,7 @@ function SimulationView({
         .map(([round, turns]) => [round, turns.filter((turn) => turn.agent_name === conversationAgentName)])
         .filter(([, turns]) => turns.length)
     : groupedConversation;
+  const hasAdvisorMessages = filteredRounds.some(([, turns]) => turns.length);
 
   return (
     <>
@@ -118,11 +123,11 @@ function SimulationView({
           </header>
 
           <div className="stream-body">
-            {!result && !loading ? (
+            {!result && !loading && !chatMessages.length ? (
               <div className="stream-empty">
                 <span className="material-symbols-outlined">terminal</span>
                 <h2>Ready To Start</h2>
-                <p>Open the form and enter a business decision you want help with.</p>
+                <p>Type your business question below or open the detailed form if you want to add numbers first.</p>
               </div>
             ) : null}
 
@@ -141,6 +146,31 @@ function SimulationView({
                   </button>
                 </div>
               </div>
+            ) : null}
+
+            {chatMessages.length ? (
+              <section className="round-section user-round-section">
+                <div className="round-divider">
+                  <div />
+                  <span>Your conversation</span>
+                  <div />
+                </div>
+
+                {chatMessages.map((message, index) => (
+                  <article key={message.id ?? `${message.timestamp}-${index}`} className="debate-message user">
+                    <div className="message-icon user">
+                      <span className="material-symbols-outlined">person</span>
+                    </div>
+                    <div className="message-content">
+                      <div className="message-meta">
+                        <span className="message-name">You</span>
+                        <span className="message-time">{index === chatMessages.length - 1 ? "Latest message" : "Earlier message"}</span>
+                      </div>
+                      <div className="message-bubble user">{toPlainText(message.content)}</div>
+                    </div>
+                  </article>
+                ))}
+              </section>
             ) : null}
 
             {filteredRounds.map(([round, turns]) => (
@@ -165,6 +195,9 @@ function SimulationView({
 
                 {turns.map((turn) => {
                   const meta = agentMeta[turn.agent_name] ?? agentMeta["CEO Agent"];
+                  const referenceLabels = formatAgentNames(turn.references, agentMeta);
+                  const challengedLabels = formatAgentNames(turn.challenged_agents, agentMeta);
+                  const stanceClassName = getStanceClassName(turn.stance);
 
                   return (
                     <article
@@ -183,12 +216,25 @@ function SimulationView({
                         <div className={turn.stance === "NO GO" ? "message-bubble danger" : "message-bubble"}>
                           {toPlainText(turn.message)}
                         </div>
+                        <div className="message-tags">
+                          <span className={`message-tag ${stanceClassName}`}>{formatDecisionLabel(turn.stance)}</span>
+                          {referenceLabels.length ? <span className="message-tag soft">Responds to {referenceLabels.join(", ")}</span> : null}
+                          {challengedLabels.length ? <span className="message-tag soft">Challenges {challengedLabels.join(", ")}</span> : null}
+                        </div>
                       </div>
                     </article>
                   );
                 })}
               </section>
             ))}
+
+            {!hasAdvisorMessages && result && !loading ? (
+              <div className="stream-empty conversation-empty">
+                <span className="material-symbols-outlined">forum</span>
+                <h2>No Advisor Messages Found</h2>
+                <p>The decision finished, but the discussion feed came back empty. Send the case again and the team will rerun it.</p>
+              </div>
+            ) : null}
 
             {conversationAgentName && !filteredRounds.length && result ? (
               <div className="stream-empty conversation-empty">
@@ -214,25 +260,55 @@ function SimulationView({
           </div>
 
           <footer className="stream-footer">
-            <div className="footer-actions">
-              <button type="button" className="footer-link" onClick={onToggleConsole}>
-                <span className="material-symbols-outlined">terminal</span>
-                Open Form
-              </button>
-              <button type="button" className="footer-link" onClick={onApplySample}>
-                <span className="material-symbols-outlined">history</span>
-                Use Example Case
-              </button>
-            </div>
-            <div className="footer-metrics">
-              <span>System status: {result ? "Live" : "Waiting"}</span>
-              <div className="footer-bars">
-                <div />
-                <div />
-                <div />
-                <div />
+            <div className="footer-top">
+              <div className="footer-actions">
+                <button type="button" className="footer-link" onClick={onToggleConsole}>
+                  <span className="material-symbols-outlined">list_alt</span>
+                  Open Detailed Form
+                </button>
+                <button type="button" className="footer-link" onClick={onApplySample}>
+                  <span className="material-symbols-outlined">history</span>
+                  Load Example
+                </button>
+              </div>
+              <div className="footer-metrics">
+                <span>System status: {result ? "Live" : "Waiting"}</span>
+                <div className="footer-bars">
+                  <div />
+                  <div />
+                  <div />
+                  <div />
+                </div>
               </div>
             </div>
+
+            <form
+              className="discussion-composer"
+              onSubmit={(event) => {
+                event.preventDefault();
+                onSubmitChat(chatDraft);
+              }}
+            >
+              <div className="composer-header">
+                <div>
+                  <strong>Ask in normal language</strong>
+                  <p>Type just like a chat. You can add follow-up details after the first answer and the team will rerun the review.</p>
+                </div>
+              </div>
+              <textarea
+                className="composer-textarea"
+                rows="4"
+                placeholder="Example: We are a small SaaS company thinking about expanding into hospitals, but we only have 10 months of cash left. Should we launch now or wait?"
+                value={chatDraft}
+                onChange={(event) => onChatDraftChange(event.target.value)}
+              />
+              <div className="composer-actions">
+                <span className="composer-hint">Tip: mention your market, cash situation, team size, pricing, or any big concern.</span>
+                <button type="submit" className="primary-action" disabled={loading || chatDraft.trim().length < 20}>
+                  {loading ? "Reviewing your message..." : "Send to advisors"}
+                </button>
+              </div>
+            </form>
           </footer>
         </section>
 
@@ -414,6 +490,20 @@ function SimulationView({
       </div>
     </>
   );
+}
+
+function formatAgentNames(names, agentMeta) {
+  return (names ?? []).slice(0, 3).map((name) => agentMeta[name]?.label ?? name.replace(" Agent", ""));
+}
+
+function getStanceClassName(stance) {
+  if (stance === "GO") {
+    return "tone-go";
+  }
+  if (stance === "MODIFY") {
+    return "tone-modify";
+  }
+  return "tone-no-go";
 }
 
 function InsightCard({ icon, accent, title, body, kicker }) {

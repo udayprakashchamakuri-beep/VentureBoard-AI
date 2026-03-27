@@ -35,11 +35,12 @@ function CommandConsoleDrawer({
             <span className="console-kicker">Business Question Form</span>
             <h2>Tell the advisory team what decision you need help with</h2>
             <p className="console-intro">
-              Fill in what you know. Short answers and rough estimates are completely fine.
+              Fill in what you know. Short answers and rough estimates are completely fine. If you prefer, you can close
+              this panel and type your question directly on the Discussion page like a normal chat.
             </p>
           </div>
           <button type="button" className="secondary-action" onClick={onClose}>
-            Close
+            Use chat instead
           </button>
         </div>
 
