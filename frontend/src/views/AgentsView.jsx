@@ -1,7 +1,37 @@
-function AgentsView({ agentCards, loading, matrixStats }) {
+import { useEffect, useMemo, useState } from "react";
+import "../teamPage.css";
+
+function AgentsView({ agentCards, loading, matrixStats, selectedAgentName, onSelectAgent }) {
+  const safeSelectedAgentName = agentCards.some((agent) => agent.name === selectedAgentName)
+    ? selectedAgentName
+    : agentCards[0]?.name ?? "";
+
+  const selectedAgent = useMemo(
+    () => agentCards.find((agent) => agent.name === safeSelectedAgentName) ?? agentCards[0] ?? null,
+    [agentCards, safeSelectedAgentName],
+  );
+
+  const [reviewPaused, setReviewPaused] = useState(false);
+  const [showAllSettings, setShowAllSettings] = useState(false);
+  const [overrideState, setOverrideState] = useState(matrixStats.overrides);
+
+  useEffect(() => {
+    setOverrideState(matrixStats.overrides);
+  }, [matrixStats.overrides]);
+
+  const visibleOverrides = showAllSettings ? overrideState : overrideState.slice(0, 3);
+
+  function toggleOverride(label) {
+    setOverrideState((current) =>
+      current.map((override) =>
+        override.label === label ? { ...override, enabled: !override.enabled } : override,
+      ),
+    );
+  }
+
   return (
-    <div className="command-canvas">
-      <header className="view-header">
+    <div className="team-page command-canvas">
+      <header className="view-header team-header">
         <div>
           <div className="view-kicker-row">
             <span className="status-chip success">LIVE</span>
@@ -9,44 +39,82 @@ function AgentsView({ agentCards, loading, matrixStats }) {
           </div>
           <h1>Advisory Team</h1>
           <p>
-            Meet the specialists reviewing your case. This page shows what each advisor focuses on and how active they
-            are right now.
+            Click any advisor to open a plain-language profile. The cards below show the 10 specialists one by one,
+            with simple summaries and easy controls.
           </p>
         </div>
 
         <div className="header-callouts">
           <article className="alert-card danger">
-            <span>Admin controls</span>
-            <button type="button">Pause review</button>
+            <span>{reviewPaused ? "Review paused" : "Team controls"}</span>
+            <button type="button" onClick={() => setReviewPaused((current) => !current)}>
+              {reviewPaused ? "Resume review" : "Pause review"}
+            </button>
           </article>
           <article className="alert-card accent">
             <span>Overall activity</span>
-            <strong>{matrixStats.networkLoad}</strong>
+            <strong>{reviewPaused ? "Paused" : matrixStats.networkLoad}</strong>
           </article>
         </div>
       </header>
 
-      <section className="agent-matrix-grid">
+      <section className="panel team-selector-panel">
+        <div className="panel-topline">
+          <div>
+            <h2>Choose an advisor</h2>
+            <p>Use these shortcuts if you want to jump straight to one advisor.</p>
+          </div>
+        </div>
+
+        <div className="agent-selector-strip">
+          {agentCards.map((agent) => (
+            <button
+              key={agent.name}
+              type="button"
+              className={safeSelectedAgentName === agent.name ? "agent-selector-chip active" : "agent-selector-chip"}
+              style={{ "--chip-accent": agent.accent }}
+              onClick={() => onSelectAgent(agent.name)}
+              aria-pressed={safeSelectedAgentName === agent.name}
+            >
+              <span className="material-symbols-outlined">{agent.symbol}</span>
+              <span>{agent.label}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="team-grid">
         {agentCards.map((agent) => (
-          <article key={agent.name} className={`agent-matrix-card tone-${agent.tone}`} style={{ "--card-accent": agent.accent }}>
-            <div className="matrix-card-main">
-              <div className="matrix-card-header">
-                <div className="matrix-agent-id">
-                  <div className="matrix-agent-icon">
+          <button
+            key={agent.name}
+            type="button"
+            className={
+              safeSelectedAgentName === agent.name
+                ? `agent-card-shell agent-matrix-card selected tone-${agent.tone}`
+                : `agent-card-shell agent-matrix-card tone-${agent.tone}`
+            }
+            style={{ "--card-accent": agent.accent }}
+            onClick={() => onSelectAgent(agent.name)}
+            aria-pressed={safeSelectedAgentName === agent.name}
+          >
+            <div className="matrix-card-main team-card-main">
+              <div className="matrix-card-header team-card-header">
+                <div className="matrix-agent-id team-agent-id">
+                  <div className="matrix-agent-icon team-agent-icon">
                     <span className="material-symbols-outlined">{agent.symbol}</span>
                   </div>
-                  <div>
+                  <div className="matrix-agent-copy team-agent-copy">
                     <h3>{agent.label}</h3>
                     <p>{agent.role}</p>
                   </div>
                 </div>
-                <div className="matrix-agent-stat">
+                <div className="matrix-agent-stat team-agent-stat">
                   <span>{agent.badgeLabel}</span>
                   <strong>{agent.badgeValue}</strong>
                 </div>
               </div>
 
-              <div className="matrix-health">
+              <div className="matrix-health team-health">
                 <div>
                   <span>System health</span>
                   <strong>{agent.health}</strong>
@@ -56,15 +124,15 @@ function AgentsView({ agentCards, loading, matrixStats }) {
                 </div>
               </div>
 
-              <div className="matrix-body">
-                <div className="matrix-visual">
+              <div className="matrix-body team-body">
+                <div className="matrix-visual team-visual">
                   <span className="material-symbols-outlined">{agent.visualIcon}</span>
                   <small>{agent.visualLabel}</small>
                 </div>
-                <div className="matrix-side-metrics">
+                <div className="matrix-side-metrics team-side-metrics">
                   <div>
                     <span>Current activity</span>
-                    <strong>{agent.load}</strong>
+                    <strong>{reviewPaused ? "Paused" : agent.load}</strong>
                   </div>
                   <div>
                     <span>{agent.historyLabel}</span>
@@ -76,25 +144,81 @@ function AgentsView({ agentCards, loading, matrixStats }) {
                   </div>
                 </div>
               </div>
+
+              <p className="team-card-summary">{agent.shortSummary}</p>
             </div>
 
-            <div className="matrix-card-footer">
-              <span>{agent.status}</span>
+            <div className="matrix-card-footer team-card-footer">
+              <span>{reviewPaused ? "Waiting while review is paused" : agent.status}</span>
               <i className="material-symbols-outlined">{agent.footerIcon}</i>
             </div>
-          </article>
+          </button>
         ))}
-
-        <article className="agent-matrix-card deploy-card">
-          <div className="deploy-orb">
-            <span className="material-symbols-outlined">add</span>
-          </div>
-          <h3>Add New Advisor</h3>
-          <p>Create another specialist role</p>
-        </article>
       </section>
 
-      <section className="matrix-bottom-grid">
+      {selectedAgent ? (
+        <section className="panel agent-detail-panel team-detail-panel">
+          <div className="panel-topline">
+            <div>
+              <h2>{selectedAgent.label}</h2>
+              <p>{selectedAgent.shortSummary}</p>
+            </div>
+            <div className="agent-detail-status">
+              <span>{selectedAgent.latestDecision}</span>
+              <strong>{selectedAgent.latestConfidence}</strong>
+            </div>
+          </div>
+
+          <div className="agent-detail-grid">
+            <article className="agent-detail-card">
+              <h3>What this advisor looks at</h3>
+              <ul className="agent-detail-list">
+                {selectedAgent.focusAreas.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </article>
+
+            <article className="agent-detail-card">
+              <h3>How this advisor helps</h3>
+              <ul className="agent-detail-list">
+                {selectedAgent.helpingWith.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </article>
+
+            <article className="agent-detail-card">
+              <h3>Common concerns</h3>
+              <ul className="agent-detail-list">
+                {selectedAgent.watchOuts.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </article>
+
+            <article className="agent-detail-card">
+              <h3>How this advisor challenges the team</h3>
+              <p>{selectedAgent.challengePattern}</p>
+              <div className="agent-detail-meta">
+                <span>Decision style</span>
+                <strong>{selectedAgent.decisionStyle}</strong>
+              </div>
+            </article>
+
+            <article className="agent-detail-card latest">
+              <h3>Latest advice</h3>
+              <p>{selectedAgent.latestView}</p>
+              <div className="agent-detail-meta">
+                <span>Recent highlights</span>
+                <strong>{selectedAgent.latestHighlights.join(" | ")}</strong>
+              </div>
+            </article>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="matrix-bottom-grid team-bottom-grid">
         <div className="panel history-panel">
           <div className="panel-topline">
             <div>
@@ -109,7 +233,11 @@ function AgentsView({ agentCards, loading, matrixStats }) {
 
           <div className="history-bars">
             {matrixStats.performanceBars.map((height, index) => (
-              <span key={`${height}-${index}`} style={{ height }} className={index === 4 || (loading && index === 7) ? "live" : ""} />
+              <span
+                key={`${height}-${index}`}
+                style={{ height }}
+                className={index === 4 || (loading && index === 7) ? "live" : ""}
+              />
             ))}
           </div>
 
@@ -124,26 +252,39 @@ function AgentsView({ agentCards, loading, matrixStats }) {
           <div className="panel-topline">
             <div>
               <h2>System Settings</h2>
-              <p>High-level controls for the review process</p>
+              <p>Use these controls to switch review behavior on or off.</p>
             </div>
           </div>
 
           <div className="override-list">
-            {matrixStats.overrides.map((override) => (
+            {visibleOverrides.map((override) => (
               <article key={override.label} className={`override-item tone-${override.tone}`}>
                 <div>
                   <strong>{override.label}</strong>
                   <span>{override.detail}</span>
                 </div>
-                <button type="button" className={override.enabled ? "toggle on" : "toggle"}>
+                <button
+                  type="button"
+                  className={override.enabled ? "toggle on" : "toggle"}
+                  onClick={() => toggleOverride(override.label)}
+                  aria-pressed={override.enabled}
+                >
                   <i />
                 </button>
               </article>
             ))}
           </div>
 
-          <button type="button" className="wide-secondary">
-            View all settings
+          <p className="settings-helper-copy">
+            {showAllSettings ? "All settings are visible." : "Only the main settings are shown right now."}
+          </p>
+
+          <button
+            type="button"
+            className="wide-secondary"
+            onClick={() => setShowAllSettings((current) => !current)}
+          >
+            {showAllSettings ? "Hide extra settings" : "View all settings"}
           </button>
         </div>
       </section>
