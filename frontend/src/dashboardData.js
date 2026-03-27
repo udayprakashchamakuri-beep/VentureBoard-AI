@@ -1,5 +1,5 @@
 export const API_BASE =
-  import.meta.env.VITE_API_BASE_URL || "https://skill-deploy-0ppx8gx7h4-n1pkbd8p3.vercel.app";
+  import.meta.env.VITE_API_BASE_URL || "https://skill-deploy-0ppx8gx7h4.vercel.app";
 
 export const NAV_ITEMS = [
   { id: "simulation", label: "Simulation", icon: "hub" },
