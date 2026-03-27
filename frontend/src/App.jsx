@@ -685,6 +685,9 @@ function buildRiskAlerts({ result }) {
 function buildRiskMetrics({ result, highestRisk }) {
   const conflicts = result?.conflicts?.length ?? 2;
   const stability = clamp(91 - conflicts * 3.2 - (result?.final_output?.confidence ? 0 : 2), 64, 96);
+  const dataConfidence = 99.98 - conflicts * 0.12;
+  const readiness = 94.1 - conflicts * 1.4;
+  const changeLevel = 0.003 + conflicts * 0.001;
 
   return {
     globalIndex: stability.toFixed(2),
@@ -698,12 +701,32 @@ function buildRiskMetrics({ result, highestRisk }) {
       { label: "Resilience score", value: (98.2 - conflicts * 0.8).toFixed(1) },
     ],
     indicators: [
-      { label: "Signal quality", value: `${(99.98 - conflicts * 0.12).toFixed(2)}%`, tone: "primary" },
-      { label: "Risk speed", value: `${(1.2 + conflicts * 0.14).toFixed(1)}m/s`, tone: "danger" },
-      { label: "Mitigation rate", value: `${(94.1 - conflicts * 1.4).toFixed(1)}%`, tone: "success" },
-      { label: "Change level", value: `Delta ${(0.003 + conflicts * 0.001).toFixed(3)}`, tone: "tertiary" },
+      { label: "Data confidence", value: `${dataConfidence.toFixed(2)}%`, tone: "primary" },
+      { label: "How fast risks are changing", value: describeRiskChangePace(conflicts), tone: "danger" },
+      { label: "How prepared we are", value: `${readiness.toFixed(1)}%`, tone: "success" },
+      { label: "Situation change", value: describeSituationChange(changeLevel), tone: "tertiary" },
     ],
   };
+}
+
+function describeRiskChangePace(conflicts) {
+  if (conflicts >= 4) {
+    return "Changing fast";
+  }
+  if (conflicts >= 2) {
+    return "Changing steadily";
+  }
+  return "Mostly steady";
+}
+
+function describeSituationChange(changeLevel) {
+  if (changeLevel >= 0.008) {
+    return "Big change";
+  }
+  if (changeLevel >= 0.005) {
+    return "Noticeable change";
+  }
+  return "Small change";
 }
 
 function getAgentProfile(name, meta) {

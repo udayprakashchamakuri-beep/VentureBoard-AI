@@ -39,7 +39,7 @@ function SimulationView({
         <aside className="obsidian-sidebar">
           <div className="sidebar-header">
             <h2>Advisory Team</h2>
-            <span>{Object.keys(agentMeta).length} READY</span>
+            <span>{Object.keys(agentMeta).length} advisors</span>
           </div>
 
           <div className="agent-stack">
@@ -386,18 +386,24 @@ function SimulationView({
 
       <div className="hud-bar">
         <div className="hud-item">
-          <span className="material-symbols-outlined">database</span>
+          <span className="material-symbols-outlined">check_circle</span>
           <div>
-            <span>Mode</span>
-            <strong>{result ? "Live analysis" : "Ready"}</strong>
+            <span>System state</span>
+            <strong>{loading ? "Review in progress" : result ? "Results ready" : "Ready for a case"}</strong>
           </div>
         </div>
         <div className="hud-divider" />
         <div className="hud-item">
-          <span className="material-symbols-outlined">memory</span>
+          <span className="material-symbols-outlined">hourglass_top</span>
           <div>
-            <span>Activity</span>
-            <strong>{loading ? "Reviewing" : "Waiting"}</strong>
+            <span>Current work</span>
+            <strong>
+              {loading
+                ? "Advisors are reviewing"
+                : conversationAgentName
+                  ? `${activeConversationMeta?.label ?? "Advisor"} selected`
+                  : "Waiting for input"}
+            </strong>
           </div>
         </div>
         <div className="hud-divider" />

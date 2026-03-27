@@ -35,7 +35,7 @@ function RiskView({ riskMetrics, riskAlerts }) {
         </div>
 
         <div className="risk-score">
-          <span>Overall stability score</span>
+          <span>Overall business safety</span>
           <strong>
             {riskMetrics.globalIndex}
             <small>{riskMetrics.delta}</small>
