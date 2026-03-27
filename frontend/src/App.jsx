@@ -19,8 +19,7 @@ function App() {
   const [consoleOpen, setConsoleOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedAgentName, setSelectedAgentName] = useState("CEO Agent");
-  const [conversationAgentName, setConversationAgentName] = useState("");
-  const [chatTargetAgentName, setChatTargetAgentName] = useState("");
+  const [focusedAgentNames, setFocusedAgentNames] = useState([]);
   const [utilityPanel, setUtilityPanel] = useState("");
 
   useEffect(() => {
@@ -84,12 +83,15 @@ function App() {
   );
 
   async function runAnalysis(payload, options = {}) {
-    const { closeConsole = false, focusAgentName = "" } = options;
+    const { closeConsole = false, focusAgentNames = [] } = options;
+    if (closeConsole) {
+      setConsoleOpen(false);
+    }
     setLoading(true);
     setError("");
     setActiveView("simulation");
-    setConversationAgentName(focusAgentName);
-    setSelectedAgentName(focusAgentName || "CEO Agent");
+    setFocusedAgentNames(focusAgentNames);
+    setSelectedAgentName(focusAgentNames[0] || "CEO Agent");
 
     try {
       setResult(createEmptyResult(payload.company_name));
@@ -134,10 +136,6 @@ function App() {
           setResult((current) => mergeStreamEvent(current ?? createEmptyResult(payload.company_name), payloadLine));
         }
       }
-
-      if (closeConsole) {
-        setConsoleOpen(false);
-      }
     } catch (submissionError) {
       setError(submissionError.message || "Unable to analyze the business problem.");
     } finally {
@@ -161,8 +159,8 @@ function App() {
 
     setForm(normalizedForm);
     setChatMessages(formChatMessages);
-
-    setChatTargetAgentName("");
+    setChatDraft("");
+    setFocusedAgentNames([]);
     await runAnalysis(buildAnalysisPayload(normalizedForm), { closeConsole: true });
   }
 
@@ -173,7 +171,7 @@ function App() {
       return;
     }
 
-    const nextMessages = [...chatMessages, createChatMessage(trimmedMessage, chatTargetAgentName)];
+    const nextMessages = [...chatMessages, createChatMessage(trimmedMessage, focusedAgentNames)];
     const derivedForm = deriveFormFromChat(form, nextMessages);
 
     setChatMessages(nextMessages);
@@ -181,7 +179,7 @@ function App() {
     setForm(derivedForm);
 
     await runAnalysis(buildAnalysisPayload(derivedForm, nextMessages), {
-      focusAgentName: chatTargetAgentName,
+      focusAgentNames: focusedAgentNames,
     });
   }
 
@@ -190,7 +188,7 @@ function App() {
     setForm(sampleForm);
     setChatDraft(sampleForm.business_problem);
     setChatMessages([createChatMessage(sampleForm.business_problem)]);
-    setChatTargetAgentName("");
+    setFocusedAgentNames([]);
     setError("");
     setActiveView("simulation");
   }
@@ -209,24 +207,39 @@ function App() {
   }
 
   function openAgentConversation(agentName) {
+    const nextFocusedAgents = focusedAgentNames.includes(agentName)
+      ? focusedAgentNames.filter((name) => name !== agentName)
+      : [...focusedAgentNames, agentName];
     setSelectedAgentName(agentName);
-    setConversationAgentName(agentName);
-    setChatTargetAgentName(agentName);
+    setFocusedAgentNames(nextFocusedAgents);
     setActiveView("simulation");
   }
 
   function clearAgentConversation() {
-    setConversationAgentName("");
-    setChatTargetAgentName("");
+    setFocusedAgentNames([]);
   }
 
-  function selectChatTarget(agentName) {
-    setChatTargetAgentName(agentName);
-    if (agentName) {
-      setSelectedAgentName(agentName);
-      setConversationAgentName(agentName);
+  function toggleFocusedAgent(agentName) {
+    if (!agentName) {
+      setFocusedAgentNames([]);
+      return;
+    }
+
+    setSelectedAgentName(agentName);
+    setFocusedAgentNames((current) => {
+      if (current.includes(agentName)) {
+        return current.filter((name) => name !== agentName);
+      }
+      return [...current, agentName];
+    });
+  }
+
+  function selectOnlyFocusedAgent(agentName) {
+    if (!agentName) {
+      setFocusedAgentNames([]);
     } else {
-      setConversationAgentName("");
+      setSelectedAgentName(agentName);
+      setFocusedAgentNames([agentName]);
     }
   }
 
@@ -290,7 +303,7 @@ function App() {
           loading={loading}
           chatMessages={chatMessages}
           chatDraft={chatDraft}
-          chatTargetAgentName={chatTargetAgentName}
+          focusedAgentNames={focusedAgentNames}
           activeTypingAgent={activeTypingAgent}
           speakingAgent={speakingAgent}
           groupedConversation={groupedConversation}
@@ -309,8 +322,9 @@ function App() {
           onApplySample={applySample}
           onChatDraftChange={setChatDraft}
           onSubmitChat={handleQuickChatSubmit}
-          onSelectChatTarget={selectChatTarget}
-          conversationAgentName={conversationAgentName}
+          onToggleFocusedAgent={toggleFocusedAgent}
+          onSelectOnlyFocusedAgent={selectOnlyFocusedAgent}
+          conversationAgentNames={focusedAgentNames}
           onOpenAgentConversation={openAgentConversation}
           onOpenAgentProfile={openAgentProfile}
           onClearAgentConversation={clearAgentConversation}
@@ -401,7 +415,7 @@ function App() {
           mode={utilityPanel}
           activeView={activeView}
           loading={loading}
-          conversationAgentName={conversationAgentName}
+          conversationAgentNames={focusedAgentNames}
           selectedAgentCard={selectedAgentCard}
           onClose={() => setUtilityPanel("")}
           onOpenForm={() => {
@@ -422,7 +436,7 @@ function IconButton({ icon, onClick, label }) {
   );
 }
 
-function UtilityPanel({ mode, activeView, loading, conversationAgentName, selectedAgentCard, onClose, onOpenForm }) {
+function UtilityPanel({ mode, activeView, loading, conversationAgentNames, selectedAgentCard, onClose, onOpenForm }) {
   const isHelp = mode === "help";
 
   return (
@@ -450,7 +464,7 @@ function UtilityPanel({ mode, activeView, loading, conversationAgentName, select
             </article>
             <article className="utility-card">
               <h3>2. Open one advisor at a time</h3>
-              <p>On the Discussion page, click an advisor on the left to see only what that advisor has said.</p>
+              <p>On the Discussion page, click advisors on the left to show only their replies. Click more than one to compare them side by side.</p>
             </article>
             <article className="utility-card">
               <h3>3. Compare the final answer</h3>
@@ -475,7 +489,11 @@ function UtilityPanel({ mode, activeView, loading, conversationAgentName, select
             </article>
             <article className="utility-card">
               <h3>Advisor conversation</h3>
-              <p>{conversationAgentName ? `${selectedAgentCard?.label ?? conversationAgentName} is currently selected in the Discussion view.` : "All advisor messages are currently visible together."}</p>
+              <p>
+                {conversationAgentNames.length
+                  ? `${conversationAgentNames.length === 1 ? selectedAgentCard?.label ?? conversationAgentNames[0] : `${conversationAgentNames.length} advisors`} selected in the Discussion view.`
+                  : "All advisor messages are currently visible together."}
+              </p>
             </article>
             <article className="utility-card">
               <h3>Backend connection</h3>
@@ -893,7 +911,9 @@ function composeBusinessProblem(form, chatMessages = []) {
   if (chatMessages.length) {
     const transcript = chatMessages
       .map((message, index) => {
-        const recipient = message.targetAgentName ? ` to ${message.targetAgentName}` : " to the full advisory team";
+        const recipient = message.targetAgentNames?.length
+          ? ` to ${message.targetAgentNames.join(", ")}`
+          : " to the full advisory team";
         return `Message ${index + 1}${recipient}: ${message.content.trim()}`;
       })
       .join("\n");
@@ -947,11 +967,11 @@ function createEmptyResult(companyName) {
   };
 }
 
-function createChatMessage(content, targetAgentName = "") {
+function createChatMessage(content, targetAgentNames = []) {
   return {
     id: `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     content,
-    targetAgentName,
+    targetAgentNames,
     timestamp: new Date().toISOString(),
   };
 }

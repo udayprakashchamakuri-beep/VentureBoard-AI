@@ -294,13 +294,19 @@ a {
 }
 
 .agent-card.active,
-.agent-card.thinking {
+.agent-card.thinking,
+.agent-card.selected {
   border-color: var(--agent-accent);
 }
 
 .agent-card.active {
   background: rgba(46, 52, 71, 0.95);
   box-shadow: 0 0 18px color-mix(in srgb, var(--agent-accent) 45%, transparent);
+}
+
+.agent-card.selected {
+  background: color-mix(in srgb, var(--agent-accent) 12%, rgba(25, 31, 49, 0.9));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--agent-accent) 24%, transparent);
 }
 
 .agent-card.thinking {

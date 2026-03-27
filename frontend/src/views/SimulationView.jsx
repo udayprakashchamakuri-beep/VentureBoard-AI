@@ -7,7 +7,7 @@ function SimulationView({
   loading,
   chatMessages,
   chatDraft,
-  chatTargetAgentName,
+  focusedAgentNames,
   activeTypingAgent,
   speakingAgent,
   groupedConversation,
@@ -26,24 +26,28 @@ function SimulationView({
   onApplySample,
   onChatDraftChange,
   onSubmitChat,
-  onSelectChatTarget,
-  conversationAgentName,
+  onToggleFocusedAgent,
+  onSelectOnlyFocusedAgent,
+  conversationAgentNames,
   onOpenAgentConversation,
   onOpenAgentProfile,
   onClearAgentConversation,
 }) {
   const conversationEndRef = useRef(null);
   const speakingMeta = agentMeta[speakingAgent] ?? agentMeta["CEO Agent"];
-  const activeConversationMeta = conversationAgentName ? agentMeta[conversationAgentName] ?? agentMeta["CEO Agent"] : null;
-  const filteredRounds = conversationAgentName
+  const activeConversationMeta =
+    conversationAgentNames.length === 1 ? agentMeta[conversationAgentNames[0]] ?? agentMeta["CEO Agent"] : null;
+  const filteredRounds = conversationAgentNames.length
     ? groupedConversation
-        .map(([round, turns]) => [round, turns.filter((turn) => turn.agent_name === conversationAgentName)])
+        .map(([round, turns]) => [round, turns.filter((turn) => conversationAgentNames.includes(turn.agent_name))])
         .filter(([, turns]) => turns.length)
     : groupedConversation;
   const hasAdvisorMessages = filteredRounds.some(([, turns]) => turns.length);
   const visibleTurnCount = filteredRounds.reduce((count, [, turns]) => count + turns.length, 0);
   const latestUserMessage = chatMessages[chatMessages.length - 1] ?? null;
   const earlierUserMessages = useMemo(() => chatMessages.slice(0, -1), [chatMessages]);
+  const selectedAdvisorLabels = conversationAgentNames.map((name) => agentMeta[name]?.label ?? name);
+  const chatTargetLabels = focusedAgentNames.map((name) => agentMeta[name]?.label ?? name);
 
   useEffect(() => {
     if (!conversationEndRef.current) {
@@ -54,7 +58,7 @@ function SimulationView({
       behavior: loading ? "smooth" : "auto",
       block: "end",
     });
-  }, [chatMessages.length, visibleTurnCount, loading, conversationAgentName]);
+  }, [chatMessages.length, visibleTurnCount, loading, conversationAgentNames]);
 
   return (
     <>
@@ -69,7 +73,14 @@ function SimulationView({
             {Object.entries(agentMeta).map(([name, meta]) => {
               const isActive = name === speakingAgent;
               const isCalculating = loading && name === activeTypingAgent;
-              const cardClassName = isActive ? "agent-card active agent-card-link" : isCalculating ? "agent-card thinking agent-card-link" : "agent-card agent-card-link";
+              const isSelected = conversationAgentNames.includes(name);
+              const cardClassName = isSelected
+                ? "agent-card selected agent-card-link"
+                : isActive
+                  ? "agent-card active agent-card-link"
+                  : isCalculating
+                    ? "agent-card thinking agent-card-link"
+                    : "agent-card agent-card-link";
 
               return (
                 <button
@@ -94,7 +105,9 @@ function SimulationView({
                   </div>
                   <h3>{meta.label}</h3>
                   <p>{meta.title}</p>
-                  <span className="agent-card-cta">Show this advisor's conversation</span>
+                  <span className="agent-card-cta">
+                    {isSelected ? "Selected for this conversation" : "Add this advisor to the conversation view"}
+                  </span>
                 </button>
               );
             })}
@@ -106,7 +119,7 @@ function SimulationView({
               Enter your business question, key limits, and numbers. The advisory team will discuss it and return a
               recommendation, risks, and next steps.
             </p>
-            <p className="sidebar-helper-copy">Click any advisor card above to see only that advisor's discussion.</p>
+            <p className="sidebar-helper-copy">Click advisor cards above to filter the thread. You can keep one, several, or all advisors visible.</p>
             <div className="module-actions">
               <button type="button" className="secondary-action" onClick={onApplySample}>
                 Use Example
@@ -149,16 +162,24 @@ function SimulationView({
               </div>
             ) : null}
 
-            {conversationAgentName ? (
+            {conversationAgentNames.length ? (
               <div className="conversation-filter-bar" style={{ "--agent-accent": activeConversationMeta?.accent ?? "#ffe16d" }}>
                 <div>
-                  <strong>{activeConversationMeta?.label ?? "Advisor"} conversation</strong>
-                  <p>Showing only what this advisor has said so far.</p>
+                  <strong>
+                    {conversationAgentNames.length === 1
+                      ? `${activeConversationMeta?.label ?? "Advisor"} conversation`
+                      : "Selected advisor conversations"}
+                  </strong>
+                  <p>
+                    Showing only replies from {selectedAdvisorLabels.join(", ")}.
+                  </p>
                 </div>
                 <div className="conversation-filter-actions">
-                  <button type="button" className="footer-link" onClick={() => onOpenAgentProfile(conversationAgentName)}>
-                    Open advisor profile
-                  </button>
+                  {conversationAgentNames.length === 1 ? (
+                    <button type="button" className="footer-link" onClick={() => onOpenAgentProfile(conversationAgentNames[0])}>
+                      Open advisor profile
+                    </button>
+                  ) : null}
                   <button type="button" className="footer-link" onClick={onClearAgentConversation}>
                     Show all advisors
                   </button>
@@ -185,9 +206,11 @@ function SimulationView({
                         <span className="message-time">Earlier message</span>
                       </div>
                       <div className="message-bubble user">{toPlainText(message.content)}</div>
-                      {message.targetAgentName ? (
+                      {message.targetAgentNames?.length ? (
                         <div className="message-tags">
-                          <span className="message-tag soft">Sent to {agentMeta[message.targetAgentName]?.label ?? message.targetAgentName}</span>
+                          <span className="message-tag soft">
+                            Sent to {message.targetAgentNames.map((name) => agentMeta[name]?.label ?? name).join(", ")}
+                          </span>
                         </div>
                       ) : null}
                     </div>
@@ -216,8 +239,8 @@ function SimulationView({
                     <div className="message-bubble user">{toPlainText(latestUserMessage.content)}</div>
                     <div className="message-tags">
                       <span className="message-tag soft">
-                        {latestUserMessage.targetAgentName
-                          ? `Sent to ${agentMeta[latestUserMessage.targetAgentName]?.label ?? latestUserMessage.targetAgentName}`
+                        {latestUserMessage.targetAgentNames?.length
+                          ? `Sent to ${latestUserMessage.targetAgentNames.map((name) => agentMeta[name]?.label ?? name).join(", ")}`
                           : "Sent to all advisors"}
                       </span>
                     </div>
@@ -289,11 +312,11 @@ function SimulationView({
               </div>
             ) : null}
 
-            {conversationAgentName && !filteredRounds.length && result ? (
+            {conversationAgentNames.length && !filteredRounds.length && result ? (
               <div className="stream-empty conversation-empty">
                 <span className="material-symbols-outlined">{activeConversationMeta?.symbol ?? "groups"}</span>
                 <h2>No Comments Yet</h2>
-                <p>This advisor has not spoken yet in the current discussion.</p>
+                <p>The selected advisors have not spoken yet in the current discussion.</p>
               </div>
             ) : null}
 
@@ -347,7 +370,7 @@ function SimulationView({
               <div className="composer-header">
                 <div>
                   <strong>Ask in normal language</strong>
-                  <p>Type just like a chat. You can send your note to the whole team or to one specific advisor.</p>
+                  <p>Type just like a chat. You can send your note to the whole team, one advisor, or a custom group of advisors.</p>
                 </div>
               </div>
               <div className="composer-targets">
@@ -355,8 +378,8 @@ function SimulationView({
                 <div className="composer-target-chips">
                   <button
                     type="button"
-                    className={chatTargetAgentName ? "target-chip" : "target-chip active"}
-                    onClick={() => onSelectChatTarget("")}
+                    className={focusedAgentNames.length ? "target-chip" : "target-chip active"}
+                    onClick={() => onSelectOnlyFocusedAgent("")}
                   >
                     All advisors
                   </button>
@@ -364,9 +387,9 @@ function SimulationView({
                     <button
                       key={name}
                       type="button"
-                      className={chatTargetAgentName === name ? "target-chip active" : "target-chip"}
+                      className={focusedAgentNames.includes(name) ? "target-chip active" : "target-chip"}
                       style={{ "--target-accent": meta.accent }}
-                      onClick={() => onSelectChatTarget(name)}
+                      onClick={() => onToggleFocusedAgent(name)}
                     >
                       <span className="material-symbols-outlined">{meta.symbol}</span>
                       {meta.label}
@@ -378,8 +401,10 @@ function SimulationView({
                 className="composer-textarea"
                 rows="4"
                 placeholder={
-                  chatTargetAgentName
-                    ? `Ask ${agentMeta[chatTargetAgentName]?.label ?? "this advisor"} something in plain language...`
+                  focusedAgentNames.length === 1
+                    ? `Ask ${agentMeta[focusedAgentNames[0]]?.label ?? "this advisor"} something in plain language...`
+                    : focusedAgentNames.length > 1
+                      ? `Ask ${chatTargetLabels.join(", ")} something in plain language...`
                     : "Example: We are a small SaaS company thinking about expanding into hospitals, but we only have 10 months of cash left. Should we launch now or wait?"
                 }
                 value={chatDraft}
@@ -387,8 +412,10 @@ function SimulationView({
               />
               <div className="composer-actions">
                 <span className="composer-hint">
-                  {chatTargetAgentName
-                    ? `Your next message will focus on ${agentMeta[chatTargetAgentName]?.label ?? "that advisor"}.`
+                  {focusedAgentNames.length === 1
+                    ? `Your next message will focus on ${agentMeta[focusedAgentNames[0]]?.label ?? "that advisor"}.`
+                    : focusedAgentNames.length > 1
+                      ? `Your next message will focus on ${chatTargetLabels.join(", ")}.`
                     : "Tip: mention your market, cash situation, team size, pricing, or any big concern."}
                 </span>
                 <button type="submit" className="primary-action" disabled={loading || chatDraft.trim().length < 20}>
