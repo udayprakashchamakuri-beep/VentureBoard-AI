@@ -185,8 +185,13 @@ def _current_user(request: Request) -> AuthUser:
 
 
 @app.get("/health")
-def healthcheck() -> dict[str, str]:
-    return {"status": "ok"}
+def healthcheck() -> dict[str, object]:
+    return {
+        "status": "ok",
+        "service": "business-agent",
+        "version": app.version,
+        "demo_mode": demo_auth_disabled,
+    }
 
 
 @app.get("/auth/session", response_model=AuthUserResponse)
