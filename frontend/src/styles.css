@@ -306,6 +306,12 @@ a {
   height: 6px;
 }
 
+.status-dot.idle {
+  background: rgba(193, 199, 207, 0.54);
+  box-shadow: none;
+  animation: none;
+}
+
 .nav-icon-row {
   gap: 8px;
 }
@@ -409,6 +415,11 @@ a {
   border-color: var(--agent-accent);
 }
 
+.agent-card.recent {
+  border-color: color-mix(in srgb, var(--agent-accent) 42%, transparent);
+  background: rgba(35, 41, 60, 0.84);
+}
+
 .agent-card.active {
   background: rgba(46, 52, 71, 0.95);
   box-shadow: 0 0 18px color-mix(in srgb, var(--agent-accent) 45%, transparent);
@@ -475,6 +486,11 @@ a {
   font-size: 0.54rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+}
+
+.agent-status-speaking.latest {
+  color: rgba(220, 225, 251, 0.7);
+  justify-items: end;
 }
 
 .signal-bar {
@@ -2906,8 +2922,9 @@ a {
 
 .threat-map-panel {
   position: relative;
-  min-height: 600px;
-  overflow: hidden;
+  display: grid;
+  gap: 16px;
+  min-height: auto;
 }
 
 .map-overlay {
@@ -2983,9 +3000,10 @@ a {
 }
 
 .threat-map {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  min-height: 520px;
   overflow: hidden;
+  border-radius: 20px;
   background:
     radial-gradient(circle at 20% 20%, rgba(255, 180, 171, 0.12), transparent 26%),
     radial-gradient(circle at 74% 36%, rgba(255, 225, 109, 0.08), transparent 18%),
@@ -3037,14 +3055,9 @@ a {
 }
 
 .threat-map-caption {
-  position: absolute;
-  left: 24px;
-  right: 24px;
-  bottom: 86px;
-  z-index: 2;
   display: grid;
   gap: 6px;
-  max-width: 460px;
+  max-width: none;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   background: rgba(7, 13, 31, 0.7);
@@ -3063,6 +3076,87 @@ a {
   color: rgba(220, 225, 251, 0.74);
   font-size: 0.83rem;
   line-height: 1.55;
+}
+
+.threat-map-footer {
+  display: grid;
+  gap: 12px;
+}
+
+.threat-map-legend,
+.map-control-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.legend-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(7, 13, 31, 0.6);
+  padding: 8px 12px;
+  color: rgba(220, 225, 251, 0.72);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.legend-dot.tone-danger {
+  background: rgba(255, 180, 171, 0.95);
+  box-shadow: 0 0 10px rgba(255, 180, 171, 0.4);
+}
+
+.legend-dot.tone-accent {
+  background: rgba(255, 225, 109, 0.95);
+  box-shadow: 0 0 10px rgba(255, 225, 109, 0.4);
+}
+
+.legend-dot.tone-success {
+  background: rgba(0, 255, 148, 0.92);
+  box-shadow: 0 0 10px rgba(0, 255, 148, 0.3);
+}
+
+.threat-axis {
+  position: absolute;
+  z-index: 2;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(220, 225, 251, 0.36);
+}
+
+.axis-top {
+  top: 16px;
+  right: 24px;
+}
+
+.axis-bottom {
+  right: 24px;
+  bottom: 16px;
+}
+
+.axis-left {
+  left: 18px;
+  bottom: 18px;
+}
+
+.axis-right {
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .threat-map-inner.view-hotspots {
@@ -3129,6 +3223,7 @@ a {
 .risk-feed {
   display: grid;
   gap: 18px;
+  min-width: 0;
 }
 
 .live-feed-dot {
@@ -3744,9 +3839,6 @@ a {
   }
 
   .threat-map-caption {
-    left: 16px;
-    right: 16px;
-    bottom: 100px;
     max-width: none;
   }
 

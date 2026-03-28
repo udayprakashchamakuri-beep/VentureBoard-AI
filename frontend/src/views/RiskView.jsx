@@ -64,8 +64,19 @@ function RiskView({ riskMetrics, riskAlerts }) {
   const observation = simulationResult?.observation ?? riskMetrics.observation;
 
   const mapViewLabel =
-    mapView === "world" ? "World view" : mapView === "hotspots" ? "Risk hotspots" : "Supply view";
+    mapView === "world" ? "Overall risk picture" : mapView === "hotspots" ? "Main risk hotspots" : "Operations and supply risks";
+  const mapSummary =
+    mapView === "world"
+      ? "This view shows the full launch path. The dashed line shows how risk builds from early launch to later scale."
+      : mapView === "hotspots"
+        ? "This view highlights the places where the biggest problems could hit first. Larger red dots need the fastest action."
+        : "This view focuses on delivery, staffing, and supply-side risks that could slow the plan down.";
   const zoomLabel = `${Math.round(mapZoom * 100)}%`;
+  const mapLegendItems = [
+    { label: "High concern", tone: "danger" },
+    { label: "Watch closely", tone: "accent" },
+    { label: "Stable area", tone: "success" },
+  ];
   const mapDiagram = useMemo(() => {
     if (mapView === "hotspots") {
       return {
@@ -244,6 +255,10 @@ function RiskView({ riskMetrics, riskAlerts }) {
               <div className="threat-orb orb-b" />
               <div className="threat-orb orb-c" />
               <div className="threat-grid-lines" />
+              <div className="threat-axis axis-top">Higher risk</div>
+              <div className="threat-axis axis-bottom">Lower risk</div>
+              <div className="threat-axis axis-left">Early launch</div>
+              <div className="threat-axis axis-right">Later scale</div>
               <svg className="threat-map-svg" viewBox="0 0 800 320" preserveAspectRatio="none" aria-hidden="true">
                 {mapDiagram.paths.map((path, index) => (
                   <path key={index} d={path} className="threat-map-path" />
@@ -258,19 +273,29 @@ function RiskView({ riskMetrics, riskAlerts }) {
                   />
                 ))}
               </svg>
-              <div className="threat-map-caption">
-                <strong>{mapViewLabel}</strong>
-                <span>{simulationResult?.summary ?? "The live map highlights the areas where the model sees the highest pressure right now."}</span>
-              </div>
             </div>
           </div>
 
-          <div className="map-overlay map-overlay-bottom">
-            <span className="map-status-chip">{mapViewLabel}</span>
-            <span className="map-status-chip">{zoomLabel}</span>
-            <button type="button" className="map-control" onClick={zoomIn}>Zoom In</button>
-            <button type="button" className="map-control" onClick={zoomOut}>Zoom Out</button>
-            <button type="button" className="map-control active" onClick={changeView}>Change view</button>
+          <div className="threat-map-footer">
+            <div className="threat-map-caption">
+              <strong>{mapViewLabel}</strong>
+              <span>{simulationResult?.summary ?? mapSummary}</span>
+            </div>
+            <div className="threat-map-legend">
+              {mapLegendItems.map((item) => (
+                <span key={item.label} className="legend-pill">
+                  <i className={`legend-dot tone-${item.tone}`} />
+                  {item.label}
+                </span>
+              ))}
+            </div>
+            <div className="map-control-row">
+              <span className="map-status-chip">{mapViewLabel}</span>
+              <span className="map-status-chip">{zoomLabel}</span>
+              <button type="button" className="map-control" onClick={zoomIn}>Zoom In</button>
+              <button type="button" className="map-control" onClick={zoomOut}>Zoom Out</button>
+              <button type="button" className="map-control active" onClick={changeView}>Change view</button>
+            </div>
           </div>
         </section>
 
@@ -284,7 +309,7 @@ function RiskView({ riskMetrics, riskAlerts }) {
           </div>
 
           <div className="risk-alert-list">
-            {riskAlerts.map((alert) => (
+            {displayAlerts.map((alert) => (
               <button
                 key={alert.id}
                 type="button"

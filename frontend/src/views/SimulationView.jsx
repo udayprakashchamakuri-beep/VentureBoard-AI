@@ -94,13 +94,16 @@ function SimulationView({
 
           <div className="agent-stack">
             {Object.entries(agentMeta).map(([name, meta]) => {
-              const isActive = name === speakingAgent;
+              const isActive = loading && name === speakingAgent;
               const isCalculating = loading && name === activeTypingAgent;
               const isSelected = conversationAgentNames.includes(name);
+              const isLatestReply = !loading && hasAnyDiscussion && name === speakingAgent;
               const cardClassName = isSelected
                 ? "agent-card selected agent-card-link"
                 : isActive
                   ? "agent-card active agent-card-link"
+                  : isLatestReply
+                    ? "agent-card recent agent-card-link"
                   : isCalculating
                     ? "agent-card thinking agent-card-link"
                     : "agent-card agent-card-link";
@@ -122,6 +125,10 @@ function SimulationView({
                         <div className="signal-bar">
                           <div />
                         </div>
+                      </div>
+                    ) : isLatestReply ? (
+                      <div className="agent-status-speaking latest">
+                        <span>Latest reply</span>
                       </div>
                     ) : null}
                     {!isActive && isCalculating ? <span className="material-symbols-outlined spin">sync</span> : null}
@@ -158,15 +165,13 @@ function SimulationView({
           <header className="stream-header">
             <div>
               <div className="header-kicker">
-                <span>Analysis Running</span>
-                <span className="status-dot small" />
+                <span>{loading ? "Analysis Running" : hasAnyDiscussion ? "Analysis Complete" : "Ready To Start"}</span>
+                <span className={loading ? "status-dot small" : "status-dot small idle"} />
               </div>
               <h1>{scenarioTitle}</h1>
             </div>
             <div className="round-meter">
-              <span>
-                Round {currentRound || 0} / {displayedRounds}
-              </span>
+              <span>{loading ? `Round ${currentRound || 0} / ${displayedRounds}` : hasAnyDiscussion ? "Review complete" : "Waiting for input"}</span>
               <div className="meter-track">
                 <div
                   className="meter-fill"

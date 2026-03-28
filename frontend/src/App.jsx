@@ -216,7 +216,12 @@ function App() {
         }
         if (payloadLine.type === "final") {
           setResult(payloadLine.result);
-          continue;
+          try {
+            await reader.cancel();
+          } catch (_error) {
+            // Ignore cancel errors because the final payload is already complete.
+          }
+          return;
         }
         setResult((current) => mergeStreamEvent(current ?? createEmptyResult(payload.company_name), payloadLine));
       }
