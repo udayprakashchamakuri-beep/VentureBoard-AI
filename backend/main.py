@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
 import os
 import uuid
@@ -62,6 +63,7 @@ app.add_middleware(
 auth_service = AuthService()
 rate_limiter = RateLimiter()
 orchestrator = EnterpriseOrchestrator()
+demo_auth_disabled = os.getenv("DEMO_AUTH_DISABLED", "true").lower() == "true"
 
 
 @app.on_event("startup")
@@ -124,6 +126,16 @@ def _client_ip(request: Request) -> str:
     return forwarded_for or (request.client.host if request.client else "unknown")
 
 
+def _demo_user(request: Request) -> AuthUser:
+    scoped_id = hashlib.sha256(_client_ip(request).encode("utf-8")).hexdigest()[:16]
+    return AuthUser(
+        id=f"demo-{scoped_id}",
+        email="demo@business-agent.local",
+        is_verified=True,
+        created_at="demo-mode",
+    )
+
+
 def _check_origin(request: Request) -> None:
     origin = request.headers.get("origin")
     if origin and origin.rstrip("/") not in frontend_origins:
@@ -160,6 +172,10 @@ def _clear_session_cookie(response: Response) -> None:
 
 
 def _current_user(request: Request) -> AuthUser:
+    if demo_auth_disabled:
+        user = _demo_user(request)
+        request.state.auth_user = user
+        return user
     token = request.cookies.get(auth_service.cookie_name, "")
     session = auth_service.get_session(token)
     if not session:

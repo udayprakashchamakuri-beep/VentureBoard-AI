@@ -94,6 +94,7 @@ EMAIL_VERIFICATION_TTL_SECONDS=86400
 PASSWORD_RESET_TTL_SECONDS=1800
 AUTH_PREVIEW_LINKS=false
 LOG_LEVEL=INFO
+DEMO_AUTH_DISABLED=true
 ```
 
 If those variables are not present, the simulator still works using the internal reasoning engine.
@@ -111,6 +112,7 @@ Authentication note:
 - email verification and password reset tokens expire automatically
 - `AUTH_PREVIEW_LINKS` should stay `false` in production so verification and reset links are not echoed back to the browser
 - provider API keys and auth configuration belong only in server-side environment variables, never in frontend code
+- `DEMO_AUTH_DISABLED=true` keeps the app open for demo use while preserving the secure auth code path for production
 
 ## Run Locally
 

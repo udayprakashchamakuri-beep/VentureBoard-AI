@@ -8,6 +8,8 @@ import IntelligenceView from "./views/IntelligenceView";
 import RiskView from "./views/RiskView";
 import SimulationView from "./views/SimulationView";
 
+const DEMO_AUTH_DISABLED = (import.meta.env.VITE_DEMO_AUTH_DISABLED ?? "true") === "true";
+
 function App() {
   const [activeView, setActiveView] = useState("simulation");
   const [form, setForm] = useState(buildDefaultForm());
@@ -29,6 +31,17 @@ function App() {
   const [authMessage, setAuthMessage] = useState("");
 
   useEffect(() => {
+    if (DEMO_AUTH_DISABLED) {
+      setAuthUser({
+        id: "demo-user",
+        email: "Demo mode",
+        is_verified: true,
+        session_expires_at: null,
+      });
+      setAuthReady(true);
+      return undefined;
+    }
+
     let active = true;
 
     async function loadSession() {
@@ -506,9 +519,11 @@ function App() {
             <IconButton icon="notifications" onClick={() => setActiveView("intelligence")} label="Open overview page" />
             <IconButton icon="settings" onClick={openStatusPanel} label="Open system status" />
           </div>
-          <button type="button" className="secondary-action nav-logout" onClick={handleLogout}>
-            Sign out
-          </button>
+          {!DEMO_AUTH_DISABLED ? (
+            <button type="button" className="secondary-action nav-logout" onClick={handleLogout}>
+              Sign out
+            </button>
+          ) : null}
           <button type="button" className="deploy-button" onClick={toggleConsole}>
             Start Analysis
           </button>
