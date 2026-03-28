@@ -15,6 +15,13 @@ function AutomationView({ scenarioTitle, autonomyStatus, autonomyBusy, autonomyE
   const orderedActions = useMemo(() => [...recentActions].slice(0, 12), [recentActions]);
   const orderedRuns = useMemo(() => [...recentRuns].slice(0, 8), [recentRuns]);
   const orderedTasks = useMemo(() => [...openTasks].slice(0, 8), [openTasks]);
+  const demoActions = useMemo(() => buildDemoActions(scenarioTitle), [scenarioTitle]);
+  const demoTasks = useMemo(() => buildDemoTasks(scenarioTitle), [scenarioTitle]);
+
+  const actionsToRender = orderedActions.length ? orderedActions : demoActions;
+  const tasksToRender = orderedTasks.length ? orderedTasks : demoTasks;
+  const usingDemoActions = !orderedActions.length;
+  const usingDemoTasks = !orderedTasks.length;
 
   return (
     <div className="command-canvas">
@@ -80,7 +87,7 @@ function AutomationView({ scenarioTitle, autonomyStatus, autonomyBusy, autonomyE
                     <span>{formatDateTime(run.completed_at || run.started_at)}</span>
                   </div>
                   <p>
-                    {run.watches_scanned} scanned · {run.actions_taken} actions · {run.trigger_source}
+                    {run.watches_scanned} scanned | {run.actions_taken} actions | {run.trigger_source}
                   </p>
                 </article>
               ))
@@ -110,7 +117,7 @@ function AutomationView({ scenarioTitle, autonomyStatus, autonomyBusy, autonomyE
                   </div>
                   <p>{watch.latest_signal_summary}</p>
                   <small>
-                    Last outcome: {watch.last_outcome || "No action yet"} · Last check:{" "}
+                    Last outcome: {watch.last_outcome || "No action yet"} | Last check:{" "}
                     {watch.last_checked_at ? formatDateTime(watch.last_checked_at) : "Not checked yet"}
                   </small>
                 </article>
@@ -130,8 +137,9 @@ function AutomationView({ scenarioTitle, autonomyStatus, autonomyBusy, autonomyE
           </div>
 
           <div className="automation-action-log">
-            {orderedActions.length ? (
-              orderedActions.map((action) => (
+            {usingDemoActions ? <p className="autonomy-empty">Showing demo examples until live actions arrive.</p> : null}
+            {actionsToRender.length ? (
+              actionsToRender.map((action) => (
                 <article key={action.id} className={`autonomy-action-item tone-${action.status}`}>
                   <div className="automation-action-head">
                     <p>{action.title}</p>
@@ -156,8 +164,9 @@ function AutomationView({ scenarioTitle, autonomyStatus, autonomyBusy, autonomyE
           </div>
 
           <div className="automation-task-list">
-            {orderedTasks.length ? (
-              orderedTasks.map((task) => (
+            {usingDemoTasks ? <p className="autonomy-empty">Showing demo examples until live tasks arrive.</p> : null}
+            {tasksToRender.length ? (
+              tasksToRender.map((task) => (
                 <article key={task.id} className="automation-task-item">
                   <strong>{task.title}</strong>
                   <span>{task.watch_label}</span>
@@ -214,6 +223,57 @@ function formatDateTime(value) {
     return value;
   }
   return parsed.toLocaleString();
+}
+
+function buildDemoActions(scenarioTitle) {
+  const label = scenarioTitle || "Current business case";
+  return [
+    {
+      id: "demo-action-1",
+      status: "executed",
+      title: "Shift budget to proven channels",
+      watch_label: label,
+      reason: "Early demand was stable but paid acquisition cost rose. The system shifted spend to the best-performing channel.",
+    },
+    {
+      id: "demo-action-2",
+      status: "executed",
+      title: "Enable weekly pricing check",
+      watch_label: label,
+      reason: "Competitor discounting increased. The system scheduled weekly pricing checks to protect margin.",
+    },
+    {
+      id: "demo-action-3",
+      status: "skipped",
+      title: "Pause expansion trigger",
+      watch_label: label,
+      reason: "Risk level improved this cycle, so the pause rule did not fire.",
+    },
+  ];
+}
+
+function buildDemoTasks(scenarioTitle) {
+  const label = scenarioTitle || "Current business case";
+  return [
+    {
+      id: "demo-task-1",
+      watch_label: label,
+      title: "Review pricing every Friday",
+      description: "Check conversion, margin, and competitor pricing. Keep a simple change log with clear next actions.",
+    },
+    {
+      id: "demo-task-2",
+      watch_label: label,
+      title: "Validate top demand signal",
+      description: "Confirm demand trend with one additional data source before increasing marketing spend.",
+    },
+    {
+      id: "demo-task-3",
+      watch_label: label,
+      title: "Prepare fallback launch plan",
+      description: "Keep a smaller launch version ready in case risk pressure rises above the threshold next cycle.",
+    },
+  ];
 }
 
 export default AutomationView;
