@@ -1,11 +1,54 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 function RiskView({ riskMetrics, riskAlerts }) {
   const [shockIntensity, setShockIntensity] = useState(75);
   const [autonomyMode, setAutonomyMode] = useState("balanced");
   const [mapZoom, setMapZoom] = useState(1);
   const [mapView, setMapView] = useState("world");
+  const [timeRange, setTimeRange] = useState("4H");
+  const [selectedAlertId, setSelectedAlertId] = useState(riskAlerts[0]?.id ?? "");
   const [lastSimulation, setLastSimulation] = useState("");
+
+  useEffect(() => {
+    if (!riskAlerts.length) {
+      setSelectedAlertId("");
+      return;
+    }
+    if (!riskAlerts.some((alert) => alert.id === selectedAlertId)) {
+      setSelectedAlertId(riskAlerts[0].id);
+    }
+  }, [riskAlerts, selectedAlertId]);
+
+  const selectedAlert = useMemo(
+    () => riskAlerts.find((alert) => alert.id === selectedAlertId) ?? riskAlerts[0] ?? null,
+    [riskAlerts, selectedAlertId],
+  );
+
+  const chartConfig = useMemo(() => {
+    if (timeRange === "1H") {
+      return {
+        path: "M0 146 Q 80 142, 120 138 T 220 130 T 320 122 T 420 116 T 520 98 T 640 86 T 800 74",
+        markerTop: "34px",
+        label: "Short-term change",
+      };
+    }
+    if (timeRange === "1D") {
+      return {
+        path: "M0 158 Q 70 146, 140 152 T 260 126 T 380 150 T 520 96 T 660 118 T 800 48",
+        markerTop: "46px",
+        label: "Daily trend",
+      };
+    }
+    return {
+      path: "M0 150 Q 50 140, 100 160 T 200 120 T 300 140 T 400 80 T 500 100 T 600 40 T 700 60 T 800 20",
+      markerTop: "18px",
+      label: "Four-hour trend",
+    };
+  }, [timeRange]);
+
+  const mapViewLabel =
+    mapView === "world" ? "World view" : mapView === "hotspots" ? "Risk hotspots" : "Supply view";
+  const zoomLabel = `${Math.round(mapZoom * 100)}%`;
 
   function zoomIn() {
     setMapZoom((current) => Math.min(1.6, Number((current + 0.15).toFixed(2))));
@@ -20,7 +63,12 @@ function RiskView({ riskMetrics, riskAlerts }) {
   }
 
   function runSimulation() {
-    setLastSimulation(`Ran a ${shockIntensity}% stress test with ${autonomyMode} advisor freedom on the ${mapView} map view.`);
+    setLastSimulation(
+      `The system ran a ${shockIntensity}% stress test with ${autonomyMode} advisor freedom in ${mapViewLabel.toLowerCase()}. Review the highlighted alert and trend chart for the biggest watch-outs.`,
+    );
+    if (riskAlerts.length) {
+      setSelectedAlertId(riskAlerts[0].id);
+    }
   }
 
   return (
@@ -67,9 +115,11 @@ function RiskView({ riskMetrics, riskAlerts }) {
           </div>
 
           <div className="map-overlay map-overlay-bottom">
-            <button type="button" onClick={zoomIn}>Zoom In</button>
-            <button type="button" onClick={zoomOut}>Zoom Out</button>
-            <button type="button" onClick={changeView}>Change view</button>
+            <span className="map-status-chip">{mapViewLabel}</span>
+            <span className="map-status-chip">{zoomLabel}</span>
+            <button type="button" className="map-control" onClick={zoomIn}>Zoom In</button>
+            <button type="button" className="map-control" onClick={zoomOut}>Zoom Out</button>
+            <button type="button" className="map-control active" onClick={changeView}>Change view</button>
           </div>
         </section>
 
@@ -84,28 +134,54 @@ function RiskView({ riskMetrics, riskAlerts }) {
 
           <div className="risk-alert-list">
             {riskAlerts.map((alert) => (
-              <article key={alert.id} className={`risk-alert tone-${alert.tone}`}>
+              <button
+                key={alert.id}
+                type="button"
+                className={selectedAlertId === alert.id ? `risk-alert tone-${alert.tone} active` : `risk-alert tone-${alert.tone}`}
+                onClick={() => setSelectedAlertId(alert.id)}
+              >
                 <div className="risk-alert-meta">
                   <span>{alert.timestamp}</span>
                   <strong>{alert.severity}</strong>
                 </div>
                 <h3>{alert.title}</h3>
                 <p>{alert.body}</p>
-              </article>
+              </button>
             ))}
           </div>
+
+          {selectedAlert ? (
+            <article className={`alert-detail tone-${selectedAlert.tone}`}>
+              <div className="panel-topline">
+                <div>
+                  <h2>Selected Alert</h2>
+                  <p>{selectedAlert.timestamp}</p>
+                </div>
+                <span className="status-chip outline">{selectedAlert.severity}</span>
+              </div>
+              <strong>{selectedAlert.title}</strong>
+              <p>{selectedAlert.body}</p>
+            </article>
+          ) : null}
         </section>
 
         <section className="panel volatility-panel">
           <div className="panel-topline">
             <div>
               <h2>Risk Trend</h2>
-              <p>How risk is changing over time</p>
+              <p>{chartConfig.label}</p>
             </div>
             <div className="legend-row">
-              <span className="status-chip outline">1H</span>
-              <span className="status-chip accent">4H</span>
-              <span className="status-chip outline">1D</span>
+              {["1H", "4H", "1D"].map((range) => (
+                <button
+                  key={range}
+                  type="button"
+                  className={timeRange === range ? "status-chip accent legend-button active" : "status-chip outline legend-button"}
+                  onClick={() => setTimeRange(range)}
+                >
+                  {range}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -118,17 +194,17 @@ function RiskView({ riskMetrics, riskAlerts }) {
                 </linearGradient>
               </defs>
               <path
-                d="M0 150 Q 50 140, 100 160 T 200 120 T 300 140 T 400 80 T 500 100 T 600 40 T 700 60 T 800 20"
+                d={chartConfig.path}
                 fill="none"
                 stroke="#ffe16d"
                 strokeWidth="2"
               />
               <path
-                d="M0 150 Q 50 140, 100 160 T 200 120 T 300 140 T 400 80 T 500 100 T 600 40 T 700 60 T 800 20 L 800 200 L 0 200 Z"
+                d={`${chartConfig.path} L 800 200 L 0 200 Z`}
                 fill="url(#volatilityGradient)"
               />
             </svg>
-            <div className="volatility-marker" />
+            <div className="volatility-marker" style={{ top: chartConfig.markerTop }} />
           </div>
 
           <div className="volatility-stats">

@@ -2926,6 +2926,8 @@ a {
 .map-overlay-bottom {
   right: 24px;
   bottom: 24px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .map-overlay button,
@@ -2938,6 +2940,22 @@ a {
   font-size: 0.58rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+.map-status-chip {
+  border-radius: 999px;
+  background: rgba(7, 13, 31, 0.9);
+  padding: 9px 12px;
+  color: rgba(220, 225, 251, 0.74);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.map-control.active {
+  border: 1px solid rgba(255, 225, 109, 0.26);
+  color: var(--accent);
 }
 
 .threat-badge {
@@ -3057,12 +3075,58 @@ a {
 }
 
 .risk-alert {
+  width: 100%;
+  border: 1px solid transparent;
   border-left: 4px solid transparent;
+  text-align: left;
+  background: rgba(21, 27, 45, 0.72);
+  transition: border-color 180ms ease, transform 180ms ease, background 180ms ease;
+}
+
+.risk-alert:hover {
+  transform: translateY(-1px);
+}
+
+.risk-alert.active {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(46, 52, 71, 0.34);
 }
 
 .risk-alert h3 {
   margin-top: 10px;
   font-size: 1rem;
+}
+
+.alert-detail {
+  display: grid;
+  gap: 10px;
+  border-left: 4px solid transparent;
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(21, 27, 45, 0.76);
+}
+
+.alert-detail strong {
+  font-size: 1rem;
+  color: #dde3eb;
+}
+
+.alert-detail p {
+  margin: 0;
+  color: rgba(220, 225, 251, 0.72);
+  line-height: 1.55;
+}
+
+.alert-detail.tone-danger {
+  border-left-color: var(--danger);
+}
+
+.alert-detail.tone-accent {
+  border-left-color: var(--accent);
+}
+
+.alert-detail.tone-success {
+  border-left-color: var(--finance);
 }
 
 .volatility-panel {
@@ -3098,6 +3162,10 @@ a {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   margin-top: 20px;
+}
+
+.legend-button {
+  cursor: pointer;
 }
 
 .volatility-stats article,
