@@ -1316,6 +1316,7 @@ a {
   z-index: 45;
   width: min(860px, calc(100vw - 48px));
   pointer-events: none;
+  visibility: hidden;
   opacity: 0;
   transform: translateY(30px);
   transition: transform 220ms ease, opacity 220ms ease;
@@ -1323,6 +1324,7 @@ a {
 
 .console-drawer.open {
   pointer-events: auto;
+  visibility: visible;
   opacity: 1;
   transform: translateY(0);
 }

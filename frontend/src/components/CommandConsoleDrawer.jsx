@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 const STAGE_OPTIONS = [
   "Idea",
   "Pre-seed",
@@ -30,6 +32,12 @@ function CommandConsoleDrawer({
   onSelectDemoCase,
   onFieldChange,
 }) {
+  useEffect(() => {
+    if (loading && consoleOpen) {
+      onClose();
+    }
+  }, [loading, consoleOpen, onClose]);
+
   return (
     <div className={consoleOpen ? "console-drawer open" : "console-drawer"}>
       <div className="console-shell">
