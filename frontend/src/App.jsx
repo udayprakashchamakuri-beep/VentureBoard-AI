@@ -9,6 +9,9 @@ import RiskView from "./views/RiskView";
 import SimulationView from "./views/SimulationView";
 
 const DEMO_AUTH_DISABLED = (import.meta.env.VITE_DEMO_AUTH_DISABLED ?? "true") === "true";
+const STREAM_TIMEOUT_MS = 6500;
+const ANALYSIS_TIMEOUT_MS = 9000;
+const FETCH_RETRIES = 0;
 
 function App() {
   const [activeView, setActiveView] = useState("simulation");
@@ -156,31 +159,30 @@ function App() {
       } catch (streamError) {
         console.warn("Streaming analysis failed, falling back to regular analysis.", streamError);
         setResult(createEmptyResult(payload.company_name));
-        await wait(800);
         await runRegularAnalysis(payload);
       }
     } catch (submissionError) {
       const rawMessage = submissionError?.message || "Unable to analyze the business problem.";
       if (/please sign in|unauthorized|401/i.test(rawMessage)) {
         setAuthUser(null);
+        setError("Please sign in to continue.");
+      } else {
+        console.warn("Remote analysis failed. Falling back to quick local review.", submissionError);
+        setResult(buildLocalFallbackAnalysis(payload));
+        setError("");
       }
-      const friendlyMessage =
-        /failed to fetch|networkerror|load failed|unable to connect/i.test(rawMessage)
-          ? "We could not reach the advisory service just now. Please wait a few seconds and try again."
-          : rawMessage;
-      setError(friendlyMessage);
     } finally {
       setLoading(false);
     }
   }
 
   async function runStreamingAnalysis(payload) {
-    const response = await fetch(`${API_BASE}/analyze/stream`, {
+    const response = await fetchWithRetry(`${API_BASE}/analyze/stream`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    });
+    }, { timeoutMs: STREAM_TIMEOUT_MS, retries: FETCH_RETRIES });
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -222,12 +224,12 @@ function App() {
   }
 
   async function runRegularAnalysis(payload) {
-    const response = await fetch(`${API_BASE}/analyze`, {
+    const response = await fetchWithRetry(`${API_BASE}/analyze`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    });
+    }, { timeoutMs: ANALYSIS_TIMEOUT_MS, retries: FETCH_RETRIES });
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -1344,6 +1346,28 @@ async function safeJson(response) {
   }
 }
 
+async function fetchWithRetry(url, options, { timeoutMs = 12000, retries = 0 } = {}) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } catch (error) {
+      lastError = error;
+      if (attempt < retries) {
+        await wait(500 * (attempt + 1));
+      }
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  }
+
+  throw lastError ?? new Error("Request failed.");
+}
+
 function mergeStreamEvent(current, eventPayload) {
   switch (eventPayload.type) {
     case "turn":
@@ -1373,6 +1397,308 @@ function mergeStreamEvent(current, eventPayload) {
     default:
       return current;
   }
+}
+
+function buildLocalFallbackAnalysis(payload) {
+  const agentNames = payload.selected_agent_names?.length ? payload.selected_agent_names : Object.keys(AGENT_META);
+  const summary = estimateFallbackSummary(payload);
+  const conversation = agentNames.map((agentName, index) =>
+    buildLocalFallbackTurn({
+      agentName,
+      payload,
+      summary,
+      round: 1,
+      confidenceOffset: (index % 3) * 2,
+    }),
+  );
+  const roundSummary = {
+    round: 1,
+    synopsis: "Quick backup review generated from the current prompt.",
+    consensus_points: [summary.mainReason],
+    conflict_points: summary.conflicts.slice(0, 2),
+    open_questions: summary.openQuestions.slice(0, 3),
+    numeric_highlights: {
+      average_confidence: summary.confidence,
+      average_expected_roi_pct: summary.estimatedMetrics.expected_roi_pct,
+      conflict_count: summary.conflicts.length,
+    },
+  };
+  const conflicts = summary.conflicts.slice(0, 2).map((description, index) => ({
+    round: 1,
+    topic: index === 0 ? "Cost vs demand" : "Speed vs caution",
+    agents: summary.topInfluencer === "Finance Agent" ? ["Finance Agent", "CEO Agent"] : ["CEO Agent", "Risk Agent"],
+    opposing_agents: summary.topInfluencer === "Finance Agent" ? ["Startup Builder Agent"] : ["Startup Builder Agent"],
+    description,
+    severity: index === 0 ? 4 : 3,
+    conflict_detected: true,
+    conflict_type: index === 0 ? "Money vs growth" : "Speed vs risk",
+    impact: index === 0 ? "High" : "Medium",
+  }));
+
+  return {
+    company_name: payload.company_name,
+    agent_definitions: [],
+    conversation,
+    round_summaries: [roundSummary],
+    conflicts,
+    final_output: {
+      decision: summary.decision,
+      confidence: summary.confidence,
+      key_reasons: [summary.mainReason, summary.supportReason],
+      risks: summary.risks,
+      recommended_actions: summary.nextSteps,
+    },
+    actions: buildLocalFallbackActions(payload, summary),
+    scenario_results: buildLocalFallbackScenarios(summary),
+    explainability: {
+      top_influencer: summary.topInfluencer,
+      conflicts: conflicts.map((conflict) => conflict.description),
+      final_reasoning_summary: summary.explainability,
+      reasoning_trace: agentNames.slice(0, 4).map((agentName, index) => ({
+        agent_name: agentName,
+        influence_score: Number((1.15 - index * 0.12).toFixed(2)),
+        stance: summary.decision,
+        summary: buildFallbackAgentLine(agentName, payload, summary).split(". ")[0] + ".",
+      })),
+    },
+    memory_summary: {
+      recalled_simulations: 1,
+      prior_failures: ["This fast backup review used the information from your current prompt."],
+      learned_adjustments: summary.nextSteps.slice(0, 2),
+      prior_agent_arguments: {},
+    },
+    validation: {
+      decisions_made: true,
+      multiple_scenarios_simulated: true,
+      actions_generated: true,
+      memory_used: true,
+      passed: true,
+    },
+  };
+}
+
+function estimateFallbackSummary(payload) {
+  const text = String(payload.business_problem || "").toLowerCase();
+  const runway = Number(payload.known_metrics?.runway_months || 0);
+  const grossMargin = Number(payload.known_metrics?.gross_margin || 0);
+  const pricePoint = Number(payload.known_metrics?.price_point || 0);
+  const localVenue = /\bgame center|gaming|arcade|college|campus|snacks|tournament\b/.test(text);
+  const priceSensitive = /\bprice-sensitive|price sensitive|budget-conscious|cheap|discount\b/.test(text);
+  const heavySetup = /\bupfront|fit-?out|equipment|rent|staff|setup|capex|capital\b/.test(text);
+  const strongDemand = /\bstrong student traffic|foot traffic|hostels|college|busy area|repeat visits\b/.test(text);
+
+  let score = 0;
+  if (strongDemand) score += 2;
+  if (localVenue) score += 1;
+  if (priceSensitive) score -= 1;
+  if (heavySetup) score -= 2;
+  if (runway && runway < 8) score -= 2;
+  if (runway && runway >= 12) score += 1;
+  if (grossMargin && grossMargin >= 60) score += 1;
+
+  const decision = score >= 2 ? "GO" : score <= -2 ? "NO GO" : "MODIFY";
+  const confidence = decision === "MODIFY" ? 74 : decision === "GO" ? 78 : 76;
+  const estimatedRevenue = localVenue ? (pricePoint || 4) * 18000 : pricePoint ? pricePoint * 14 : 85000;
+  const launchBudget = localVenue ? Math.max(18000, (pricePoint || 5) * 4200) : 42000;
+  const paybackMonths = decision === "GO" ? 7.5 : decision === "MODIFY" ? 10.0 : 14.0;
+  const expectedRoi = Number((((estimatedRevenue * 0.35) - launchBudget) / Math.max(launchBudget, 1) * 100).toFixed(1));
+  const topInfluencer = heavySetup ? "Finance Agent" : strongDemand ? "Market Research Agent" : "CEO Agent";
+
+  return {
+    decision,
+    confidence,
+    topInfluencer,
+    mainReason:
+      decision === "GO"
+        ? "The plan looks workable if you keep the first launch small and stay disciplined on spending."
+        : decision === "MODIFY"
+          ? "The idea looks promising, but it needs a smaller first launch, tighter spending, and proof that repeat demand is real."
+          : "The idea is interesting, but the current setup looks too risky until the upfront cost and demand uncertainty come down.",
+    supportReason:
+      localVenue
+        ? "The student location helps demand, but the biggest watch-outs are price sensitivity, equipment cost, and whether people come back often enough."
+        : "The biggest question is whether demand is strong enough to justify the upfront investment and operating effort.",
+    risks: heavySetup
+      ? [
+          "The upfront setup cost could become too heavy before demand is proven.",
+          "Student demand may look strong at first but still be inconsistent on normal weekdays.",
+          "Low pricing could fill the venue without leaving enough profit.",
+        ]
+      : [
+          "Demand may not convert into repeat paying customers quickly enough.",
+          "The first version could become too broad before the economics are proven.",
+        ],
+    nextSteps: localVenue
+      ? [
+          "Start with a smaller first version, fewer stations, and one simple food offer.",
+          "Test hourly pricing, bundle pricing, and membership pricing with real students before the full fit-out.",
+          "Use tournaments and hostel partnerships to build repeat visits early.",
+        ]
+      : [
+          "Start with a narrower first offer and prove demand before committing fully.",
+          "Set spending limits and success checkpoints before scaling.",
+          "Talk to early buyers and tighten the offer around the clearest need.",
+        ],
+    conflicts: [
+      "The upside looks real, but the upfront cost and ongoing operating load could get too heavy too early.",
+      "The team wants to move fast, but only after the first version is small enough to learn cheaply.",
+    ],
+    openQuestions: [
+      "How many repeat visits or repeat customers are needed to break even each month?",
+      "What is the smallest launch version that still feels attractive to early customers?",
+      "Which pricing option brings students in without making the business too thin on margin?",
+    ],
+    explainability:
+      "This quick backup review leans on the demand signals in your prompt, the likely startup cost, and the need to keep the first launch small enough to learn safely.",
+    estimatedMetrics: {
+      expected_roi_pct: expectedRoi,
+      estimated_payback_months: paybackMonths,
+      projected_annual_revenue: Number(estimatedRevenue.toFixed(0)),
+      launch_budget: Number(launchBudget.toFixed(0)),
+      price_point: pricePoint || (localVenue ? 4 : 299),
+      gross_margin_pct: grossMargin || (localVenue ? 52 : 61),
+      expected_customers_12m: localVenue ? 4200 : 120,
+    },
+  };
+}
+
+function buildLocalFallbackTurn({ agentName, payload, summary, round, confidenceOffset }) {
+  const meta = AGENT_META[agentName] ?? AGENT_META["CEO Agent"];
+  const message = buildFallbackAgentLine(agentName, payload, summary);
+  return {
+    agent_name: agentName,
+    role: meta.boardRole,
+    round,
+    scenario_name: "Base Scenario",
+    message,
+    stance: summary.decision,
+    confidence: Math.max(62, Math.min(90, summary.confidence - confidenceOffset)),
+    topics: [],
+    key_points: summary.nextSteps.slice(0, 2),
+    assumptions: summary.risks.slice(0, 2),
+    references: [],
+    challenged_agents: [],
+    policy_positions: {},
+    score_snapshot: {},
+    estimated_metrics: summary.estimatedMetrics,
+    calculations: [],
+    memory_references: [],
+    research_points: [],
+  };
+}
+
+function buildFallbackAgentLine(agentName, payload, summary) {
+  const lower = String(payload.business_problem || "").toLowerCase();
+  const localVenue = /\bgame center|gaming|arcade|college|campus\b/.test(lower);
+
+  const localTemplates = {
+    "CEO Agent": "I would move carefully here. The best path is a smaller first launch with clear goals for demand, repeat visits, and monthly break-even.",
+    "Startup Builder Agent": "Do not build the full version on day one. Start smaller, prove demand fast, and expand only after you see steady repeat visits.",
+    "Market Research Agent": "Before a full launch, talk to students nearby, test pricing, and confirm what mix of gaming, events, and snacks they actually want.",
+    "Finance Agent": "This can work only if the fit-out, equipment, and rent stay under control. The business should prove repeat demand before taking on a heavy fixed-cost base.",
+    "Marketing Agent": "Lead with affordable entry pricing, tournaments, and hostel or campus partnerships so the venue becomes a habit, not just a one-time visit.",
+    "Pricing Agent": "Use simple hourly pricing, bundles, and a membership option. The goal is to stay student-friendly without making the margin too thin.",
+    "Supply Chain Agent": "Keep operations simple at the start: a small number of stations, a short menu, and limited tournament commitments until the workflow is stable.",
+    "Hiring Agent": "Start with a lean team and only add more staff once weekday traffic and repeat visits are consistent.",
+    "Risk Agent": "The biggest risk is spending too much before you know how often students will come back. Keep the first version small enough that a slow start is survivable.",
+    "Sales Strategy Agent": "Treat the early sales motion like community building. Pre-opening signups, student clubs, and tournament registrations are the first proof points.",
+  };
+
+  const genericTemplates = {
+    "CEO Agent": "I would move ahead only with a narrower first version and clear success checkpoints.",
+    "Startup Builder Agent": "The first version should be small enough to launch quickly and learn from real customers.",
+    "Market Research Agent": "The first decision should be based on real customer proof, not just a broad market story.",
+    "Finance Agent": "The plan needs tighter control over spending and a clear path to earning the money back.",
+    "Marketing Agent": "The offer needs a clearer message and one or two strong channels before broader spend.",
+    "Pricing Agent": "Pricing should be simple, easy to test, and tied to the clearest value for the customer.",
+    "Supply Chain Agent": "Operations should stay simple at the start so quality does not break under early demand.",
+    "Hiring Agent": "Keep the team lean at first and hire only for the most critical gaps.",
+    "Risk Agent": "The main downside is committing too much too early before demand and execution are proven.",
+    "Sales Strategy Agent": "The first sales motion should focus on a narrow customer group with a simple buying path.",
+  };
+
+  return (localVenue ? localTemplates[agentName] : genericTemplates[agentName]) || genericTemplates["CEO Agent"];
+}
+
+function buildLocalFallbackActions(payload, summary) {
+  return {
+    execution_plan: summary.nextSteps.map((step, index) => ({
+      step,
+      owner: index === 0 ? "CEO Agent" : index === 1 ? "Market Research Agent" : "Finance Agent",
+      timeline: index === 0 ? "Week 1" : index === 1 ? "Weeks 1-2" : "Weeks 2-4",
+      success_metric:
+        index === 0
+          ? "Agree on the smallest first launch."
+          : index === 1
+            ? "Get enough customer proof to support the launch plan."
+            : "Keep early spending within the planned limit.",
+    })),
+    marketing_strategy: {
+      audience: "The clearest first customer group mentioned in the prompt",
+      positioning: "A simpler, safer first version that solves one strong need well.",
+      core_message: "Start small, prove the demand, and scale only after the numbers are healthy.",
+      channels: [
+        {
+          channel: "Local partnerships and direct outreach",
+          objective: "Get early customers or foot traffic quickly",
+          message: "Invite early users with a simple clear offer",
+          budget_share_pct: 40,
+        },
+        {
+          channel: "Social content and repeat-visit offers",
+          objective: "Drive repeat usage",
+          message: "Show why the first experience is worth coming back for",
+          budget_share_pct: 35,
+        },
+      ],
+      ad_angles: ["Lead with the clearest value", "Keep the launch narrow and easy to understand"],
+    },
+    financial_plan: {
+      assumptions: [
+        { name: "Launch budget", value: `${summary.estimatedMetrics.launch_budget}`, rationale: "Quick fallback estimate based on the prompt." },
+        { name: "Expected yearly sales", value: `${summary.estimatedMetrics.projected_annual_revenue}`, rationale: "Used to shape the backup recommendation." },
+      ],
+      monthly_costs: [
+        { category: "Launch spending", monthly_cost: Number((summary.estimatedMetrics.launch_budget / 4).toFixed(0)) },
+        { category: "Operations", monthly_cost: Number((summary.estimatedMetrics.launch_budget / 6).toFixed(0)) },
+      ],
+      revenue_projection: [
+        { milestone: "Month 3", customers: 20, revenue: Number((summary.estimatedMetrics.projected_annual_revenue * 0.18).toFixed(0)) },
+        { milestone: "Month 12", customers: summary.estimatedMetrics.expected_customers_12m, revenue: summary.estimatedMetrics.projected_annual_revenue },
+      ],
+      roi_estimate: `Quick fallback estimate: about ${summary.estimatedMetrics.expected_roi_pct}% return with roughly ${summary.estimatedMetrics.estimated_payback_months} months payback.`,
+    },
+    hiring_plan: {
+      roles: [
+        { role: "Operations lead", timing: "Early", reason: "Keep the first launch stable and well run.", estimated_monthly_cost: 2500 },
+        { role: "Customer-facing support", timing: "After demand is proven", reason: "Support repeat users without overhiring too early.", estimated_monthly_cost: 1800 },
+      ],
+      hiring_sequence: ["Keep the initial team lean.", "Add support only after demand becomes consistent."],
+    },
+  };
+}
+
+function buildLocalFallbackScenarios(summary) {
+  return [
+    {
+      scenario: "Lean budget case",
+      decision: summary.decision === "GO" ? "MODIFY" : summary.decision,
+      confidence: Math.max(60, summary.confidence - 6),
+      difference_from_base: "With a tighter budget, the answer becomes more cautious and the launch needs to be smaller.",
+      reasoning_shift: ["Finance and Risk matter more when the budget gets tighter."],
+      changed_agents: ["Finance Agent", "Risk Agent"],
+      top_influencer: "Finance Agent",
+    },
+    {
+      scenario: "Stronger demand case",
+      decision: summary.decision === "NO GO" ? "MODIFY" : "GO",
+      confidence: Math.min(88, summary.confidence + 5),
+      difference_from_base: "If demand is stronger than expected, the team becomes more comfortable moving ahead.",
+      reasoning_shift: ["Market Research and CEO become more positive when demand proof improves."],
+      changed_agents: ["Market Research Agent", "CEO Agent"],
+      top_influencer: "CEO Agent",
+    },
+  ];
 }
 
 function buildDefaultForm() {

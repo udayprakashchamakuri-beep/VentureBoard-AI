@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional
 
+from backend.config.env import load_local_env
 from backend.agents.base import Agent
 from backend.controller.schemas import AgentTurn, AnalyzeRequest, ConflictRecord, RoundSummary
 from backend.debate_engine.conflict_detector import ConflictDetector
@@ -18,9 +20,11 @@ class DebateResult:
 
 class DebateEngine:
     def __init__(self, agents: List[Agent], memory: MemoryManager) -> None:
+        load_local_env()
         self.agents = agents
         self.memory = memory
         self.conflict_detector = ConflictDetector()
+        self.max_rounds = max(1, min(4, int(os.getenv("DEBATE_MAX_ROUNDS", "2"))))
 
     def run(
         self,
@@ -29,7 +33,7 @@ class DebateEngine:
     ) -> DebateResult:
         all_conflicts: List[ConflictRecord] = []
 
-        for round_number in range(1, 4):
+        for round_number in range(1, self.max_rounds + 1):
             if event_handler:
                 event_handler(
                     {

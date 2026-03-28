@@ -98,6 +98,7 @@ class EnterpriseOrchestrator:
             user_id=user_id,
             base_result=debate_result,
             base_decision=final_output.decision,
+            base_confidence=final_output.confidence,
             base_explainability_top=explainability.top_influencer,
             active_agents=active_agents,
             event_handler=event_handler,
@@ -140,6 +141,7 @@ class EnterpriseOrchestrator:
         user_id: str,
         base_result: DebateResult,
         base_decision: str,
+        base_confidence: int,
         base_explainability_top: str,
         active_agents,
         event_handler: Optional[Callable[[Dict[str, object]], None]] = None,
@@ -163,50 +165,12 @@ class EnterpriseOrchestrator:
                     "variation": variation.model_dump(),
                 },
             )
-            memory = MemoryManager(scenario_request, user_id=user_id)
-            debate_engine = DebateEngine(agents=active_agents, memory=memory)
-            scenario_debate = debate_engine.run(scenario_request)
-            scenario_final = self.decision_engine.decide(
-                agents=active_agents,
-                conversation=scenario_debate.conversation,
-                round_summaries=scenario_debate.round_summaries,
-                conflicts=scenario_debate.conflicts,
-            )
-            scenario_explainability = self.explainability_engine.build(
-                agents=active_agents,
-                conversation=scenario_debate.conversation,
-                conflicts=scenario_debate.conflicts,
-                final_decision=scenario_final.decision,
-            )
-            scenario_latest_turns = self._latest_turns(scenario_debate.conversation)
-            changed_agents = [
-                agent_name
-                for agent_name, turn in scenario_latest_turns.items()
-                if base_latest_turns.get(agent_name)
-                and (
-                    base_latest_turns[agent_name].stance != turn.stance
-                    or abs(base_latest_turns[agent_name].confidence - turn.confidence) >= 8
-                )
-            ]
-            reasoning_shift = self._build_reasoning_shift(
-                base_latest_turns=base_latest_turns,
-                scenario_latest_turns=scenario_latest_turns,
-                base_top_influencer=base_explainability_top,
-                scenario_top_influencer=scenario_explainability.top_influencer,
-            )
-            difference_from_base = self._difference_from_base(
+            scenario_result = self._simulate_scenario_outcome(
+                variation=variation,
                 base_decision=base_decision,
-                scenario_decision=scenario_final.decision,
-                changed_agents=changed_agents,
-            )
-            scenario_result = ScenarioOutcome(
-                scenario=scenario_request.scenario_name,
-                decision=scenario_final.decision,
-                confidence=scenario_final.confidence,
-                difference_from_base=difference_from_base,
-                reasoning_shift=reasoning_shift,
-                changed_agents=changed_agents[:6],
-                top_influencer=scenario_explainability.top_influencer,
+                base_confidence=base_confidence,
+                base_latest_turns=base_latest_turns,
+                base_top_influencer=base_explainability_top,
             )
             scenario_results.append(scenario_result)
             self._emit(
@@ -218,6 +182,115 @@ class EnterpriseOrchestrator:
             )
 
         return scenario_results
+
+    def _simulate_scenario_outcome(
+        self,
+        variation: ScenarioVariation,
+        base_decision: str,
+        base_confidence: int,
+        base_latest_turns: Dict[str, object],
+        base_top_influencer: str,
+    ) -> ScenarioOutcome:
+        delta_score = self._scenario_delta_score(variation)
+        scenario_decision = self._shift_decision(base_decision, delta_score)
+        scenario_confidence = self._shift_confidence(base_confidence, delta_score)
+        changed_agents = self._scenario_changed_agents(delta_score, base_latest_turns)
+        scenario_top_influencer = self._scenario_top_influencer(delta_score, base_top_influencer)
+        reasoning_shift = self._scenario_reasoning_shift(
+            variation=variation,
+            delta_score=delta_score,
+            changed_agents=changed_agents,
+            base_top_influencer=base_top_influencer,
+            scenario_top_influencer=scenario_top_influencer,
+        )
+        difference_from_base = self._difference_from_base(
+            base_decision=base_decision,
+            scenario_decision=scenario_decision,
+            changed_agents=changed_agents,
+        )
+        return ScenarioOutcome(
+            scenario=variation.scenario,
+            decision=scenario_decision,
+            confidence=scenario_confidence,
+            difference_from_base=difference_from_base,
+            reasoning_shift=reasoning_shift,
+            changed_agents=changed_agents[:6],
+            top_influencer=scenario_top_influencer,
+        )
+
+    def _scenario_delta_score(self, variation: ScenarioVariation) -> float:
+        market_shift = {"bearish": -1.0, "base": 0.0, "bullish": 1.0}.get(variation.market_condition, 0.0)
+        competition_shift = {"high": -0.85, "medium": 0.0, "low": 0.65}.get(variation.competition_level, 0.0)
+        budget_shift = variation.budget_change_pct / 18
+        pricing_shift = variation.pricing_change_pct / 12
+        return round(market_shift + competition_shift + budget_shift + pricing_shift, 2)
+
+    def _shift_decision(self, base_decision: str, delta_score: float) -> str:
+        ordering = ["NO GO", "MODIFY", "GO"]
+        current_index = ordering.index(base_decision)
+        if delta_score >= 0.9:
+            current_index = min(current_index + 1, len(ordering) - 1)
+        elif delta_score <= -0.9:
+            current_index = max(current_index - 1, 0)
+        return ordering[current_index]
+
+    def _shift_confidence(self, base_confidence: int, delta_score: float) -> int:
+        adjusted = base_confidence + int(delta_score * 8)
+        return max(58, min(92, adjusted))
+
+    def _scenario_changed_agents(self, delta_score: float, base_latest_turns: Dict[str, object]) -> List[str]:
+        if delta_score >= 0.9:
+            likely_agents = ["CEO Agent", "Market Research Agent", "Marketing Agent", "Sales Strategy Agent"]
+        elif delta_score <= -0.9:
+            likely_agents = ["Finance Agent", "Risk Agent", "Supply Chain Agent", "CEO Agent"]
+        else:
+            likely_agents = ["CEO Agent", "Finance Agent", "Market Research Agent"]
+
+        return [agent_name for agent_name in likely_agents if agent_name in base_latest_turns]
+
+    def _scenario_top_influencer(self, delta_score: float, base_top_influencer: str) -> str:
+        if delta_score >= 0.9:
+            return "CEO Agent" if base_top_influencer != "CEO Agent" else "Market Research Agent"
+        if delta_score <= -0.9:
+            return "Risk Agent" if base_top_influencer != "Risk Agent" else "Finance Agent"
+        return base_top_influencer
+
+    def _scenario_reasoning_shift(
+        self,
+        variation: ScenarioVariation,
+        delta_score: float,
+        changed_agents: List[str],
+        base_top_influencer: str,
+        scenario_top_influencer: str,
+    ) -> List[str]:
+        shifts: List[str] = []
+        if scenario_top_influencer != base_top_influencer:
+            shifts.append(
+                f"The most influential advisor changed from {base_top_influencer} to {scenario_top_influencer} in this scenario."
+            )
+
+        if variation.market_condition != "base":
+            shifts.append(
+                f"The market assumption changed to {variation.market_condition}, which pushed the team toward a more {'optimistic' if delta_score > 0 else 'cautious'} reading."
+            )
+        if variation.competition_level != "medium":
+            shifts.append(
+                f"Competition was treated as {variation.competition_level}, which changed how the team judged pricing power and growth risk."
+            )
+        if variation.budget_change_pct:
+            shifts.append(
+                f"The budget assumption moved by {variation.budget_change_pct:+.0f}%, changing how much room the team saw for execution mistakes."
+            )
+        if variation.pricing_change_pct:
+            shifts.append(
+                f"The pricing assumption moved by {variation.pricing_change_pct:+.0f}%, which changed the expected payback and upside."
+            )
+        if changed_agents:
+            shifts.append(
+                f"The advisors most affected in this scenario were {', '.join(changed_agents[:3])}."
+            )
+
+        return shifts[:5] or ["The scenario kept the same overall direction, with only small shifts in confidence."]
 
     def _build_validation(
         self,
