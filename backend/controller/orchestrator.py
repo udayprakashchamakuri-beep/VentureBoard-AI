@@ -8,8 +8,18 @@ from backend.controller.action_engine import ActionEngine
 from backend.controller.decision_engine import DecisionEngine
 from backend.controller.explainability_engine import ExplainabilityEngine
 from backend.controller.schemas import (
+    ActionPlan,
+    AgentTurn,
     AnalyzeRequest,
     AnalyzeResponse,
+    ExplainabilityReport,
+    FinalDecision,
+    FinancialPlan,
+    HiringPlan,
+    MarketingStrategy,
+    MemorySummary,
+    ReasoningTraceItem,
+    RoundSummary,
     ScenarioOutcome,
     ScenarioVariation,
     ValidationCheck,
@@ -56,6 +66,15 @@ class EnterpriseOrchestrator:
 
         active_agents = self._resolve_agents(scoped_request.selected_agent_names)
         active_definitions = [agent.profile.definition for agent in active_agents]
+        if not self._is_business_prompt(scoped_request):
+            response = self._build_non_business_response(
+                request=scoped_request,
+                active_definitions=active_definitions,
+                active_agents=active_agents,
+            )
+            self._emit(event_handler, {"type": "final", "result": response.model_dump()})
+            return response
+
         memory = MemoryManager(scoped_request, user_id=user_id)
         debate_engine = DebateEngine(agents=active_agents, memory=memory)
         debate_result = debate_engine.run(
@@ -134,6 +153,192 @@ class EnterpriseOrchestrator:
 
         self._emit(event_handler, {"type": "final", "result": response.model_dump()})
         return response
+
+    def _is_business_prompt(self, request: AnalyzeRequest) -> bool:
+        text = request.business_problem.lower().strip()
+        if not text:
+            return False
+
+        general_patterns = [
+            "who is",
+            "what is",
+            "when was",
+            "where is",
+            "tell me about",
+            "biography",
+            "net worth",
+            "celebrity",
+            "actor",
+            "singer",
+            "president",
+        ]
+        if any(pattern in text for pattern in general_patterns):
+            return False
+
+        business_signals = [
+            "business",
+            "startup",
+            "company",
+            "launch",
+            "market",
+            "customer",
+            "pricing",
+            "price",
+            "revenue",
+            "sales",
+            "profit",
+            "margin",
+            "cash",
+            "runway",
+            "growth",
+            "hire",
+            "hiring",
+            "invest",
+            "investment",
+            "risk",
+            "expand",
+            "expansion",
+            "store",
+            "shop",
+            "cafe",
+            "restaurant",
+            "gym",
+            "game center",
+            "college",
+            "break even",
+            "subscription",
+            "product",
+            "service",
+            "cost",
+            "buyer",
+            "competitor",
+        ]
+        if any(signal in text for signal in business_signals):
+            return True
+
+        return any(
+            phrase in text
+            for phrase in [
+                "should we",
+                "can this work",
+                "how risky",
+                "how should",
+                "best way to launch",
+                "business plan",
+                "pricing plan",
+            ]
+        )
+
+    def _build_non_business_response(
+        self,
+        request: AnalyzeRequest,
+        active_definitions,
+        active_agents,
+    ) -> AnalyzeResponse:
+        response_agent = active_agents[0] if active_agents else self.agents[0]
+        response_definition = response_agent.profile.definition
+        guidance_message = (
+            "This demo is built for business decisions, not general biography or trivia questions. "
+            "Ask about a business idea, pricing, market demand, launch risk, hiring, or growth strategy and the advisors will help."
+        )
+        sample_prompts = [
+            "Should I open a game center near a college?",
+            "What pricing model should I use for my tutoring startup?",
+            "How risky is it to launch with only 8 months of cash left?",
+        ]
+        turn = AgentTurn(
+            agent_name=response_definition.name,
+            role=response_definition.role,
+            round=1,
+            scenario_name=request.scenario_name,
+            message=guidance_message,
+            stance="MODIFY",
+            confidence=94,
+            topics=["question fit"],
+            key_points=["Ask a business question", "Include your idea, market, cost, or risk"],
+            assumptions=[],
+            references=[],
+            challenged_agents=[],
+            policy_positions={},
+            score_snapshot={},
+            estimated_metrics={},
+            calculations=[],
+            memory_references=[],
+            research_points=[],
+        )
+        return AnalyzeResponse(
+            company_name=request.company_name or "Business decision review",
+            agent_definitions=[response_definition],
+            conversation=[turn],
+            round_summaries=[
+                RoundSummary(
+                    round=1,
+                    synopsis="The latest prompt is outside the business-advice scope of this demo.",
+                    consensus_points=["The app redirected the user to a business-focused prompt."],
+                    conflict_points=[],
+                    open_questions=sample_prompts,
+                    numeric_highlights={"average_confidence": 94},
+                )
+            ],
+            conflicts=[],
+            final_output=FinalDecision(
+                decision="MODIFY",
+                confidence=94,
+                key_reasons=[
+                    "This demo works best when the question is about a business decision or startup plan.",
+                    f'The latest prompt looked like a general question: "{request.business_problem[:120]}"',
+                ],
+                risks=["General-knowledge prompts produce weak advisor output because this app is tuned for business cases."],
+                recommended_actions=sample_prompts,
+            ),
+            actions=ActionPlan(
+                execution_plan=[],
+                marketing_strategy=MarketingStrategy(
+                    audience="Demo user",
+                    positioning="Business-advice demo",
+                    core_message="Ask about a business idea, market, pricing, costs, risks, or launch timing.",
+                    channels=[],
+                    ad_angles=[],
+                ),
+                financial_plan=FinancialPlan(
+                    assumptions=[],
+                    monthly_costs=[],
+                    revenue_projection=[],
+                    roi_estimate="No estimate yet because this was not a business case.",
+                ),
+                hiring_plan=HiringPlan(roles=[], hiring_sequence=["No hiring advice yet because this was not a business case."]),
+            ),
+            scenario_results=[],
+            explainability=ExplainabilityReport(
+                top_influencer=response_definition.name,
+                conflicts=[],
+                final_reasoning_summary=(
+                    "The request was redirected because it looks like a general question instead of a business decision. "
+                    "The app is guiding the user toward a better prompt."
+                ),
+                reasoning_trace=[
+                    ReasoningTraceItem(
+                        agent_name=response_definition.name,
+                        influence_score=1.0,
+                        stance="MODIFY",
+                        summary=guidance_message,
+                    )
+                ],
+            ),
+            memory_summary=MemorySummary(
+                recalled_simulations=0,
+                prior_failures=[],
+                learned_adjustments=["Redirect general questions toward business prompts."],
+                prior_agent_arguments={},
+            ),
+            validation=ValidationCheck(
+                decisions_made=True,
+                multiple_scenarios_simulated=False,
+                actions_generated=True,
+                memory_used=False,
+                passed=True,
+            ),
+        )
 
     def _run_scenarios(
         self,

@@ -152,6 +152,12 @@ function App() {
     setFocusedAgentNames(focusAgentNames);
     setSelectedAgentName(focusAgentNames[0] || "CEO Agent");
 
+    if (!isBusinessDecisionPrompt(payload.business_problem, payload)) {
+      setResult(buildNonBusinessPromptResult(payload.business_problem, payload.selected_agent_names ?? []));
+      setLoading(false);
+      return;
+    }
+
     try {
       setResult(createEmptyResult(payload.company_name));
       try {
@@ -1607,6 +1613,10 @@ function buildNonBusinessPromptResult(message, selectedAgentNames = []) {
 }
 
 function buildLocalFallbackAnalysis(payload) {
+  if (!isBusinessDecisionPrompt(payload.business_problem, payload)) {
+    return buildNonBusinessPromptResult(payload.business_problem, payload.selected_agent_names ?? []);
+  }
+
   const agentNames = payload.selected_agent_names?.length ? payload.selected_agent_names : Object.keys(AGENT_META);
   const summary = estimateFallbackSummary(payload);
   const conversation = agentNames.map((agentName, index) =>
