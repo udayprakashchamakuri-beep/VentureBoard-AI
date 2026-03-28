@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AuthPanel from "./components/AuthPanel";
 import CommandConsoleDrawer from "./components/CommandConsoleDrawer";
-import { AGENT_META, API_BASE, DEMO_CASES, NAV_ITEMS, defaultTimeline } from "./dashboardData";
+import { AGENT_META, API_BASE, API_BASE_CANDIDATES, DEMO_CASES, NAV_ITEMS, defaultTimeline } from "./dashboardData";
 import { formatDecisionLabel, toPlainText } from "./plainLanguage";
 import AgentsView from "./views/AgentsView";
 import IntelligenceView from "./views/IntelligenceView";
@@ -24,6 +24,7 @@ function App() {
   const [typingIndex, setTypingIndex] = useState(0);
   const [consoleOpen, setConsoleOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [apiBase, setApiBase] = useState(API_BASE);
   const [selectedDemoCaseId, setSelectedDemoCaseId] = useState(DEMO_CASES[0]?.id ?? "");
   const [selectedAgentName, setSelectedAgentName] = useState("CEO Agent");
   const [focusedAgentNames, setFocusedAgentNames] = useState([]);
@@ -52,7 +53,7 @@ function App() {
 
     async function loadSession() {
       try {
-        const response = await fetch(`${API_BASE}/auth/session`, {
+        const response = await fetchApi("/auth/session", {
           method: "GET",
           credentials: "include",
         });
@@ -91,7 +92,7 @@ function App() {
 
     async function refreshStatus() {
       try {
-        const response = await fetch(`${API_BASE}/autonomy/status`, {
+        const response = await fetchApi("/autonomy/status", {
           method: "GET",
           credentials: "include",
         });
@@ -106,7 +107,8 @@ function App() {
         setAutonomyError("");
       } catch (statusError) {
         if (active) {
-          setAutonomyError(statusError.message || "Unable to load automatic monitoring status.");
+          setAutonomyStatus((current) => current ?? buildLocalAutonomyStatus({ scenarioTitle }));
+          setAutonomyError("Live monitor is temporarily unreachable. Showing local fallback status.");
         }
       }
     }
@@ -171,6 +173,11 @@ function App() {
     return map;
   }, [result]);
 
+  const apiBaseCandidates = useMemo(
+    () => [apiBase, ...API_BASE_CANDIDATES.filter((base) => base && base !== apiBase)],
+    [apiBase],
+  );
+
   const intelligenceMetrics = useMemo(() => buildIntelligenceMetrics({ result, loading }), [result, loading]);
   const semanticStream = useMemo(() => buildSemanticStream({ result }), [result]);
   const timelinePoints = useMemo(() => buildInferenceTimeline({ result, timeline }), [result, timeline]);
@@ -182,6 +189,26 @@ function App() {
     () => agentCards.find((agent) => agent.name === selectedAgentName) ?? agentCards[0] ?? null,
     [agentCards, selectedAgentName],
   );
+
+  async function fetchApi(path, options = {}, fetchOptions = {}) {
+    let lastError = null;
+    for (const base of apiBaseCandidates) {
+      try {
+        const response = await fetchWithRetry(`${base}${path}`, options, fetchOptions);
+        if ([502, 503, 504].includes(response.status)) {
+          lastError = new Error(`Temporary server error from ${base}.`);
+          continue;
+        }
+        if (base !== apiBase) {
+          setApiBase(base);
+        }
+        return response;
+      } catch (networkError) {
+        lastError = networkError;
+      }
+    }
+    throw lastError ?? new Error("Unable to reach the advisory service.");
+  }
 
   async function runAnalysis(payload, options = {}) {
     const { closeConsole = false, focusAgentNames = [] } = options;
@@ -219,7 +246,7 @@ function App() {
   }
 
   async function runStreamingAnalysis(payload) {
-    const response = await fetchWithRetry(`${API_BASE}/analyze/stream`, {
+    const response = await fetchApi("/analyze/stream", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -271,7 +298,7 @@ function App() {
   }
 
   async function runRegularAnalysis(payload) {
-    const response = await fetchWithRetry(`${API_BASE}/analyze`, {
+    const response = await fetchApi("/analyze", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -402,7 +429,7 @@ function App() {
     setAutonomyBusy(true);
     setAutonomyError("");
     try {
-      const response = await fetch(`${API_BASE}/autonomy/run`, {
+      const response = await fetchApi("/autonomy/run", {
         method: "POST",
         credentials: "include",
       });
@@ -412,7 +439,8 @@ function App() {
       }
       setAutonomyStatus(body);
     } catch (submissionError) {
-      setAutonomyError(submissionError.message || "Unable to run the automatic monitor right now.");
+      setAutonomyStatus((current) => runLocalAutonomyFallback({ currentStatus: current, result, scenarioTitle }));
+      setAutonomyError("Live monitor is temporarily unreachable. Ran a local fallback monitor cycle.");
     } finally {
       setAutonomyBusy(false);
     }
@@ -422,7 +450,7 @@ function App() {
     setAuthBusy(true);
     setAuthMessage("");
     try {
-      const response = await fetch(`${API_BASE}/auth/login`, {
+      const response = await fetchApi("/auth/login", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -446,7 +474,7 @@ function App() {
     setAuthBusy(true);
     setAuthMessage("");
     try {
-      const response = await fetch(`${API_BASE}/auth/register`, {
+      const response = await fetchApi("/auth/register", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -473,7 +501,7 @@ function App() {
     setAuthBusy(true);
     setAuthMessage("");
     try {
-      const response = await fetch(`${API_BASE}/auth/request-password-reset`, {
+      const response = await fetchApi("/auth/request-password-reset", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -499,7 +527,7 @@ function App() {
     setAuthBusy(true);
     setAuthMessage("");
     try {
-      const response = await fetch(`${API_BASE}/auth/reset-password`, {
+      const response = await fetchApi("/auth/reset-password", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -521,7 +549,7 @@ function App() {
     setAuthBusy(true);
     setAuthMessage("");
     try {
-      await fetch(`${API_BASE}/auth/logout`, {
+      await fetchApi("/auth/logout", {
         method: "POST",
         credentials: "include",
       });
@@ -1410,6 +1438,90 @@ function numericValue(value) {
 
 function compactObject(object) {
   return Object.fromEntries(Object.entries(object).filter(([, value]) => value !== undefined));
+}
+
+function buildLocalAutonomyStatus({ scenarioTitle }) {
+  const now = new Date().toISOString();
+  return {
+    scheduler_mode: "local fallback mode",
+    background_running: false,
+    poll_interval_seconds: 300,
+    next_run_hint: "Backend monitor is unreachable. Local fallback status is shown for the demo.",
+    watch_profiles: [
+      {
+        id: "local-watch",
+        label: scenarioTitle || "Current business case",
+        company_name: scenarioTitle || "Current business case",
+        industry: "",
+        region: "",
+        active: true,
+        last_checked_at: now,
+        latest_signal_summary: "Waiting for a live monitor run.",
+        last_outcome: "No action yet.",
+      },
+    ],
+    recent_actions: [],
+    open_tasks: [],
+    recent_runs: [],
+  };
+}
+
+function runLocalAutonomyFallback({ currentStatus, result, scenarioTitle }) {
+  const base = currentStatus ?? buildLocalAutonomyStatus({ scenarioTitle });
+  const now = new Date().toISOString();
+  const topRisk = result?.final_output?.risks?.[0] ?? "Watch spending and execution quality closely.";
+  const nextAction = result?.final_output?.recommended_actions?.[0] ?? "Run a tighter pilot with weekly checkpoints.";
+  const nextRun = {
+    id: `local-run-${Date.now()}`,
+    started_at: now,
+    completed_at: now,
+    status: "completed",
+    trigger_source: "local-fallback",
+    watches_scanned: 1,
+    actions_taken: 1,
+    summary: "Local fallback monitor cycle completed.",
+  };
+  const nextActionLog = {
+    id: `local-action-${Date.now()}`,
+    watch_id: "local-watch",
+    watch_label: scenarioTitle || "Current business case",
+    action_type: "local-review",
+    title: "Review launch plan and risk controls",
+    reason: topRisk,
+    status: "executed",
+    executor: "local-fallback",
+    executed_at: now,
+    result_summary: nextAction,
+  };
+
+  return {
+    ...base,
+    watch_profiles: [
+      {
+        ...(base.watch_profiles?.[0] ?? {}),
+        id: "local-watch",
+        label: scenarioTitle || "Current business case",
+        company_name: scenarioTitle || "Current business case",
+        last_checked_at: now,
+        latest_signal_summary: topRisk,
+        last_outcome: nextAction,
+      },
+    ],
+    recent_runs: [nextRun, ...(base.recent_runs ?? []).slice(0, 4)],
+    recent_actions: [nextActionLog, ...(base.recent_actions ?? []).slice(0, 5)],
+    open_tasks: [
+      {
+        id: `local-task-${Date.now()}`,
+        watch_id: "local-watch",
+        watch_label: scenarioTitle || "Current business case",
+        title: nextAction,
+        description: topRisk,
+        status: "open",
+        created_at: now,
+      },
+      ...(base.open_tasks ?? []).slice(0, 3),
+    ],
+  };
 }
 
 function wait(milliseconds) {
