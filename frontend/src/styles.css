@@ -340,7 +340,7 @@ a {
 
 .obsidian-main {
   display: grid;
-  grid-template-columns: 18% minmax(0, 1fr) 30%;
+  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.82fr);
   height: calc(100vh - 64px);
 }
 
@@ -583,6 +583,37 @@ a {
   background: var(--surface);
   position: relative;
   overflow: hidden;
+}
+
+.discussion-utility-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 18px 0;
+}
+
+.discussion-utility-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.discussion-utility-copy strong {
+  font-family: "Manrope", sans-serif;
+  font-size: 0.94rem;
+  color: var(--text);
+}
+
+.discussion-utility-copy span {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.discussion-utility-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .stream-header,
@@ -1526,12 +1557,17 @@ a {
 
 @media (max-width: 1440px) {
   .obsidian-main {
-    grid-template-columns: 260px minmax(0, 1fr) 360px;
+    grid-template-columns: minmax(0, 1.15fr) 340px;
   }
 
   .hud-bar {
     width: calc(100vw - 40px);
     justify-content: center;
+  }
+
+  .discussion-utility-bar {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 
@@ -1580,6 +1616,7 @@ a {
 @media (max-width: 780px) {
   .obsidian-nav,
   .stream-header,
+  .discussion-utility-bar,
   .stream-body,
   .stream-footer,
   .obsidian-sidebar,
@@ -1593,7 +1630,13 @@ a {
     gap: 12px;
   }
 
+  .discussion-utility-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
   .round-meter,
+  .discussion-utility-bar,
   .stream-header,
   .stream-footer,
   .console-top,

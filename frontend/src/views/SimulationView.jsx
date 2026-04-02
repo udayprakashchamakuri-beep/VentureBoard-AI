@@ -113,81 +113,6 @@ function SimulationView({
   return (
     <>
       <main className="obsidian-main">
-        <aside className="obsidian-sidebar">
-          <div className="sidebar-header">
-            <h2>Advisory Team</h2>
-            <span>{Object.keys(agentMeta).length} advisors</span>
-          </div>
-
-          <div className="agent-stack">
-            {Object.entries(agentMeta).map(([name, meta]) => {
-              const isActive = loading && name === speakingAgent;
-              const isCalculating = loading && name === activeTypingAgent;
-              const isSelected = conversationAgentNames.includes(name);
-              const isLatestReply = !loading && hasAnyDiscussion && name === speakingAgent;
-              const cardClassName = isSelected
-                ? "agent-card selected agent-card-link"
-                : isActive
-                  ? "agent-card active agent-card-link"
-                  : isLatestReply
-                    ? "agent-card recent agent-card-link"
-                  : isCalculating
-                    ? "agent-card thinking agent-card-link"
-                    : "agent-card agent-card-link";
-
-              return (
-                <button
-                  key={name}
-                  type="button"
-                  className={cardClassName}
-                  style={{ "--agent-accent": meta.accent }}
-                  onClick={() => onOpenAgentConversation(name)}
-                  aria-label={`Open ${meta.label} details`}
-                >
-                  <div className="agent-card-head">
-                    <span className="material-symbols-outlined">{meta.symbol}</span>
-                    {isActive ? (
-                      <div className="agent-status-speaking">
-                        <span>Talking</span>
-                        <div className="signal-bar">
-                          <div />
-                        </div>
-                      </div>
-                    ) : isLatestReply ? (
-                      <div className="agent-status-speaking latest">
-                        <span>Latest reply</span>
-                      </div>
-                    ) : null}
-                    {!isActive && isCalculating ? <span className="material-symbols-outlined spin">sync</span> : null}
-                  </div>
-                  <h3>{meta.label}</h3>
-                  <p>{meta.title}</p>
-                  <span className="agent-card-cta">
-                    {isSelected ? "Selected for this conversation" : "Add this advisor to the conversation view"}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="sidebar-module">
-            <div className="module-label">How It Works</div>
-            <p>
-              Enter your business question, key limits, and numbers. The advisory team will discuss it and return a
-              recommendation, risks, and next steps.
-            </p>
-            <p className="sidebar-helper-copy">Click advisor cards above to filter the thread. You can keep one, several, or all advisors visible.</p>
-            <div className="module-actions">
-              <button type="button" className="secondary-action" onClick={onApplySample}>
-                Use Example
-              </button>
-              <button type="button" className="primary-action" onClick={onToggleConsole}>
-                Open Detailed Form
-              </button>
-            </div>
-          </div>
-        </aside>
-
         <section className="obsidian-stream">
           <header className="stream-header">
             <div>
@@ -207,6 +132,24 @@ function SimulationView({
               </div>
             </div>
           </header>
+
+          <div className="discussion-utility-bar">
+            <div className="discussion-utility-copy">
+              <strong>Focused on the result</strong>
+              <span>
+                The Discussion view now gives more room to the debate and final answer. Use the controls below to send a
+                new prompt or narrow the advisor replies.
+              </span>
+            </div>
+            <div className="discussion-utility-actions">
+              <button type="button" className="secondary-action" onClick={onApplySample}>
+                Use Example
+              </button>
+              <button type="button" className="primary-action" onClick={onToggleConsole}>
+                Open Detailed Form
+              </button>
+            </div>
+          </div>
 
           <div className="stream-body">
             {!hasAnyDiscussion && !loading && !chatMessages.length ? (
