@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Callable, Dict, Iterable, List, Optional
 
 from backend.agents.prompts import build_agent_definitions
@@ -163,11 +164,17 @@ class EnterpriseOrchestrator:
         if not text:
             return False
 
+        strong_business_patterns = [
+            r"\b(i want to|we want to|i am planning to|we are planning to|planning to|thinking of)\s+(start|open|launch|build|run|expand|grow|buy|sell)\b",
+            r"\b(start|open|launch|build|run|expand|grow)\s+(a|an|my|our)\s+(business|company|startup|store|shop|center|centre|farm|poultry farm|restaurant|cafe|clinic|salon|agency|franchise|gym|arcade|factory|manufacturing unit)\b",
+            r"\bshould i\b.*\b(start|open|launch|build|run|expand|grow|invest)\b",
+        ]
+        if any(re.search(pattern, text) for pattern in strong_business_patterns):
+            return True
+
         classified = self.featherless_client.classify_prompt_kind(primary_prompt)
         if classified == "BUSINESS":
             return True
-        if classified == "GENERAL":
-            return False
 
         general_patterns = [
             "who is",
@@ -213,6 +220,15 @@ class EnterpriseOrchestrator:
             "cafe",
             "restaurant",
             "gym",
+            "farm",
+            "poultry",
+            "dairy",
+            "franchise",
+            "agency",
+            "clinic",
+            "salon",
+            "factory",
+            "manufacturing",
             "game center",
             "college",
             "break even",
@@ -223,8 +239,12 @@ class EnterpriseOrchestrator:
             "buyer",
             "competitor",
         ]
-        if any(signal in text for signal in business_signals):
+        heuristic_business = any(signal in text for signal in business_signals)
+        if heuristic_business:
             return True
+
+        if classified == "GENERAL":
+            return False
 
         return any(
             phrase in text
