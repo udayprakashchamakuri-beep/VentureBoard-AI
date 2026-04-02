@@ -477,6 +477,14 @@ function SimulationView({
                 }
                 value={chatDraft}
                 onChange={(event) => onChatDraftChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    if (!loading && chatDraft.trim().length >= 20) {
+                      onSubmitChat(chatDraft);
+                    }
+                  }
+                }}
               />
               <div className="composer-actions">
                 <span className="composer-hint">

@@ -39,12 +39,20 @@ class FeatherlessClient:
         content = self._chat_completion(
             system_prompt=(
                 "You classify whether a user prompt is asking for business advice or not. "
-                "Reply with exactly one word: BUSINESS or GENERAL."
+                "Reply with exactly one word: BUSINESS, GENERAL, or UNSURE."
             ),
             prompt=(
                 "Classify this prompt.\n"
-                "BUSINESS = business decision, startup, pricing, launch, market, revenue, hiring, growth, costs, risk, or operations.\n"
-                "GENERAL = biography, trivia, school knowledge, history, definitions, or anything not asking for business advice.\n\n"
+                "BUSINESS = any prompt about starting, running, growing, funding, pricing, marketing, operating, or evaluating a business, store, farm, service, startup, local venture, franchise, or company.\n"
+                "GENERAL = biography, trivia, school knowledge, history, definitions, casual facts, or anything not asking for business advice.\n"
+                "UNSURE = only when the prompt is too ambiguous to tell.\n\n"
+                "Examples:\n"
+                "- 'i want to start a poultry farm in karimnagar' -> BUSINESS\n"
+                "- 'should i open a tea stall near a college' -> BUSINESS\n"
+                "- 'can a tuition center work in my town' -> BUSINESS\n"
+                "- 'what is poultry farming' -> GENERAL\n"
+                "- 'who is the ceo of tesla' -> GENERAL\n"
+                "- 'tell me about hyderabad' -> GENERAL\n\n"
                 f"Prompt: {prompt}"
             ),
             fallback="",
