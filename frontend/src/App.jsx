@@ -345,15 +345,16 @@ function App() {
       return;
     }
 
-    const nextMessages = [...chatMessages, createChatMessage(trimmedMessage, focusedAgentNames)];
-    const derivedForm = deriveFormFromChat(form, nextMessages);
+    const nextMessages = [createChatMessage(trimmedMessage)];
+    const derivedForm = deriveFormFromChat(buildDefaultForm(), nextMessages);
 
     setChatMessages(nextMessages);
     setChatDraft("");
     setForm(derivedForm);
+    setFocusedAgentNames([]);
 
     await runAnalysis(buildAnalysisPayload(derivedForm, nextMessages), {
-      focusAgentNames: focusedAgentNames,
+      focusAgentNames: [],
     });
   }
 
@@ -1654,6 +1655,8 @@ function isBusinessDecisionPrompt(message, form = {}) {
 
 function mergeStreamEvent(current, eventPayload) {
   switch (eventPayload.type) {
+    case "analysis_started":
+      return createEmptyResult(eventPayload.company_name || current.company_name || "Business decision review");
     case "turn":
       return {
         ...current,

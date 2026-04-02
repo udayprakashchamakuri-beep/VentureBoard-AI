@@ -64,11 +64,14 @@ iith/
 
 ## External Providers
 
-The simulator now supports two optional external providers:
+The simulator now supports optional external providers:
 
 - `Featherless AI`
   - Used for optional boardroom-language enhancement in agent turns
   - Expected as an OpenAI-compatible endpoint via `https://api.featherless.ai/v1`
+- `Firecrawl`
+  - Used for optional web search grounding that can feed advisor research points
+  - Works with either a self-hosted instance or the hosted API
 - `Bright Data`
   - Used for optional external market-grounding snippets
   - Integrated through an environment-configured API endpoint so you can point it at your Bright Data AI / web-access setup
@@ -79,6 +82,11 @@ Create `backend/.env` from `backend/.env.example` and set:
 FEATHERLESS_API_KEY=your_featherless_key
 FEATHERLESS_MODEL=Qwen/Qwen2.5-7B-Instruct
 FEATHERLESS_BASE_URL=https://api.featherless.ai/v1
+
+FIRECRAWL_API_KEY=your_firecrawl_key
+FIRECRAWL_BASE_URL=http://localhost:3002
+FIRECRAWL_TIMEOUT=4
+FIRECRAWL_SEARCH_LIMIT=3
 
 BRIGHTDATA_API_KEY=your_brightdata_key
 BRIGHTDATA_API_ENDPOINT=https://api.brightdata.com/request
@@ -98,6 +106,12 @@ DEMO_AUTH_DISABLED=true
 ```
 
 If those variables are not present, the simulator still works using the internal reasoning engine.
+
+Firecrawl note:
+
+- if `FIRECRAWL_API_KEY` is set, the backend will query Firecrawl search first and merge the results into advisor research points
+- `FIRECRAWL_BASE_URL` can point at your self-hosted Firecrawl instance or the hosted API
+- if Firecrawl is unreachable, the simulator will continue with Bright Data and the internal reasoning engine
 
 Bright Data note:
 

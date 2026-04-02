@@ -7,9 +7,11 @@ from statistics import mean
 from typing import Dict, Iterable, List, Tuple
 
 from backend.agents.base import AgentProfile
+from backend.controller.prompt_utils import extract_primary_prompt
 from backend.controller.schemas import AgentTurn, AnalyzeRequest, ConflictRecord, DecisionStatus, RoundSummary
 from backend.services.brightdata_client import BrightDataClient, BrightDataResearch
 from backend.services.featherless_client import FeatherlessClient
+from backend.services.firecrawl_client import FirecrawlClient
 
 
 @dataclass
@@ -59,15 +61,17 @@ class StrategicReasoner:
         self.signal_cache: Dict[str, BusinessSignals] = {}
         self.featherless_client = FeatherlessClient()
         self.brightdata_client = BrightDataClient()
+        self.firecrawl_client = FirecrawlClient()
 
     def analyze_request(self, request: AnalyzeRequest) -> BusinessSignals:
         cache_key = json.dumps(request.model_dump(mode="json"), sort_keys=True)
         if cache_key in self.signal_cache:
             return self.signal_cache[cache_key]
 
+        primary_prompt = extract_primary_prompt(request.business_problem)
         problem = " ".join(
             [
-                request.business_problem,
+                primary_prompt,
                 request.scenario_name,
                 request.company_name,
                 request.industry or "",
@@ -1009,7 +1013,14 @@ class StrategicReasoner:
         query_specs = self._build_research_queries(request)
         if not query_specs:
             return BrightDataResearch()
-        return self.brightdata_client.fetch_market_research(query_specs)
+        combined = BrightDataResearch()
+        for provider_research in (
+            self.firecrawl_client.fetch_market_research(query_specs),
+            self.brightdata_client.fetch_market_research(query_specs),
+        ):
+            for topic in provider_research.topics():
+                combined.add_hits(topic, provider_research.get(topic))
+        return combined
 
     def _build_research_queries(self, request: AnalyzeRequest) -> List[Tuple[str, str]]:
         topic_seed = self._research_subject(request)
@@ -1018,7 +1029,7 @@ class StrategicReasoner:
 
         region = "" if not request.region or request.region.lower() == "global" else request.region
         scope = f"{topic_seed} {region}".strip()
-        lower_problem = request.business_problem.lower()
+        lower_problem = extract_primary_prompt(request.business_problem).lower()
         local_business = any(
             keyword in lower_problem
             for keyword in [
@@ -1061,9 +1072,7 @@ class StrategicReasoner:
         return queries[:5]
 
     def _research_subject(self, request: AnalyzeRequest) -> str:
-        subject = " ".join(filter(None, [request.industry or "", request.business_problem]))
-        subject = re.sub(r"conversation with the user:|additional background:", " ", subject, flags=re.IGNORECASE)
-        subject = re.sub(r"message\s+\d+\s+to\s+[^:]+:\s*", " ", subject, flags=re.IGNORECASE)
+        subject = " ".join(filter(None, [request.industry or "", extract_primary_prompt(request.business_problem)]))
         subject = re.sub(r"\s+", " ", subject).strip()
         return subject[:160]
 

@@ -7,6 +7,7 @@ from backend.agents.registry import build_agent_roster
 from backend.controller.action_engine import ActionEngine
 from backend.controller.decision_engine import DecisionEngine
 from backend.controller.explainability_engine import ExplainabilityEngine
+from backend.controller.prompt_utils import extract_primary_prompt
 from backend.controller.schemas import (
     ActionPlan,
     AgentTurn,
@@ -157,11 +158,12 @@ class EnterpriseOrchestrator:
         return response
 
     def _is_business_prompt(self, request: AnalyzeRequest) -> bool:
-        text = request.business_problem.lower().strip()
+        primary_prompt = extract_primary_prompt(request.business_problem)
+        text = primary_prompt.lower().strip()
         if not text:
             return False
 
-        classified = self.featherless_client.classify_prompt_kind(request.business_problem)
+        classified = self.featherless_client.classify_prompt_kind(primary_prompt)
         if classified == "BUSINESS":
             return True
         if classified == "GENERAL":
@@ -244,7 +246,7 @@ class EnterpriseOrchestrator:
         active_agents,
     ) -> AnalyzeResponse:
         direct_answer = self.featherless_client.answer_general_prompt(
-            prompt=request.business_problem,
+            prompt=extract_primary_prompt(request.business_problem),
             fallback=(
                 "This demo is mainly built for business decisions. For a general question like this, "
                 "please try again in a moment or ask a business-focused question."

@@ -60,13 +60,12 @@ export function buildRoundSummary(turn) {
     return "";
   }
 
-  const stanceLine = buildStanceLine(turn);
   const researchLine = buildResearchLine(turn);
   const metricLine = buildMetricLine(turn, inferQuestionIntent(""));
   const actions = (turn.key_points ?? []).map((item) => toPlainText(item)).filter(Boolean);
   const actionLine = actions[0] ? normalizeSentence(actions[0]) : "";
 
-  return [stanceLine, researchLine, metricLine, actionLine].filter(Boolean).join(" ");
+  return [researchLine, metricLine, actionLine].filter(Boolean).join(" ");
 }
 
 export function buildDirectAdvisorReply(turn, question = "") {
@@ -76,7 +75,6 @@ export function buildDirectAdvisorReply(turn, question = "") {
 
   const intent = inferQuestionIntent(question);
   const isDecisionQuestion = shouldShowAdvisorStanceBadge(question);
-  const stanceLine = buildStanceLine(turn);
   const researchLine = buildResearchLine(turn);
   const metricLine = buildMetricLine(turn, intent);
   const actions = (turn.key_points ?? []).map((item) => toPlainText(item)).filter(Boolean);
@@ -88,7 +86,7 @@ export function buildDirectAdvisorReply(turn, question = "") {
   }
 
   if (isDecisionQuestion) {
-    return [stanceLine, researchLine, metricLine, supportingLine, cautionLine].filter(Boolean).join(" ");
+    return [researchLine, metricLine, supportingLine, cautionLine].filter(Boolean).join(" ");
   }
 
   return (
@@ -124,16 +122,6 @@ export function inferQuestionIntent(question) {
     asksAboutOperations: /\boperations|delivery|support|integration|capacity|fulfillment\b/.test(lower),
     asksAboutMarketing: /\bmarketing|ads|channels|message|campaign|demand\b/.test(lower),
   };
-}
-
-function buildStanceLine(turn) {
-  if (turn.stance === "GO") {
-    return "My view is that this can move ahead now.";
-  }
-  if (turn.stance === "MODIFY") {
-    return "My view is that this can move ahead, but only with a few changes first.";
-  }
-  return "My view is that this should not move ahead yet.";
 }
 
 function buildMetricLine(turn, intent) {
