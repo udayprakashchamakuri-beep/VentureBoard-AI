@@ -340,8 +340,8 @@ a {
 
 .obsidian-main {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.82fr);
-  height: calc(100vh - 64px);
+  grid-template-columns: minmax(0, 2fr) minmax(248px, 0.42fr);
+  height: calc(100vh - 54px);
 }
 
 .obsidian-sidebar,
@@ -589,8 +589,8 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  padding: 14px 18px 0;
+  gap: 14px;
+  padding: 8px 14px 0;
 }
 
 .discussion-utility-copy {
@@ -606,7 +606,7 @@ a {
 
 .discussion-utility-copy span {
   color: var(--text-muted);
-  font-size: 0.88rem;
+  font-size: 0.8rem;
 }
 
 .discussion-utility-actions {
@@ -625,7 +625,7 @@ a {
 }
 
 .stream-header {
-  padding: 14px 18px;
+  padding: 8px 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   background: linear-gradient(180deg, rgba(21, 27, 45, 0.92), transparent);
 }
@@ -640,7 +640,7 @@ a {
 
 .stream-header h1 {
   margin: 0;
-  font-size: clamp(1.5rem, 2.3vw, 2.35rem);
+  font-size: clamp(1.42rem, 2.15vw, 2.2rem);
   font-weight: 800;
   letter-spacing: -0.05em;
   color: #dde3eb;
@@ -650,8 +650,8 @@ a {
 .round-meter {
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
-  min-width: 170px;
+  gap: 4px;
+  min-width: 136px;
 }
 
 .round-meter span {
@@ -677,7 +677,7 @@ a {
 .stream-body {
   flex: 1;
   overflow-y: auto;
-  padding: 18px 28px 20px;
+  padding: 10px 18px 12px;
 }
 
 .stream-empty {
@@ -766,7 +766,7 @@ a {
 .debate-message {
   display: flex;
   gap: 16px;
-  max-width: 920px;
+  max-width: min(100%, 1180px);
 }
 
 .debate-message.user {
@@ -948,21 +948,53 @@ a {
   gap: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   background: rgba(21, 27, 45, 0.88);
-  padding: 8px 12px;
+  padding: 6px 10px;
+}
+
+.stream-footer.compact {
+  gap: 0;
+  padding: 6px 10px;
 }
 
 .discussion-composer {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
   background: rgba(7, 13, 31, 0.56);
-  padding: 12px 14px;
+  padding: 10px 12px;
+}
+
+.composer-reopen-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  background: rgba(7, 13, 31, 0.48);
+  padding: 10px 12px;
+}
+
+.composer-reopen-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.composer-reopen-copy strong {
+  font-family: "Manrope", sans-serif;
+  font-size: 0.88rem;
+  color: var(--text);
+}
+
+.composer-reopen-copy span {
+  color: rgba(220, 225, 251, 0.64);
+  font-size: 0.76rem;
 }
 
 .composer-targets {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .composer-target-label {
@@ -976,7 +1008,7 @@ a {
 .composer-target-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .target-chip {
@@ -986,7 +1018,7 @@ a {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
   background: rgba(21, 27, 45, 0.84);
-  padding: 8px 12px;
+  padding: 7px 10px;
   color: rgba(220, 225, 251, 0.72);
   font-family: "Space Grotesk", sans-serif;
   font-size: 0.62rem;
@@ -1013,8 +1045,8 @@ a {
 .composer-hint {
   margin: 6px 0 0;
   color: rgba(220, 225, 251, 0.68);
-  font-size: 0.82rem;
-  line-height: 1.5;
+  font-size: 0.8rem;
+  line-height: 1.45;
 }
 
 .advisor-reply-section .message-bubble {
@@ -1032,9 +1064,9 @@ a {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
   background: rgba(12, 19, 36, 0.9);
-  padding: 12px 14px;
+  padding: 10px 12px;
   color: #dde3eb;
-  min-height: 88px;
+  min-height: 76px;
 }
 
 .composer-textarea:focus {
@@ -1073,8 +1105,8 @@ a {
   border-left: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 24px;
+  gap: 16px;
+  padding: 14px 14px 12px;
 }
 
 .directive-card,
@@ -1090,7 +1122,7 @@ a {
   position: relative;
   overflow: hidden;
   border-radius: 22px;
-  padding: 22px;
+  padding: 18px;
 }
 
 .directive-mark {
@@ -1122,8 +1154,8 @@ a {
 
 .directive-title {
   margin: 0;
-  max-width: 340px;
-  font-size: 1.8rem;
+  max-width: none;
+  font-size: 1.55rem;
   line-height: 1.15;
   letter-spacing: -0.05em;
   color: #dde3eb;
@@ -1158,7 +1190,7 @@ a {
 
 .insight-section {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .insight-grid {
@@ -1170,7 +1202,7 @@ a {
   border-left: 3px solid var(--insight-accent);
   border-radius: 16px;
   background: rgba(21, 27, 45, 0.82);
-  padding: 14px 16px;
+  padding: 12px 14px;
 }
 
 .insight-title-row {
@@ -1199,7 +1231,7 @@ a {
 
 .health-panel {
   border-radius: 22px;
-  padding: 20px;
+  padding: 16px;
 }
 
 .health-row,
@@ -1557,7 +1589,7 @@ a {
 
 @media (max-width: 1440px) {
   .obsidian-main {
-    grid-template-columns: minmax(0, 1.15fr) 340px;
+    grid-template-columns: minmax(0, 1.56fr) 256px;
   }
 
   .hud-bar {
@@ -1633,6 +1665,11 @@ a {
   .discussion-utility-actions {
     width: 100%;
     flex-wrap: wrap;
+  }
+
+  .composer-reopen-bar {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .round-meter,

@@ -39,6 +39,7 @@ function SimulationView({
   error,
   chatMessages,
   chatDraft,
+  composerOpen,
   focusedAgentNames,
   activeTypingAgent,
   speakingAgent,
@@ -58,6 +59,7 @@ function SimulationView({
   onApplySample,
   onChatDraftChange,
   onSubmitChat,
+  onShowComposer,
   onToggleFocusedAgent,
   onSelectOnlyFocusedAgent,
   conversationAgentNames,
@@ -376,75 +378,89 @@ function SimulationView({
             <div ref={conversationEndRef} className="conversation-end-anchor" />
           </div>
 
-          <footer className="stream-footer">
-            <form
-              className="discussion-composer"
-              onSubmit={(event) => {
-                event.preventDefault();
-                onSubmitChat(chatDraft);
-              }}
-            >
-              <div className="composer-targets">
-                <span className="composer-target-label">Talk to</span>
-                <div className="composer-target-chips">
-                  <button
-                    type="button"
-                    className={focusedAgentNames.length ? "target-chip" : "target-chip active"}
-                    onClick={() => onSelectOnlyFocusedAgent("")}
-                  >
-                    All advisors
-                  </button>
-                  {Object.entries(agentMeta).map(([name, meta]) => (
-                    <button
-                      key={name}
-                      type="button"
-                      className={focusedAgentNames.includes(name) ? "target-chip active" : "target-chip"}
-                      style={{ "--target-accent": meta.accent }}
-                      onClick={() => onToggleFocusedAgent(name)}
-                    >
-                      <span className="material-symbols-outlined">{meta.symbol}</span>
-                      {meta.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <textarea
-                className="composer-textarea"
-                rows="3"
-                placeholder={
-                  focusedAgentNames.length === 1
-                    ? `Ask ${agentMeta[focusedAgentNames[0]]?.label ?? "this advisor"} something in plain language...`
-                    : focusedAgentNames.length > 1
-                      ? `Ask ${chatTargetLabels.join(", ")} something in plain language...`
-                    : "Example: We are a small SaaS company thinking about expanding into hospitals, but we only have 10 months of cash left. Should we launch now or wait?"
-                }
-                value={chatDraft}
-                onChange={(event) => onChatDraftChange(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    if (!loading && chatDraft.trim().length >= 20) {
-                      onSubmitChat(chatDraft);
-                    }
-                  }
+          <footer className={composerOpen ? "stream-footer" : "stream-footer compact"}>
+            {composerOpen ? (
+              <form
+                className="discussion-composer"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  onSubmitChat(chatDraft);
                 }}
-              />
-              <div className="composer-actions">
-                <span className="composer-hint">
-                  {focusedAgentNames.length === 1
-                    ? `Your next message will focus on ${agentMeta[focusedAgentNames[0]]?.label ?? "that advisor"}.`
-                    : focusedAgentNames.length > 1
-                      ? `Your next message will focus on ${chatTargetLabels.join(", ")}.`
-                    : "Tip: mention your market, cash situation, team size, pricing, or any big concern."}
-                </span>
-                <div className="composer-action-group">
-                  <span className="composer-status">{loading ? "Advisors are reviewing..." : result ? "Latest reply visible above" : "Ready for your question"}</span>
-                  <button type="submit" className="primary-action" disabled={loading || chatDraft.trim().length < 20}>
-                    {loading ? "Reviewing..." : "Send"}
-                  </button>
+              >
+                <div className="composer-targets">
+                  <span className="composer-target-label">Talk to</span>
+                  <div className="composer-target-chips">
+                    <button
+                      type="button"
+                      className={focusedAgentNames.length ? "target-chip" : "target-chip active"}
+                      onClick={() => onSelectOnlyFocusedAgent("")}
+                    >
+                      All advisors
+                    </button>
+                    {Object.entries(agentMeta).map(([name, meta]) => (
+                      <button
+                        key={name}
+                        type="button"
+                        className={focusedAgentNames.includes(name) ? "target-chip active" : "target-chip"}
+                        style={{ "--target-accent": meta.accent }}
+                        onClick={() => onToggleFocusedAgent(name)}
+                      >
+                        <span className="material-symbols-outlined">{meta.symbol}</span>
+                        {meta.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+                <textarea
+                  className="composer-textarea"
+                  rows="3"
+                  placeholder={
+                    focusedAgentNames.length === 1
+                      ? `Ask ${agentMeta[focusedAgentNames[0]]?.label ?? "this advisor"} something in plain language...`
+                      : focusedAgentNames.length > 1
+                        ? `Ask ${chatTargetLabels.join(", ")} something in plain language...`
+                        : "Example: We are a small SaaS company thinking about expanding into hospitals, but we only have 10 months of cash left. Should we launch now or wait?"
+                  }
+                  value={chatDraft}
+                  onChange={(event) => onChatDraftChange(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      if (!loading && chatDraft.trim().length >= 20) {
+                        onSubmitChat(chatDraft);
+                      }
+                    }
+                  }}
+                />
+                <div className="composer-actions">
+                  <span className="composer-hint">
+                    {focusedAgentNames.length === 1
+                      ? `Your next message will focus on ${agentMeta[focusedAgentNames[0]]?.label ?? "that advisor"}.`
+                      : focusedAgentNames.length > 1
+                        ? `Your next message will focus on ${chatTargetLabels.join(", ")}.`
+                        : "Tip: mention your market, cash situation, team size, pricing, or any big concern."}
+                  </span>
+                  <div className="composer-action-group">
+                    <span className="composer-status">
+                      {loading ? "Advisors are reviewing..." : result ? "Latest reply visible above" : "Ready for your question"}
+                    </span>
+                    <button type="submit" className="primary-action" disabled={loading || chatDraft.trim().length < 20}>
+                      {loading ? "Reviewing..." : "Send"}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            ) : (
+              <div className="composer-reopen-bar">
+                <div className="composer-reopen-copy">
+                  <strong>Result view expanded</strong>
+                  <span>Open the prompt box only when you want to ask the next question.</span>
+                </div>
+                <button type="button" className="primary-action" onClick={onShowComposer} disabled={loading}>
+                  {loading ? "Review In Progress" : "Ask Another Question"}
+                </button>
               </div>
-            </form>
+            )}
           </footer>
         </section>
 

@@ -18,6 +18,7 @@ function App() {
   const [activeView, setActiveView] = useState("simulation");
   const [form, setForm] = useState(buildDefaultForm());
   const [chatDraft, setChatDraft] = useState("");
+  const [composerOpen, setComposerOpen] = useState(true);
   const [chatMessages, setChatMessages] = useState([]);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -334,6 +335,7 @@ function App() {
     setForm(normalizedForm);
     setChatMessages(formChatMessages);
     setChatDraft("");
+    setComposerOpen(false);
     setFocusedAgentNames([]);
     await runAnalysis(buildAnalysisPayload(normalizedForm), { closeConsole: true });
   }
@@ -350,6 +352,7 @@ function App() {
 
     setChatMessages(nextMessages);
     setChatDraft("");
+    setComposerOpen(false);
     setForm(derivedForm);
     setFocusedAgentNames([]);
 
@@ -363,6 +366,7 @@ function App() {
     setSelectedDemoCaseId(sampleId);
     setForm(sampleForm);
     setChatDraft(sampleForm.business_problem);
+    setComposerOpen(true);
     setChatMessages([createChatMessage(sampleForm.business_problem)]);
     setFocusedAgentNames([]);
     setError("");
@@ -638,6 +642,7 @@ function App() {
           error={error}
           chatMessages={chatMessages}
           chatDraft={chatDraft}
+          composerOpen={composerOpen}
           focusedAgentNames={focusedAgentNames}
           activeTypingAgent={activeTypingAgent}
           speakingAgent={speakingAgent}
@@ -657,6 +662,7 @@ function App() {
           onApplySample={applySample}
           onChatDraftChange={setChatDraft}
           onSubmitChat={handleQuickChatSubmit}
+          onShowComposer={() => setComposerOpen(true)}
           onToggleFocusedAgent={toggleFocusedAgent}
           onSelectOnlyFocusedAgent={selectOnlyFocusedAgent}
           conversationAgentNames={isDirectAnswerMode ? [] : focusedAgentNames}
