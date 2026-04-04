@@ -193,14 +193,6 @@ function buildFallbackIdeaProfile(turn) {
 
 function buildAgentGraph(turn) {
   const researchSnapshot = turn?.research_snapshot ?? {};
-  const name = turn?.agent_name ?? "";
-  const topicLabels = {
-    demand: "Demand",
-    competition: "Competition",
-    pricing: "Pricing",
-    risk: "Risk",
-    location: "Location",
-  };
   const sourceLabels = {
     firecrawl: "Firecrawl",
     brightdata: "Bright Data",
@@ -208,14 +200,6 @@ function buildAgentGraph(turn) {
   };
 
   const topicEntries = Object.entries(researchSnapshot.topic_counts ?? {}).slice(0, 4);
-  const maxTopicCount = Math.max(...topicEntries.map(([, count]) => Number(count) || 0), 1);
-  const barItems = topicEntries.map(([topic, count]) => ({
-    label: topicLabels[topic] ?? topic,
-    value: Number(count) || 0,
-    height: `${clampValue(((Number(count) || 0) / maxTopicCount) * 100, 18, 100)}%`,
-    display: `${count} hits`,
-  }));
-
   const rawSourceEntries = Object.entries(researchSnapshot.source_counts ?? {}).filter(([, count]) => Number(count) > 0);
   const sourcePalette = ["#a78bfa", "#60a5fa", "#34d399", "#f59e0b"];
   const sourceItems = rawSourceEntries.map(([source, count], index) => ({
@@ -230,25 +214,77 @@ function buildAgentGraph(turn) {
     value: clampValue(Number(item.value ?? 0)),
     detail: toPlainText(item.detail ?? ""),
   }));
+  const sampleTitleCount = Object.values(researchSnapshot.sample_titles ?? {}).reduce(
+    (total, titles) => total + (Array.isArray(titles) ? titles.length : 0),
+    0,
+  );
+  const quantitativeBars = [
+    {
+      label: "Web Hits",
+      value: topicEntries.reduce((total, [, count]) => total + (Number(count) || 0), 0),
+      display: `${topicEntries.reduce((total, [, count]) => total + (Number(count) || 0), 0)} hits`,
+    },
+    {
+      label: "Topics",
+      value: topicEntries.length,
+      display: `${topicEntries.length} topics`,
+    },
+    {
+      label: "Sources",
+      value: sourceItems.length,
+      display: `${sourceItems.length} sources`,
+    },
+    {
+      label: "Comparables",
+      value: sampleTitleCount || Math.max(1, (turn?.research_points ?? []).length),
+      display: `${sampleTitleCount || Math.max(1, (turn?.research_points ?? []).length)} refs`,
+    },
+  ];
+  const fallbackQuantities = [
+    {
+      label: "Signals",
+      value: Math.max(1, (turn?.key_points ?? []).length),
+      display: `${Math.max(1, (turn?.key_points ?? []).length)} signals`,
+    },
+    {
+      label: "Checks",
+      value: Math.max(1, (turn?.references ?? []).length + (turn?.challenged_agents ?? []).length),
+      display: `${Math.max(1, (turn?.references ?? []).length + (turn?.challenged_agents ?? []).length)} checks`,
+    },
+    {
+      label: "Risks",
+      value: Math.max(1, (turn?.assumptions ?? []).length),
+      display: `${Math.max(1, (turn?.assumptions ?? []).length)} risks`,
+    },
+    {
+      label: "Math",
+      value: Math.max(1, (turn?.calculations ?? []).length),
+      display: `${Math.max(1, (turn?.calculations ?? []).length)} lines`,
+    },
+  ];
 
-  if (barItems.length) {
+  if (topicEntries.length) {
+    const maxQuantity = Math.max(...quantitativeBars.map((item) => item.value || 0), 1);
     return {
       title: startupProfile.title ?? "Startup idea profile",
       subtitle: startupProfile.subtitle ?? "Startup-specific market shape from your prompt and live web research",
-      barItems,
+      barItems: quantitativeBars.map((item) => ({
+        ...item,
+        height: `${clampValue(((item.value || 0) / maxQuantity) * 100, 18, 100)}%`,
+      })),
       ideaItems,
       sourceItems,
       sourced: true,
     };
   }
 
+  const maxFallbackQuantity = Math.max(...fallbackQuantities.map((item) => item.value || 0), 1);
   return {
-    title: startupProfile.title ?? `${name.replace(" Agent", "")} idea profile`,
+    title: startupProfile.title ?? "Startup idea profile",
     subtitle: startupProfile.subtitle ?? "Idea-specific fit inferred from the business case",
-    barItems: ideaItems.map((item) => ({
+    barItems: fallbackQuantities.map((item) => ({
       ...item,
-      height: `${clampValue(item.value, 18, 100)}%`,
-      display: `${Math.round(item.value)}`,
+      height: `${clampValue(((item.value || 0) / maxFallbackQuantity) * 100, 18, 100)}%`,
     })),
     ideaItems,
     sourceItems: [],
