@@ -908,6 +908,7 @@ a {
   color: rgba(220, 225, 251, 0.82);
   font-size: 0.88rem;
   line-height: 1.7;
+  white-space: pre-line;
 }
 
 .debate-message.user .message-tags {

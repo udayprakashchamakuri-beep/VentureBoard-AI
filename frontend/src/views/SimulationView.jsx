@@ -33,13 +33,45 @@ function getConversationMeta(agentMeta, name) {
 }
 
 function buildExpandedReasoningText(turn) {
-  const message = toPlainText(turn?.message ?? "");
-  if (message) {
-    return message;
+  if (!turn) {
+    return "";
   }
 
-  const points = (turn?.key_points ?? []).map((item) => toPlainText(item)).filter(Boolean);
-  return points.join(" ");
+  const sections = [];
+  const cleanMessage = toPlainText(String(turn.message ?? "").replace(/^\[[^\]]+\]:\s*/, ""));
+  const researchPoints = (turn.research_points ?? []).map((item) => toPlainText(item)).filter(Boolean);
+  const keyPoints = (turn.key_points ?? []).map((item) => toPlainText(item)).filter(Boolean);
+  const assumptions = (turn.assumptions ?? []).map((item) => toPlainText(item)).filter(Boolean);
+  const calculations = (turn.calculations ?? []).map((item) => toPlainText(item)).filter(Boolean);
+  const memoryReferences = (turn.memory_references ?? []).map((item) => toPlainText(item)).filter(Boolean);
+  const references = (turn.references ?? []).map((item) => toPlainText(item)).filter(Boolean);
+  const challengedAgents = (turn.challenged_agents ?? []).map((item) => toPlainText(item)).filter(Boolean);
+
+  if (cleanMessage) {
+    sections.push(cleanMessage);
+  }
+  if (researchPoints.length) {
+    sections.push(`Research: ${researchPoints.join(" ")}`);
+  }
+  if (keyPoints.length) {
+    sections.push(`What this advisor is pushing for: ${keyPoints.join(" ")}`);
+  }
+  if (assumptions.length) {
+    sections.push(`What could break: ${assumptions.join(" ")}`);
+  }
+  if (calculations.length) {
+    sections.push(`Numbers behind the view: ${calculations.join(" ")}`);
+  }
+  if (memoryReferences.length) {
+    sections.push(`Relevant past context: ${memoryReferences.join(" ")}`);
+  }
+  if (references.length || challengedAgents.length) {
+    const referenceLine = references.length ? `Cross-checking: ${references.join(", ")}.` : "";
+    const challengeLine = challengedAgents.length ? `Pressuring: ${challengedAgents.join(", ")}.` : "";
+    sections.push([referenceLine, challengeLine].filter(Boolean).join(" "));
+  }
+
+  return sections.join("\n\n");
 }
 
 function SimulationView({
