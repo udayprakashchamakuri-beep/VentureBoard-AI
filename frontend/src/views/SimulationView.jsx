@@ -32,6 +32,16 @@ function getConversationMeta(agentMeta, name) {
   };
 }
 
+function buildExpandedReasoningText(turn) {
+  const message = toPlainText(turn?.message ?? "");
+  if (message) {
+    return message;
+  }
+
+  const points = (turn?.key_points ?? []).map((item) => toPlainText(item)).filter(Boolean);
+  return points.join(" ");
+}
+
 function SimulationView({
   agentMeta,
   result,
@@ -294,6 +304,12 @@ function SimulationView({
                               <span className={`message-tag ${stanceClassName}`}>{formatAdvisorStanceLabel(turn.stance)}</span>
                             </div>
                           ) : null}
+                          {turn.agent_name !== "General Assistant" && buildExpandedReasoningText(turn) ? (
+                            <details className="message-reasoning">
+                              <summary>View full reasoning</summary>
+                              <div className="message-reasoning-body">{buildExpandedReasoningText(turn)}</div>
+                            </details>
+                          ) : null}
                         </div>
                       </article>
                     );
@@ -349,9 +365,17 @@ function SimulationView({
                             {turn.agent_name === "General Assistant" ? toPlainText(turn.message) : buildRoundSummary(turn)}
                           </div>
                           {turn.agent_name !== "General Assistant" ? (
-                            <div className="message-tags">
-                              <span className={`message-tag ${stanceClassName}`}>{formatDecisionLabel(turn.stance)}</span>
-                            </div>
+                            <>
+                              <div className="message-tags">
+                                <span className={`message-tag ${stanceClassName}`}>{formatDecisionLabel(turn.stance)}</span>
+                              </div>
+                              {buildExpandedReasoningText(turn) ? (
+                                <details className="message-reasoning">
+                                  <summary>View full reasoning</summary>
+                                  <div className="message-reasoning-body">{buildExpandedReasoningText(turn)}</div>
+                                </details>
+                              ) : null}
+                            </>
                           ) : null}
                         </div>
                       </article>
