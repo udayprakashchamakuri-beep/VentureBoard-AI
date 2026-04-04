@@ -62,7 +62,7 @@ export function buildAdvisorParagraph(turn) {
 
   const cleanedMessage = toPlainText(String(turn.message ?? "").replace(/^\[[^\]]+\]:\s*/, ""));
   if (cleanedMessage) {
-    return cleanedMessage;
+    return trimAdvisorParagraph(cleanedMessage);
   }
 
   return buildRoundSummary(turn);
@@ -228,6 +228,22 @@ function normalizeSentence(text) {
 
 function normalizeFragment(text) {
   return String(text || "").trim().replace(/[.!?]+$/, "");
+}
+
+function trimAdvisorParagraph(text) {
+  const normalized = String(text || "").trim();
+  if (!normalized) {
+    return "";
+  }
+
+  const sentences = normalized.match(/[^.!?]+[.!?]+/g) ?? [normalized];
+  const trimmed = sentences.slice(0, 3).join(" ").trim();
+
+  if (trimmed.length <= 320) {
+    return trimmed;
+  }
+
+  return `${trimmed.slice(0, 317).trimEnd()}...`;
 }
 
 function rewriteMachineText(value) {
