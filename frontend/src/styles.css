@@ -779,7 +779,6 @@ a {
 }
 
 .advisor-dashboard-id span,
-.advisor-metric-tile span,
 .advisor-dashboard-label {
   font-family: "Space Grotesk", sans-serif;
   font-size: 0.58rem;
@@ -792,27 +791,6 @@ a {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.advisor-dashboard-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.advisor-metric-tile {
-  display: grid;
-  gap: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 12px 12px 11px;
-}
-
-.advisor-metric-tile strong {
-  font-family: "Manrope", sans-serif;
-  font-size: 1rem;
-  color: #f3f5ff;
 }
 
 .advisor-dashboard-summary,
@@ -897,40 +875,48 @@ a {
   line-height: 1.4;
 }
 
-.advisor-pie-panel {
+.advisor-line-panel {
   display: grid;
   gap: 12px;
   align-content: start;
 }
 
-.advisor-pie-chart {
-  position: relative;
-  width: 132px;
-  height: 132px;
-  margin: 0 auto;
-  border-radius: 999px;
+.advisor-line-chart {
+  width: 100%;
+  height: auto;
+  overflow: visible;
 }
 
-.advisor-pie-core {
-  position: absolute;
-  inset: 24px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: rgba(7, 13, 31, 0.92);
-  color: #eef2ff;
-  font-family: "Space Grotesk", sans-serif;
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.advisor-line-grid {
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 1;
 }
 
-.advisor-pie-legend {
+.advisor-line-path {
+  fill: none;
+  stroke: color-mix(in srgb, var(--agent-accent) 88%, white 8%);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.advisor-line-point {
+  fill: #0c1324;
+  stroke: color-mix(in srgb, var(--agent-accent) 88%, white 8%);
+  stroke-width: 4;
+}
+
+.advisor-line-label {
+  fill: rgba(219, 224, 255, 0.66);
+  font-size: 10px;
+}
+
+.advisor-source-legend {
   display: grid;
   gap: 8px;
 }
 
-.advisor-pie-legend-item {
+.advisor-source-chip {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 8px;
@@ -939,13 +925,13 @@ a {
   font-size: 0.78rem;
 }
 
-.advisor-pie-legend-item i {
+.advisor-source-chip i {
   width: 10px;
   height: 10px;
   border-radius: 999px;
 }
 
-.advisor-pie-legend-item strong {
+.advisor-source-chip strong {
   color: #eef2ff;
   font-family: "Manrope", sans-serif;
   font-size: 0.78rem;
@@ -4739,8 +4725,7 @@ a {
   }
 
   .advisor-dashboard-grid,
-  .advisor-dashboard-grid.focused,
-  .advisor-dashboard-metrics {
+  .advisor-dashboard-grid.focused {
     grid-template-columns: 1fr;
   }
 

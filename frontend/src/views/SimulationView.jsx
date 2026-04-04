@@ -87,61 +87,6 @@ function buildExpandedReasoningText(turn) {
   return sections.join("\n\n");
 }
 
-function formatMetricValue(value, formatter = (input) => input) {
-  if (value === null || value === undefined || value === "") {
-    return "";
-  }
-  return formatter(value);
-}
-
-function getTurnMetrics(turn) {
-  const metrics = turn?.estimated_metrics ?? {};
-  const metricItems = [
-    {
-      label: "Payback",
-      value: formatMetricValue(metrics.estimated_payback_months, (input) => `${Math.round(Number(input))} mo`),
-    },
-    {
-      label: "Runway",
-      value: formatMetricValue(metrics.runway_months, (input) => `${Math.round(Number(input))} mo`),
-    },
-    {
-      label: "Price",
-      value: formatMetricValue(metrics.price_point, (input) => {
-        const numeric = Number(input);
-        if (!Number.isFinite(numeric) || numeric <= 0) {
-          return "";
-        }
-        return new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-          maximumFractionDigits: 0,
-        }).format(numeric);
-      }),
-    },
-    {
-      label: "Margin",
-      value: formatMetricValue(metrics.gross_margin_pct, (input) => `${Math.round(Number(input))}%`),
-    },
-    {
-      label: "Launch Budget",
-      value: formatMetricValue(metrics.launch_budget, (input) => {
-        const numeric = Number(input);
-        if (!Number.isFinite(numeric) || numeric <= 0) {
-          return "";
-        }
-        return new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-          maximumFractionDigits: 0,
-        }).format(numeric);
-      }),
-    },
-  ];
-
-  return metricItems.filter((item) => item.value).slice(0, 3);
-}
-
 function clampValue(value, min = 0, max = 100) {
   return Math.min(max, Math.max(min, value));
 }
@@ -174,16 +119,14 @@ function buildAgentGraph(turn) {
   }));
 
   const rawSourceEntries = Object.entries(researchSnapshot.source_counts ?? {}).filter(([, count]) => Number(count) > 0);
-  const totalSourceCount = rawSourceEntries.reduce((sum, [, count]) => sum + Number(count), 0);
   const sourcePalette = ["#a78bfa", "#60a5fa", "#34d399", "#f59e0b"];
-  const pieItems = rawSourceEntries.map(([source, count], index) => ({
+  const sourceItems = rawSourceEntries.map(([source, count], index) => ({
     label: sourceLabels[source] ?? source,
     value: Number(count) || 0,
-    percentage: totalSourceCount ? Math.round((Number(count) / totalSourceCount) * 100) : 0,
     color: sourcePalette[index % sourcePalette.length],
   }));
 
-  if (barItems.length && pieItems.length) {
+  if (barItems.length) {
     const titleMap = {
       "CEO Agent": "Live Decision Signals",
       "Startup Builder Agent": "Build Signal Mix",
@@ -201,7 +144,7 @@ function buildAgentGraph(turn) {
       title: titleMap[name] ?? "Live Evidence Mix",
       subtitle: "From Firecrawl and Bright Data research hits",
       barItems,
-      pieItems,
+      sourceItems,
       sourced: true,
     };
   }
@@ -220,7 +163,7 @@ function buildAgentGraph(turn) {
       height: `${clampValue(item.value, 18, 100)}%`,
       display: `${Math.round(item.value)}`,
     })),
-    pieItems: [],
+    sourceItems: [],
     sourced: false,
   };
 }
@@ -242,19 +185,20 @@ function getAgentIcon(agentName) {
   return icons[agentName] ?? Bot;
 }
 
-function buildPieBackground(items) {
-  if (!items?.length) {
-    return "conic-gradient(from 180deg, rgba(255,255,255,0.08) 0 100%)";
+function buildLineChartPoints(items = []) {
+  if (!items.length) {
+    return "";
   }
 
-  let current = 0;
-  const stops = items.map((item) => {
-    const next = current + item.percentage;
-    const segment = `${item.color} ${current}% ${next}%`;
-    current = next;
-    return segment;
-  });
-  return `conic-gradient(from 180deg, ${stops.join(", ")})`;
+  const count = items.length;
+  return items
+    .map((item, index) => {
+      const x = count === 1 ? 110 : 16 + (index * 188) / (count - 1);
+      const numeric = Number(item.value ?? 0);
+      const y = 108 - clampValue(numeric, 0, 100) * 0.9;
+      return `${x},${y}`;
+    })
+    .join(" ");
 }
 
 function getTurnHighlights(turn) {
@@ -516,7 +460,6 @@ function SimulationView({
                           summary={buildAdvisorParagraph(turn) || buildDirectAdvisorReply(turn, latestUserMessage?.content ?? "")}
                           highlightItems={getTurnHighlights(turn)}
                           riskLine={getTurnRiskLine(turn)}
-                          metrics={getTurnMetrics(turn)}
                           showFocusedReplyBadge={shouldShowFocusedReplyBadge}
                           onOpenAgentConversation={onOpenAgentConversation}
                           onOpenAgentProfile={onOpenAgentProfile}
@@ -573,7 +516,6 @@ function SimulationView({
                           }
                           highlightItems={getTurnHighlights(turn)}
                           riskLine={getTurnRiskLine(turn)}
-                          metrics={getTurnMetrics(turn)}
                           onOpenAgentConversation={onOpenAgentConversation}
                           onOpenAgentProfile={onOpenAgentProfile}
                           isActive={turn.agent_name === speakingAgent && !loading}
@@ -916,7 +858,6 @@ function AgentDashboardCard({
   summary,
   highlightItems,
   riskLine,
-  metrics,
   onOpenAgentConversation,
   onOpenAgentProfile,
   isActive,
@@ -926,6 +867,7 @@ function AgentDashboardCard({
   const reasoning = buildExpandedReasoningText(turn);
   const graph = buildAgentGraph(turn);
   const Icon = getAgentIcon(turn.agent_name);
+  const linePoints = buildLineChartPoints(graph.barItems);
 
   return (
     <article
@@ -950,17 +892,6 @@ function AgentDashboardCard({
         </div>
       </div>
 
-      {metrics.length ? (
-        <div className="advisor-dashboard-metrics">
-          {metrics.map((item) => (
-            <div key={item.label} className="advisor-metric-tile">
-              <span>{item.label}</span>
-              <strong>{item.value}</strong>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
       <div className="advisor-dashboard-graph">
         <div className="advisor-dashboard-graph-head">
           <div>
@@ -981,19 +912,38 @@ function AgentDashboardCard({
             ))}
           </div>
 
-          <div className="advisor-pie-panel">
-            <div className="advisor-pie-chart" style={{ background: buildPieBackground(graph.pieItems) }}>
-              <div className="advisor-pie-core">{graph.sourced ? "Live" : "Model"}</div>
-            </div>
-            <div className="advisor-pie-legend">
-              {(graph.pieItems.length ? graph.pieItems : [{ label: "Internal", percentage: 100, color: "#a78bfa" }]).map((item) => (
-                <div key={item.label} className="advisor-pie-legend-item">
-                  <i style={{ background: item.color }} />
-                  <span>{item.label}</span>
-                  <strong>{item.percentage}%</strong>
-                </div>
+          <div className="advisor-line-panel">
+            <svg viewBox="0 0 220 132" className="advisor-line-chart" aria-hidden="true">
+              {[24, 52, 80, 108].map((y) => (
+                <line key={`h-${y}`} x1="12" y1={y} x2="208" y2={y} className="advisor-line-grid" />
               ))}
-            </div>
+              {graph.barItems.map((item, index) => {
+                const count = graph.barItems.length;
+                const x = count === 1 ? 110 : 16 + (index * 188) / (count - 1);
+                const y = 108 - clampValue(Number(item.value ?? 0), 0, 100) * 0.9;
+                return (
+                  <g key={item.label}>
+                    <circle cx={x} cy={y} r="5.5" className="advisor-line-point" />
+                    <text x={x} y="126" textAnchor="middle" className="advisor-line-label">
+                      {item.label}
+                    </text>
+                  </g>
+                );
+              })}
+              <polyline points={linePoints} className="advisor-line-path" />
+            </svg>
+
+            {graph.sourceItems.length ? (
+              <div className="advisor-source-legend">
+                {graph.sourceItems.map((item) => (
+                  <div key={item.label} className="advisor-source-chip">
+                    <i style={{ background: item.color }} />
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
