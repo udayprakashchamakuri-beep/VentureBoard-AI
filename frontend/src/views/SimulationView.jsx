@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import {
+  buildAdvisorParagraph,
   buildDirectAdvisorReply,
   buildRoundSummary,
   formatAdvisorStanceLabel,
@@ -329,7 +330,7 @@ function SimulationView({
                             <span className="message-time">Latest reply</span>
                           </div>
                           <div className={turn.stance === "NO GO" ? "message-bubble danger" : "message-bubble"}>
-                            {buildDirectAdvisorReply(turn, latestUserMessage?.content ?? "")}
+                            {buildAdvisorParagraph(turn) || buildDirectAdvisorReply(turn, latestUserMessage?.content ?? "")}
                           </div>
                           {shouldShowFocusedReplyBadge && turn.agent_name !== "General Assistant" ? (
                             <div className="message-tags">
@@ -394,7 +395,7 @@ function SimulationView({
                             <span className="message-time">Round {turn.round}</span>
                           </div>
                           <div className={turn.stance === "NO GO" ? "message-bubble danger" : "message-bubble"}>
-                            {turn.agent_name === "General Assistant" ? toPlainText(turn.message) : buildRoundSummary(turn)}
+                            {turn.agent_name === "General Assistant" ? toPlainText(turn.message) : buildAdvisorParagraph(turn) || buildRoundSummary(turn)}
                           </div>
                           {turn.agent_name !== "General Assistant" ? (
                             <>

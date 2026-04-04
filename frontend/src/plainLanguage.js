@@ -55,6 +55,19 @@ export function formatDecisionLabel(value) {
   return DECISION_LABELS[value] ?? toPlainText(value);
 }
 
+export function buildAdvisorParagraph(turn) {
+  if (!turn) {
+    return "";
+  }
+
+  const cleanedMessage = toPlainText(String(turn.message ?? "").replace(/^\[[^\]]+\]:\s*/, ""));
+  if (cleanedMessage) {
+    return cleanedMessage;
+  }
+
+  return buildRoundSummary(turn);
+}
+
 export function buildRoundSummary(turn) {
   if (!turn) {
     return "";
