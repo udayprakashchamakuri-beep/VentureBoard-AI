@@ -396,7 +396,7 @@ class StrategicReasoner:
             calculations=calculations,
             memory_references=memory_references,
             research_points=research_points,
-            research_snapshot=self._build_research_snapshot(profile.definition.name, signals.external_research),
+            research_snapshot=self._build_research_snapshot(profile.definition.name, request, signals),
         )
 
     def _build_agent_insights(
@@ -1212,13 +1212,16 @@ class StrategicReasoner:
                 points.append(f"Recent web research suggests {fallback}.")
         return points[:2]
 
-    def _build_research_snapshot(self, agent_name: str, external_research: BrightDataResearch) -> Dict[str, object]:
-        if not external_research.has_hits():
-            return {}
-
+    def _build_research_snapshot(
+        self,
+        agent_name: str,
+        request: AnalyzeRequest,
+        signals: BusinessSignals,
+    ) -> Dict[str, object]:
+        external_research = signals.external_research
         visible_topics = [topic for topic in self._research_topics_for_agent(agent_name) if external_research.get(topic)]
         if not visible_topics:
-            visible_topics = external_research.topics()[:3]
+            visible_topics = external_research.topics()[:4]
 
         topic_counts = {
             topic: len(external_research.get(topic))
@@ -1242,6 +1245,204 @@ class StrategicReasoner:
             "topic_counts": topic_counts,
             "source_counts": source_counts,
             "sample_titles": sample_titles,
+            "idea_profile": self._build_startup_idea_profile(
+                agent_name=agent_name,
+                request=request,
+                signals=signals,
+                visible_topics=visible_topics,
+            ),
+        }
+
+    def _build_startup_idea_profile(
+        self,
+        agent_name: str,
+        request: AnalyzeRequest,
+        signals: BusinessSignals,
+        visible_topics: List[str],
+    ) -> Dict[str, object]:
+        external_research = signals.external_research
+        subject = self._research_subject(request) or request.company_name or "Startup idea"
+
+        def cap(value: float) -> int:
+            return int(max(12, min(92, round(value))))
+
+        demand_text = " ".join(external_research.summaries("demand", limit=3)).lower()
+        competition_text = " ".join(external_research.summaries("competition", limit=3)).lower()
+        pricing_text = " ".join(external_research.summaries("pricing", limit=3)).lower()
+        location_text = " ".join(external_research.summaries("location", limit=3)).lower()
+        risk_text = " ".join(external_research.summaries("risk", limit=3)).lower()
+
+        demand_signal = self._keyword_balance(
+            demand_text,
+            positive=["growing", "growth", "rising", "popular", "demand", "adoption", "student", "busy"],
+            negative=["decline", "slow", "weak", "drop", "closing"],
+        )
+        competition_signal = self._keyword_balance(
+            competition_text,
+            positive=["crowded", "competitive", "saturated", "many competitors", "incumbent"],
+            negative=["underserved", "whitespace", "few competitors"],
+        )
+        pricing_signal = self._keyword_balance(
+            pricing_text,
+            positive=["premium", "membership", "ticket", "package", "pricing", "roi"],
+            negative=["cheap", "discount", "free", "low-cost"],
+        )
+        location_signal = self._keyword_balance(
+            location_text,
+            positive=["students", "foot traffic", "campus", "walkable", "busy", "local demand"],
+            negative=["remote", "low traffic", "quiet"],
+        )
+        risk_signal = self._keyword_balance(
+            risk_text,
+            positive=["regulation", "permit", "license", "compliance", "safety", "lawsuit", "cost"],
+            negative=["simple", "easy to start", "low barrier"],
+        )
+
+        price_point = signals.numeric_metrics.get("price_point")
+        gross_margin = signals.numeric_metrics.get("gross_margin")
+
+        topic_details = {
+            "demand": self._summarize_research_topic(external_research, "demand")
+            or "Buyer pull is being estimated from the business problem and prior advisor evidence.",
+            "competition": self._summarize_research_topic(external_research, "competition")
+            or "Competitive density is being inferred from the category and distribution motion.",
+            "pricing": self._summarize_research_topic(external_research, "pricing")
+            or "Pricing room is inferred from willingness-to-pay cues in the prompt.",
+            "location": self._summarize_research_topic(external_research, "location")
+            or "Local fit is inferred from the audience and region mentioned in the prompt.",
+            "risk": self._summarize_research_topic(external_research, "risk")
+            or "Execution burden is inferred from compliance, setup, and support requirements.",
+        }
+
+        common_values = {
+            "demand": cap(signals.market_attractiveness + len(external_research.get("demand")) * 4 + demand_signal * 3),
+            "pricing": cap(
+                signals.pricing_power
+                + pricing_signal * 4
+                + (8 if price_point and price_point >= 10000 else 0)
+            ),
+            "competition": cap(
+                signals.differentiation_pressure
+                + len(external_research.get("competition")) * 4
+                + max(0, competition_signal) * 3
+            ),
+            "location": cap(
+                (signals.market_attractiveness * 0.45)
+                + 32
+                + len(external_research.get("location")) * 4
+                + location_signal * 4
+            ),
+            "operations": cap(
+                signals.operational_complexity
+                + max(0, risk_signal) * 3
+                + max(0, competition_signal)
+            ),
+            "compliance": cap(signals.compliance_risk + max(0, risk_signal) * 4),
+            "friction": cap(signals.sales_friction + max(0, competition_signal) * 2 + max(0, risk_signal)),
+            "finance": cap(
+                signals.financial_viability
+                + pricing_signal * 2
+                + (6 if gross_margin and gross_margin >= 60 else 0)
+                - max(0, risk_signal) * 2
+            ),
+            "talent": cap(signals.talent_load + max(0, risk_signal) + max(0, competition_signal)),
+        }
+
+        common_details = {
+            "demand": topic_details["demand"],
+            "pricing": topic_details["pricing"],
+            "competition": topic_details["competition"],
+            "location": topic_details["location"],
+            "operations": topic_details["risk"],
+            "compliance": topic_details["risk"],
+            "friction": topic_details["competition"],
+            "finance": topic_details["pricing"],
+            "talent": topic_details["risk"],
+        }
+
+        profile_map = {
+            "CEO Agent": [
+                ("Demand", "demand"),
+                ("Price", "pricing"),
+                ("Friction", "friction"),
+                ("Competition", "competition"),
+            ],
+            "Startup Builder Agent": [
+                ("Demand", "demand"),
+                ("Local Fit", "location"),
+                ("Ops Load", "operations"),
+                ("Compliance", "compliance"),
+            ],
+            "Market Research Agent": [
+                ("Demand", "demand"),
+                ("Local Fit", "location"),
+                ("Price", "pricing"),
+                ("Competition", "competition"),
+            ],
+            "Finance Agent": [
+                ("Revenue Fit", "finance"),
+                ("Price", "pricing"),
+                ("Friction", "friction"),
+                ("Ops Load", "operations"),
+            ],
+            "Marketing Agent": [
+                ("Audience", "demand"),
+                ("Local Buzz", "location"),
+                ("Noise", "competition"),
+                ("Offer", "pricing"),
+            ],
+            "Pricing Agent": [
+                ("Budget Fit", "pricing"),
+                ("Demand", "demand"),
+                ("Noise", "competition"),
+                ("Friction", "friction"),
+            ],
+            "Supply Chain Agent": [
+                ("Local Fit", "location"),
+                ("Ops Load", "operations"),
+                ("Compliance", "compliance"),
+                ("Friction", "friction"),
+            ],
+            "Hiring Agent": [
+                ("Demand", "demand"),
+                ("Talent", "talent"),
+                ("Ops Load", "operations"),
+                ("Support", "compliance"),
+            ],
+            "Risk Agent": [
+                ("Compliance", "compliance"),
+                ("Ops Load", "operations"),
+                ("Dependence", "competition"),
+                ("Friction", "friction"),
+            ],
+            "Sales Strategy Agent": [
+                ("Urgency", "demand"),
+                ("Ticket", "pricing"),
+                ("Cycle", "friction"),
+                ("Noise", "competition"),
+            ],
+        }
+        selected_profile = profile_map.get(
+            agent_name,
+            [("Demand", "demand"), ("Price", "pricing"), ("Competition", "competition"), ("Ops Load", "operations")],
+        )
+
+        series = [
+            {
+                "label": label,
+                "topic": key,
+                "value": common_values[key],
+                "detail": common_details[key],
+            }
+            for label, key in selected_profile
+        ]
+
+        return {
+            "subject": subject[:80],
+            "title": f"{subject[:40]} fit",
+            "subtitle": "Startup-specific market shape from your prompt and live web research",
+            "series": series,
+            "visible_topics": visible_topics,
         }
 
     def _research_topics_for_agent(self, agent_name: str) -> List[str]:

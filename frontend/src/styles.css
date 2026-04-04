@@ -877,7 +877,7 @@ a {
 
 .advisor-line-panel {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   align-content: start;
 }
 
@@ -909,6 +909,46 @@ a {
 .advisor-line-label {
   fill: rgba(219, 224, 255, 0.66);
   font-size: 10px;
+}
+
+.advisor-line-detail-list {
+  display: grid;
+  gap: 8px;
+}
+
+.advisor-line-detail-item {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.advisor-line-detail-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.advisor-line-detail-top strong {
+  color: #eef2ff;
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+}
+
+.advisor-line-detail-top span {
+  color: color-mix(in srgb, var(--agent-accent) 88%, white 12%);
+  font-family: "Manrope", sans-serif;
+  font-size: 0.78rem;
+}
+
+.advisor-line-detail-item p {
+  margin: 0;
+  color: rgba(219, 224, 255, 0.68);
+  font-size: 0.72rem;
+  line-height: 1.45;
 }
 
 .advisor-source-legend {

@@ -91,9 +91,107 @@ function clampValue(value, min = 0, max = 100) {
   return Math.min(max, Math.max(min, value));
 }
 
-function buildAgentGraph(turn) {
-  const metrics = turn?.estimated_metrics ?? {};
+function buildFallbackIdeaProfile(turn) {
   const snapshot = turn?.score_snapshot ?? {};
+  const name = turn?.agent_name ?? "";
+  const dimensionValues = {
+    demand: clampValue(Number(snapshot.market_attractiveness ?? 52)),
+    pricing: clampValue(Number(snapshot.pricing_power ?? 50)),
+    competition: clampValue(Number(snapshot.differentiation_pressure ?? 48)),
+    location: clampValue(Math.round(((Number(snapshot.market_attractiveness ?? 50) * 0.55) + 18))),
+    operations: clampValue(Number(snapshot.operational_complexity ?? 50)),
+    compliance: clampValue(Number(snapshot.compliance_risk ?? 44)),
+    friction: clampValue(Number(snapshot.sales_friction ?? 50)),
+    finance: clampValue(Number(snapshot.financial_viability ?? 50)),
+    talent: clampValue(Number(snapshot.talent_load ?? 48)),
+  };
+  const detailMap = {
+    demand: "Demand fit inferred from the business case and advisor evidence collected so far.",
+    pricing: "Pricing room inferred from willingness-to-pay and category positioning signals.",
+    competition: "Competitive pressure inferred from the market shape and comparable alternatives.",
+    location: "Local fit inferred from audience, geography, and access assumptions in the prompt.",
+    operations: "Execution load inferred from setup, delivery, and operational dependencies.",
+    compliance: "Compliance burden inferred from permits, safety, privacy, or regulated steps.",
+    friction: "Sales friction inferred from buyer process, onboarding drag, and switching barriers.",
+    finance: "Commercial fit inferred from revenue quality and the board's economics discussion.",
+    talent: "Talent load inferred from specialist hiring, support, and enablement requirements.",
+  };
+  const profileMap = {
+    "CEO Agent": [
+      ["Demand", "demand"],
+      ["Price", "pricing"],
+      ["Friction", "friction"],
+      ["Competition", "competition"],
+    ],
+    "Startup Builder Agent": [
+      ["Demand", "demand"],
+      ["Local Fit", "location"],
+      ["Ops Load", "operations"],
+      ["Compliance", "compliance"],
+    ],
+    "Market Research Agent": [
+      ["Demand", "demand"],
+      ["Local Fit", "location"],
+      ["Price", "pricing"],
+      ["Competition", "competition"],
+    ],
+    "Finance Agent": [
+      ["Revenue Fit", "finance"],
+      ["Price", "pricing"],
+      ["Friction", "friction"],
+      ["Ops Load", "operations"],
+    ],
+    "Marketing Agent": [
+      ["Audience", "demand"],
+      ["Local Buzz", "location"],
+      ["Noise", "competition"],
+      ["Offer", "pricing"],
+    ],
+    "Pricing Agent": [
+      ["Budget Fit", "pricing"],
+      ["Demand", "demand"],
+      ["Noise", "competition"],
+      ["Friction", "friction"],
+    ],
+    "Supply Chain Agent": [
+      ["Local Fit", "location"],
+      ["Ops Load", "operations"],
+      ["Compliance", "compliance"],
+      ["Friction", "friction"],
+    ],
+    "Hiring Agent": [
+      ["Demand", "demand"],
+      ["Talent", "talent"],
+      ["Ops Load", "operations"],
+      ["Support", "compliance"],
+    ],
+    "Risk Agent": [
+      ["Compliance", "compliance"],
+      ["Ops Load", "operations"],
+      ["Dependence", "competition"],
+      ["Friction", "friction"],
+    ],
+    "Sales Strategy Agent": [
+      ["Urgency", "demand"],
+      ["Ticket", "pricing"],
+      ["Cycle", "friction"],
+      ["Noise", "competition"],
+    ],
+  };
+
+  return {
+    title: "Startup idea profile",
+    subtitle: "Idea-specific fit built from the current business case",
+    series: (profileMap[name] ?? profileMap["CEO Agent"]).map(([label, key]) => ({
+      label,
+      topic: key,
+      value: dimensionValues[key],
+      detail: detailMap[key],
+    })),
+  };
+}
+
+function buildAgentGraph(turn) {
   const researchSnapshot = turn?.research_snapshot ?? {};
   const name = turn?.agent_name ?? "";
   const topicLabels = {
@@ -125,44 +223,34 @@ function buildAgentGraph(turn) {
     value: Number(count) || 0,
     color: sourcePalette[index % sourcePalette.length],
   }));
+  const startupProfile = researchSnapshot.idea_profile ?? buildFallbackIdeaProfile(turn);
+  const ideaItems = (startupProfile.series ?? []).slice(0, 4).map((item) => ({
+    label: item.label,
+    topic: item.topic,
+    value: clampValue(Number(item.value ?? 0)),
+    detail: toPlainText(item.detail ?? ""),
+  }));
 
   if (barItems.length) {
-    const titleMap = {
-      "CEO Agent": "Live Decision Signals",
-      "Startup Builder Agent": "Build Signal Mix",
-      "Market Research Agent": "Research Signal Mix",
-      "Finance Agent": "Financial Evidence Mix",
-      "Marketing Agent": "Marketing Evidence Mix",
-      "Pricing Agent": "Pricing Evidence Mix",
-      "Supply Chain Agent": "Operations Evidence Mix",
-      "Hiring Agent": "Talent Market Mix",
-      "Risk Agent": "Risk Evidence Mix",
-      "Sales Strategy Agent": "Sales Evidence Mix",
-    };
-
     return {
-      title: titleMap[name] ?? "Live Evidence Mix",
-      subtitle: "From Firecrawl and Bright Data research hits",
+      title: startupProfile.title ?? "Startup idea profile",
+      subtitle: startupProfile.subtitle ?? "Startup-specific market shape from your prompt and live web research",
       barItems,
+      ideaItems,
       sourceItems,
       sourced: true,
     };
   }
 
-  const fallbackItems = [
-    { label: "Confidence", value: clampValue(Number(turn?.confidence ?? 0)) },
-    { label: "Growth", value: clampValue(Number(snapshot.growth_potential ?? 0)) },
-    { label: "Risk", value: clampValue(Number(snapshot.compliance_risk ?? 0)) },
-  ];
-
   return {
-    title: "Advisor Signal",
-    subtitle: "Fallback model metrics",
-    barItems: fallbackItems.map((item) => ({
+    title: startupProfile.title ?? `${name.replace(" Agent", "")} idea profile`,
+    subtitle: startupProfile.subtitle ?? "Idea-specific fit inferred from the business case",
+    barItems: ideaItems.map((item) => ({
       ...item,
       height: `${clampValue(item.value, 18, 100)}%`,
       display: `${Math.round(item.value)}`,
     })),
+    ideaItems,
     sourceItems: [],
     sourced: false,
   };
@@ -867,7 +955,7 @@ function AgentDashboardCard({
   const reasoning = buildExpandedReasoningText(turn);
   const graph = buildAgentGraph(turn);
   const Icon = getAgentIcon(turn.agent_name);
-  const linePoints = buildLineChartPoints(graph.barItems);
+  const linePoints = buildLineChartPoints(graph.ideaItems);
 
   return (
     <article
@@ -917,8 +1005,8 @@ function AgentDashboardCard({
               {[24, 52, 80, 108].map((y) => (
                 <line key={`h-${y}`} x1="12" y1={y} x2="208" y2={y} className="advisor-line-grid" />
               ))}
-              {graph.barItems.map((item, index) => {
-                const count = graph.barItems.length;
+              {graph.ideaItems.map((item, index) => {
+                const count = graph.ideaItems.length;
                 const x = count === 1 ? 110 : 16 + (index * 188) / (count - 1);
                 const y = 108 - clampValue(Number(item.value ?? 0), 0, 100) * 0.9;
                 return (
@@ -932,6 +1020,20 @@ function AgentDashboardCard({
               })}
               <polyline points={linePoints} className="advisor-line-path" />
             </svg>
+
+            {graph.ideaItems.length ? (
+              <div className="advisor-line-detail-list">
+                {graph.ideaItems.map((item) => (
+                  <div key={`${turn.agent_name}-${item.label}`} className="advisor-line-detail-item">
+                    <div className="advisor-line-detail-top">
+                      <strong>{item.label}</strong>
+                      <span>{Math.round(item.value)}</span>
+                    </div>
+                    <p>{item.detail}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
 
             {graph.sourceItems.length ? (
               <div className="advisor-source-legend">
