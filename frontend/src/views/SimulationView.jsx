@@ -336,6 +336,22 @@ function getTurnRiskLine(turn) {
   return assumptions[0] ?? "";
 }
 
+function buildDirectAssistantNotice(message) {
+  const clean = toPlainText(message ?? "");
+  const fallback =
+    "This question is not related to a business case, so the advisor dashboard was skipped. Ask about launch timing, pricing, customers, costs, hiring, risk, or growth if you want a business review.";
+
+  if (!clean) {
+    return fallback;
+  }
+
+  if (/not related to business|general question|business case/i.test(clean)) {
+    return clean;
+  }
+
+  return `This question is not related to a business case. ${clean}`;
+}
+
 function SimulationView({
   agentMeta,
   result,
@@ -403,7 +419,9 @@ function SimulationView({
   const shouldShowFocusedReplyBadge = shouldShowAdvisorStanceBadge(latestUserMessage?.content ?? "");
   const isDirectAnswerThread =
     (result?.conversation?.length ?? 0) > 0 && result.conversation.every((turn) => turn.agent_name === "General Assistant");
-  const directAnswerText = toPlainText(result?.conversation?.[0]?.message ?? "The model will answer directly here.");
+  const directAnswerText = buildDirectAssistantNotice(
+    result?.conversation?.[0]?.message ?? "The model will answer directly here.",
+  );
 
   useEffect(() => {
     if (!conversationEndRef.current) {
@@ -603,6 +621,27 @@ function SimulationView({
                   <p>The selected advisors have not replied yet. Send your question and their answers will appear here.</p>
                 </div>
               ) : null
+            ) : isDirectAnswerThread ? (
+              <section className="round-section direct-answer-section">
+                <div className="round-divider">
+                  <div />
+                  <span>Direct answer</span>
+                  <div />
+                </div>
+
+                <article className="direct-answer-panel">
+                  <div className="direct-answer-top">
+                    <div className="direct-answer-icon">
+                      <Bot size={20} strokeWidth={2.1} />
+                    </div>
+                    <div>
+                      <strong>General Assistant</strong>
+                      <span>Business review skipped</span>
+                    </div>
+                  </div>
+                  <p>{directAnswerText}</p>
+                </article>
+              </section>
             ) : (
               filteredRounds.map(([round, turns]) => (
                 <section key={round} className="round-section">
