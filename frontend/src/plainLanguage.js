@@ -237,13 +237,13 @@ function trimAdvisorParagraph(text) {
   }
 
   const sentences = normalized.match(/[^.!?]+[.!?]+/g) ?? [normalized];
-  const trimmed = sentences.slice(0, 3).join(" ").trim();
+  const trimmed = sentences.slice(0, 5).join(" ").trim();
 
-  if (trimmed.length <= 320) {
+  if (trimmed.length <= 520) {
     return trimmed;
   }
 
-  return `${trimmed.slice(0, 317).trimEnd()}...`;
+  return `${trimmed.slice(0, 517).trimEnd()}...`;
 }
 
 function rewriteMachineText(value) {
