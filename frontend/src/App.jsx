@@ -29,7 +29,7 @@ function App() {
   const [query, setQuery] = useState("");
   const [apiBase, setApiBase] = useState(API_BASE);
   const [selectedDemoCaseId, setSelectedDemoCaseId] = useState(DEMO_CASES[0]?.id ?? "");
-  const [selectedAgentName, setSelectedAgentName] = useState("CEO Agent");
+  const [selectedAgentName, setSelectedAgentName] = useState("");
   const [focusedAgentNames, setFocusedAgentNames] = useState([]);
   const [utilityPanel, setUtilityPanel] = useState("");
   const [authReady, setAuthReady] = useState(false);
@@ -193,6 +193,26 @@ function App() {
     [agentCards, selectedAgentName],
   );
 
+  useEffect(() => {
+    const agentNames = agentCards.map((agent) => agent.name);
+    if (!agentNames.length) {
+      return;
+    }
+
+    if (selectedAgentName && agentNames.includes(selectedAgentName)) {
+      return;
+    }
+
+    const preferredAgent =
+      (result?.explainability?.top_influencer && agentNames.includes(result.explainability.top_influencer)
+        ? result.explainability.top_influencer
+        : null) ??
+      (result?.conversation?.length ? result.conversation[result.conversation.length - 1]?.agent_name : null) ??
+      agentNames[0];
+
+    setSelectedAgentName(preferredAgent);
+  }, [agentCards, result, selectedAgentName]);
+
   async function fetchApi(path, options = {}, fetchOptions = {}) {
     let lastError = null;
     for (const base of apiBaseCandidates) {
@@ -222,7 +242,7 @@ function App() {
     setError("");
     setActiveView("simulation");
     setFocusedAgentNames(focusAgentNames);
-    setSelectedAgentName(focusAgentNames[0] || "CEO Agent");
+    setSelectedAgentName(focusAgentNames[0] || "");
 
     try {
       setResult(createEmptyResult(payload.company_name));

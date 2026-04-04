@@ -130,6 +130,123 @@ function getTurnMetrics(turn) {
   return metricItems.filter((item) => item.value).slice(0, 3);
 }
 
+function clampValue(value, min = 0, max = 100) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function buildAgentGraph(turn) {
+  const metrics = turn?.estimated_metrics ?? {};
+  const snapshot = turn?.score_snapshot ?? {};
+  const name = turn?.agent_name ?? "";
+
+  const currencyLabel = (input) => {
+    const numeric = Number(input);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return "";
+    }
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+      notation: numeric >= 100000 ? "compact" : "standard",
+    }).format(numeric);
+  };
+
+  const graphMap = {
+    "CEO Agent": {
+      title: "Decision Balance",
+      items: [
+        { label: "Confidence", value: clampValue(Number(turn?.confidence ?? 0)), display: `${turn?.confidence ?? 0}%` },
+        { label: "Growth", value: clampValue(Number(snapshot.growth_potential ?? 0)), display: `${Math.round(Number(snapshot.growth_potential ?? 0))}` },
+        { label: "Finance", value: clampValue(Number(snapshot.financial_viability ?? 0)), display: `${Math.round(Number(snapshot.financial_viability ?? 0))}` },
+      ],
+    },
+    "Startup Builder Agent": {
+      title: "Launch Readiness",
+      items: [
+        { label: "Build Speed", value: clampValue(100 - Number(snapshot.operational_complexity ?? 40)), display: `${Math.round(100 - Number(snapshot.operational_complexity ?? 40))}` },
+        { label: "Demand Pull", value: clampValue(Number(snapshot.growth_potential ?? 0)), display: `${Math.round(Number(snapshot.growth_potential ?? 0))}` },
+        { label: "Execution", value: clampValue(Number(snapshot.market_attractiveness ?? 0)), display: `${Math.round(Number(snapshot.market_attractiveness ?? 0))}` },
+      ],
+    },
+    "Market Research Agent": {
+      title: "Market Signal",
+      items: [
+        { label: "Demand", value: clampValue(Number(snapshot.market_attractiveness ?? 0)), display: `${Math.round(Number(snapshot.market_attractiveness ?? 0))}` },
+        { label: "Growth", value: clampValue(Number(snapshot.growth_potential ?? 0)), display: `${Math.round(Number(snapshot.growth_potential ?? 0))}` },
+        { label: "Friction", value: clampValue(100 - Number(snapshot.sales_friction ?? 40)), display: `${Math.round(100 - Number(snapshot.sales_friction ?? 40))}` },
+      ],
+    },
+    "Finance Agent": {
+      title: "Finance Check",
+      items: [
+        { label: "Runway", value: clampValue((Number(metrics.runway_months ?? 0) / 18) * 100), display: `${Math.round(Number(metrics.runway_months ?? 0))} mo` },
+        { label: "Margin", value: clampValue(Number(metrics.gross_margin_pct ?? 0)), display: `${Math.round(Number(metrics.gross_margin_pct ?? 0))}%` },
+        { label: "Payback", value: clampValue(100 - (Number(metrics.estimated_payback_months ?? 0) / 18) * 100), display: `${Math.round(Number(metrics.estimated_payback_months ?? 0))} mo` },
+      ],
+    },
+    "Marketing Agent": {
+      title: "Marketing Pulse",
+      items: [
+        { label: "Demand", value: clampValue(Number(snapshot.market_attractiveness ?? 0)), display: `${Math.round(Number(snapshot.market_attractiveness ?? 0))}` },
+        { label: "Differentiation", value: clampValue(100 - Number(snapshot.differentiation_pressure ?? 40)), display: `${Math.round(100 - Number(snapshot.differentiation_pressure ?? 40))}` },
+        { label: "Win Rate", value: clampValue(Number(metrics.expected_win_rate_pct ?? 0)), display: `${Math.round(Number(metrics.expected_win_rate_pct ?? 0))}%` },
+      ],
+    },
+    "Pricing Agent": {
+      title: "Pricing Model",
+      items: [
+        { label: "Price", value: clampValue((Number(metrics.price_point ?? 0) / 50000) * 100), display: currencyLabel(metrics.price_point) || "n/a" },
+        { label: "Margin", value: clampValue(Number(metrics.gross_margin_pct ?? 0)), display: `${Math.round(Number(metrics.gross_margin_pct ?? 0))}%` },
+        { label: "Power", value: clampValue(Number(snapshot.pricing_power ?? 0)), display: `${Math.round(Number(snapshot.pricing_power ?? 0))}` },
+      ],
+    },
+    "Supply Chain Agent": {
+      title: "Operations Load",
+      items: [
+        { label: "Capacity", value: clampValue(100 - Number(snapshot.operational_complexity ?? 40)), display: `${Math.round(100 - Number(snapshot.operational_complexity ?? 40))}` },
+        { label: "Stress", value: clampValue(Number(metrics.fulfillment_stress_pct ?? 0)), display: `${Math.round(Number(metrics.fulfillment_stress_pct ?? 0))}%` },
+        { label: "Team Load", value: clampValue(100 - Number(snapshot.talent_load ?? 40)), display: `${Math.round(100 - Number(snapshot.talent_load ?? 40))}` },
+      ],
+    },
+    "Hiring Agent": {
+      title: "Hiring Pressure",
+      items: [
+        { label: "Talent Load", value: clampValue(Number(snapshot.talent_load ?? 0)), display: `${Math.round(Number(snapshot.talent_load ?? 0))}` },
+        { label: "Core Hires", value: clampValue((Number(metrics.critical_hires_required ?? 0) / 5) * 100), display: `${Math.round(Number(metrics.critical_hires_required ?? 0))}` },
+        { label: "Readiness", value: clampValue(100 - Number(snapshot.operational_complexity ?? 40)), display: `${Math.round(100 - Number(snapshot.operational_complexity ?? 40))}` },
+      ],
+    },
+    "Risk Agent": {
+      title: "Risk Surface",
+      items: [
+        { label: "Compliance", value: clampValue(Number(snapshot.compliance_risk ?? 0)), display: `${Math.round(Number(snapshot.compliance_risk ?? 0))}` },
+        { label: "Penalty", value: clampValue(Number(metrics.risk_penalty_pct ?? 0)), display: `${Math.round(Number(metrics.risk_penalty_pct ?? 0))}%` },
+        { label: "Ops Risk", value: clampValue(Number(snapshot.operational_complexity ?? 0)), display: `${Math.round(Number(snapshot.operational_complexity ?? 0))}` },
+      ],
+    },
+    "Sales Strategy Agent": {
+      title: "Sales Funnel",
+      items: [
+        { label: "Leads", value: clampValue((Number(metrics.monthly_leads_required ?? 0) / 40) * 100), display: `${Math.round(Number(metrics.monthly_leads_required ?? 0))}` },
+        { label: "Win Rate", value: clampValue(Number(metrics.expected_win_rate_pct ?? 0)), display: `${Math.round(Number(metrics.expected_win_rate_pct ?? 0))}%` },
+        { label: "Pipeline", value: clampValue((Number(metrics.pipeline_value ?? 0) / 500000) * 100), display: currencyLabel(metrics.pipeline_value) || "n/a" },
+      ],
+    },
+  };
+
+  return (
+    graphMap[name] ?? {
+      title: "Advisor Signal",
+      items: [
+        { label: "Confidence", value: clampValue(Number(turn?.confidence ?? 0)), display: `${turn?.confidence ?? 0}%` },
+        { label: "Growth", value: clampValue(Number(snapshot.growth_potential ?? 0)), display: `${Math.round(Number(snapshot.growth_potential ?? 0))}` },
+        { label: "Risk", value: clampValue(Number(snapshot.compliance_risk ?? 0)), display: `${Math.round(Number(snapshot.compliance_risk ?? 0))}` },
+      ],
+    }
+  );
+}
+
 function getTurnHighlights(turn) {
   return (turn?.key_points ?? []).map((item) => toPlainText(item)).filter(Boolean).slice(0, 2);
 }
@@ -797,6 +914,7 @@ function AgentDashboardCard({
   showFocusedReplyBadge = false,
 }) {
   const reasoning = buildExpandedReasoningText(turn);
+  const graph = buildAgentGraph(turn);
 
   return (
     <article
@@ -831,6 +949,25 @@ function AgentDashboardCard({
           ))}
         </div>
       ) : null}
+
+      <div className="advisor-dashboard-graph">
+        <div className="advisor-dashboard-graph-head">
+          <span className="advisor-dashboard-label">{graph.title}</span>
+        </div>
+        <div className="advisor-dashboard-bars">
+          {graph.items.map((item) => (
+            <div key={item.label} className="advisor-bar-item">
+              <div className="advisor-bar-copy">
+                <span>{item.label}</span>
+                <strong>{item.display}</strong>
+              </div>
+              <div className="advisor-bar-track">
+                <div className="advisor-bar-fill" style={{ width: `${clampValue(Number(item.value ?? 0))}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <p className="advisor-dashboard-summary">{summary}</p>
 

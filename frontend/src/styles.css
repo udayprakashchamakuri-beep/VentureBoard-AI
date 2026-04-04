@@ -818,6 +818,62 @@ a {
   line-height: 1.7;
 }
 
+.advisor-dashboard-graph {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px;
+}
+
+.advisor-dashboard-graph-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.advisor-dashboard-bars {
+  display: grid;
+  gap: 10px;
+}
+
+.advisor-bar-item {
+  display: grid;
+  gap: 6px;
+}
+
+.advisor-bar-copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.advisor-bar-copy span {
+  color: rgba(219, 224, 255, 0.7);
+  font-size: 0.78rem;
+}
+
+.advisor-bar-copy strong {
+  color: #eef2ff;
+  font-family: "Manrope", sans-serif;
+  font-size: 0.82rem;
+}
+
+.advisor-bar-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.advisor-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--agent-accent) 74%, white 10%), color-mix(in srgb, var(--agent-accent) 38%, white 8%));
+}
+
 .advisor-dashboard-section,
 .advisor-dashboard-risk {
   display: grid;
