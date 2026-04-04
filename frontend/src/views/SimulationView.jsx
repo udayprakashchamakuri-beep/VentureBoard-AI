@@ -7,7 +7,6 @@ import {
   shouldShowAdvisorStanceBadge,
   toPlainText,
 } from "../plainLanguage";
-import HeroSection from "../components/HeroSection";
 
 function getConversationMeta(agentMeta, name) {
   if (agentMeta[name]) {
@@ -156,7 +155,11 @@ function SimulationView({
 
           <div className="stream-body">
             {!hasAnyDiscussion && !loading && !chatMessages.length ? (
-              <HeroSection onApplySample={onApplySample} onOpenForm={onToggleConsole} />
+              <div className="stream-empty">
+                <span className="material-symbols-outlined">terminal</span>
+                <h2>Ready To Start</h2>
+                <p>Type your business question below or open the detailed form if you want to add numbers first.</p>
+              </div>
             ) : null}
 
             {conversationAgentNames.length ? (

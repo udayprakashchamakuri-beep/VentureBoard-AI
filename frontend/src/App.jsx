@@ -5,6 +5,7 @@ import { AGENT_META, API_BASE, API_BASE_CANDIDATES, DEMO_CASES, NAV_ITEMS, defau
 import { formatDecisionLabel, toPlainText } from "./plainLanguage";
 import AgentsView from "./views/AgentsView";
 import AutomationView from "./views/AutomationView";
+import HomeView from "./views/HomeView";
 import IntelligenceView from "./views/IntelligenceView";
 import RiskView from "./views/RiskView";
 import SimulationView from "./views/SimulationView";
@@ -15,7 +16,7 @@ const ANALYSIS_TIMEOUT_MS = 9000;
 const FETCH_RETRIES = 0;
 
 function App() {
-  const [activeView, setActiveView] = useState("simulation");
+  const [activeView, setActiveView] = useState("home");
   const [form, setForm] = useState(buildDefaultForm());
   const [chatDraft, setChatDraft] = useState("");
   const [composerOpen, setComposerOpen] = useState(true);
@@ -381,6 +382,11 @@ function App() {
     setConsoleOpen((current) => !current);
   }
 
+  function openConsoleFromHome() {
+    setActiveView("simulation");
+    setConsoleOpen(true);
+  }
+
   function openAgentProfile(agentName) {
     setSelectedAgentName(agentName);
     setActiveView("agents");
@@ -627,12 +633,20 @@ function App() {
               Sign out
             </button>
           ) : null}
-          <button type="button" className="deploy-button" onClick={toggleConsole}>
+          <button type="button" className="deploy-button" onClick={activeView === "home" ? openConsoleFromHome : toggleConsole}>
             Start Analysis
           </button>
           <div className="avatar-badge">BA</div>
         </div>
       </nav>
+
+      {activeView === "home" ? (
+        <HomeView
+          onApplySample={applySample}
+          onOpenForm={openConsoleFromHome}
+          onGoToDiscussion={() => setActiveView("simulation")}
+        />
+      ) : null}
 
       {activeView === "simulation" ? (
         <SimulationView
@@ -670,7 +684,7 @@ function App() {
           onOpenAgentProfile={openAgentProfile}
           onClearAgentConversation={clearAgentConversation}
         />
-      ) : (
+      ) : activeView !== "home" ? (
         <div className="command-shell">
           <aside className="command-side-nav">
             <div className="side-nav-header">
@@ -761,7 +775,7 @@ function App() {
             ) : null}
           </div>
         </div>
-      )}
+      ) : null}
 
       <CommandConsoleDrawer
         consoleOpen={consoleOpen}

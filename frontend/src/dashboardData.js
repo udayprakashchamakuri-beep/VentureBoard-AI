@@ -8,6 +8,7 @@ export const API_BASE_CANDIDATES = [
 export const API_BASE = API_BASE_CANDIDATES[0];
 
 export const NAV_ITEMS = [
+  { id: "home", label: "Home", icon: "home" },
   { id: "simulation", label: "Discussion", icon: "hub" },
   { id: "intelligence", label: "Overview", icon: "psychology" },
   { id: "automation", label: "Automation", icon: "autorenew" },

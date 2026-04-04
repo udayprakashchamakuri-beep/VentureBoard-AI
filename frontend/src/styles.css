@@ -2,21 +2,21 @@
 
 :root {
   color-scheme: dark;
-  --background: #0c1324;
-  --surface: #0c1324;
-  --surface-lowest: #070d1f;
-  --surface-low: #151b2d;
-  --surface-container: #191f31;
-  --surface-high: #23293c;
-  --surface-highest: #2e3447;
-  --outline: rgba(144, 144, 151, 0.25);
-  --outline-strong: rgba(144, 144, 151, 0.44);
-  --text: #dce1fb;
-  --text-muted: rgba(220, 225, 251, 0.56);
-  --primary: #c1c7cf;
-  --accent: #ffe16d;
-  --accent-strong: #ffdb3c;
-  --tertiary: #ddb7ff;
+  --background: #050505;
+  --surface: #07080e;
+  --surface-lowest: #05060a;
+  --surface-low: #0d1018;
+  --surface-container: #121623;
+  --surface-high: #1a2030;
+  --surface-highest: #232a3d;
+  --outline: rgba(144, 144, 171, 0.18);
+  --outline-strong: rgba(167, 139, 250, 0.28);
+  --text: #f2f4ff;
+  --text-muted: rgba(219, 224, 255, 0.58);
+  --primary: #d9dcf1;
+  --accent: #a78bfa;
+  --accent-strong: #60a5fa;
+  --tertiary: #8b5cf6;
   --finance: #00ff94;
   --danger: #ffb4ab;
 }
@@ -25,8 +25,8 @@
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background: #0c1324;
-  color: #dce1fb;
+  background: #050505;
+  color: #f2f4ff;
   font-family: "Inter", sans-serif;
   font-size: 1rem;
 }
@@ -37,9 +37,9 @@
   place-items: center;
   padding: 2rem;
   background:
-    radial-gradient(circle at top right, rgba(255, 225, 109, 0.12), transparent 22%),
-    radial-gradient(circle at bottom left, rgba(0, 255, 148, 0.08), transparent 28%),
-    #0c1324;
+    radial-gradient(circle at top right, rgba(168, 85, 247, 0.14), transparent 22%),
+    radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.1), transparent 28%),
+    #050505;
 }
 
 .auth-card {
@@ -145,9 +145,9 @@ body {
   margin: 0;
   overflow: auto;
   background:
-    radial-gradient(circle at top left, rgba(221, 183, 255, 0.11), transparent 25%),
-    radial-gradient(circle at top right, rgba(255, 225, 109, 0.08), transparent 30%),
-    linear-gradient(180deg, #0c1324 0%, #070d1f 100%);
+    radial-gradient(circle at top left, rgba(168, 85, 247, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 28%),
+    linear-gradient(180deg, #050505 0%, #07080e 100%);
   color: var(--text);
   font-family: "Inter", sans-serif;
   selection-color: transparent;
@@ -193,10 +193,10 @@ a {
   justify-content: space-between;
   gap: 20px;
   padding: 0 32px;
-  background: rgba(12, 19, 36, 0.82);
+  background: rgba(7, 8, 14, 0.82);
   backdrop-filter: blur(24px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  box-shadow: 0 20px 40px rgba(7, 13, 31, 0.5);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
 }
 
 .nav-left,
@@ -243,7 +243,10 @@ a {
   font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: -0.04em;
-  color: var(--accent);
+  background: linear-gradient(90deg, #ffffff 0%, #c4b5fd 52%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
   text-transform: uppercase;
 }
 
@@ -284,7 +287,7 @@ a {
   gap: 8px;
   border-color: rgba(255, 255, 255, 0.06);
   border-radius: 999px;
-  background: var(--surface-lowest);
+  background: rgba(255, 255, 255, 0.03);
   padding: 6px 14px;
   font-family: "Space Grotesk", sans-serif;
   font-size: 0.68rem;
@@ -1750,9 +1753,9 @@ a {
 
 .deploy-button {
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(255, 225, 109, 0.96), rgba(255, 219, 60, 0.85));
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.92), rgba(96, 165, 250, 0.88));
   padding: 11px 16px;
-  color: #15130c;
+  color: #f8f9ff;
   font-family: "Space Grotesk", sans-serif;
   font-size: 0.68rem;
   font-weight: 700;
@@ -1767,7 +1770,7 @@ a {
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
-  background: linear-gradient(145deg, rgba(46, 52, 71, 0.96), rgba(21, 27, 45, 0.88));
+  background: linear-gradient(145deg, rgba(31, 36, 54, 0.96), rgba(12, 15, 24, 0.88));
   font-family: "Manrope", sans-serif;
   font-size: 0.78rem;
   font-weight: 800;
@@ -1788,7 +1791,7 @@ a {
   flex-direction: column;
   gap: 28px;
   border-right: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(21, 27, 45, 0.86);
+  background: rgba(10, 12, 18, 0.86);
   padding: 28px 18px 22px;
   backdrop-filter: blur(24px);
 }
@@ -1889,21 +1892,21 @@ a {
 }
 
 .side-nav-link.active {
-  background: rgba(46, 52, 71, 0.52);
-  box-shadow: 0 0 15px rgba(0, 255, 148, 0.16);
-  color: var(--finance);
+  background: rgba(96, 165, 250, 0.12);
+  box-shadow: 0 0 18px rgba(96, 165, 250, 0.12);
+  color: #bfdbfe;
 }
 
 .side-nav-link:hover,
 .side-nav-utility:hover {
-  background: rgba(46, 52, 71, 0.4);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--accent);
 }
 
 .side-nav-deploy {
   border-radius: 14px;
-  background: linear-gradient(135deg, rgba(255, 225, 109, 0.16), rgba(255, 255, 255, 0.03));
-  border: 1px solid rgba(255, 225, 109, 0.22);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.16), rgba(255, 255, 255, 0.03));
+  border: 1px solid rgba(168, 85, 247, 0.24);
   padding: 14px 16px;
   color: var(--accent);
   font-family: "Space Grotesk", sans-serif;
@@ -1915,6 +1918,136 @@ a {
 
 .command-main {
   min-width: 0;
+  background:
+    radial-gradient(circle at top left, rgba(168, 85, 247, 0.08), transparent 18%),
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 22%),
+    linear-gradient(180deg, rgba(7, 8, 14, 0.9), rgba(5, 5, 5, 0.9));
+}
+
+.home-view-shell {
+  display: grid;
+  gap: 28px;
+  padding: 24px 28px 48px;
+}
+
+.home-support-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.home-support-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+  padding: 22px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+.home-support-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: rgba(168, 85, 247, 0.14);
+  color: #c4b5fd;
+}
+
+.home-support-card h2,
+.home-detail-strip h2,
+.home-final-copy h2 {
+  margin: 18px 0 10px;
+  font-family: "Manrope", sans-serif;
+  font-size: clamp(1.4rem, 2vw, 2rem);
+  letter-spacing: -0.04em;
+  color: #f7f8ff;
+}
+
+.home-support-card p,
+.home-detail-strip p,
+.home-final-copy p {
+  margin: 0;
+  color: rgba(219, 224, 255, 0.58);
+  line-height: 1.7;
+}
+
+.home-detail-strip,
+.home-final-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.02));
+  padding: 28px;
+}
+
+.home-detail-strip span,
+.home-final-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #a78bfa;
+}
+
+.home-detail-strip h2,
+.home-final-copy h2 {
+  margin-top: 12px;
+  max-width: 720px;
+}
+
+.home-detail-cta,
+.home-final-primary,
+.home-final-secondary {
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: transform 180ms ease, opacity 180ms ease, background 180ms ease, color 180ms ease;
+}
+
+.home-detail-cta,
+.home-final-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.92), rgba(96, 165, 250, 0.88));
+  color: #f8f9ff;
+}
+
+.home-final-secondary {
+  padding: 14px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #eef1ff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.home-detail-cta:hover,
+.home-final-primary:hover,
+.home-final-secondary:hover {
+  transform: translateY(-1px);
+}
+
+.home-final-cta {
+  margin-bottom: 8px;
+}
+
+.home-final-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .command-canvas {
