@@ -147,6 +147,7 @@ class AgentTurn(BaseModel):
     calculations: List[str] = Field(default_factory=list)
     memory_references: List[str] = Field(default_factory=list)
     research_points: List[str] = Field(default_factory=list)
+    research_snapshot: Dict[str, Any] = Field(default_factory=dict)
 
 
 class ConflictRecord(BaseModel):

@@ -87,6 +87,7 @@ class FirecrawlClient:
                     snippet=snippet,
                     url=url,
                     rank=rank,
+                    provider="firecrawl",
                 )
             )
 

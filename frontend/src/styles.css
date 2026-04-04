@@ -766,6 +766,11 @@ a {
   color: var(--agent-accent);
 }
 
+.advisor-dashboard-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
 .advisor-dashboard-id strong {
   display: block;
   font-family: "Manrope", sans-serif;
@@ -833,45 +838,117 @@ a {
   justify-content: space-between;
 }
 
-.advisor-dashboard-bars {
-  display: grid;
-  gap: 10px;
+.advisor-dashboard-graph-note {
+  margin: 6px 0 0;
+  color: rgba(193, 199, 207, 0.56);
+  font-size: 0.76rem;
 }
 
-.advisor-bar-item {
+.advisor-dashboard-chart-grid {
   display: grid;
-  gap: 6px;
+  grid-template-columns: 1.2fr 0.95fr;
+  gap: 14px;
+  align-items: stretch;
 }
 
-.advisor-bar-copy {
+.advisor-vertical-chart {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+  min-height: 168px;
+}
+
+.advisor-vertical-item {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+}
+
+.advisor-vertical-value {
+  color: #eef2ff;
+  font-family: "Manrope", sans-serif;
+  font-size: 0.76rem;
+}
+
+.advisor-vertical-track {
+  position: relative;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  width: 100%;
+  min-height: 112px;
+  align-items: end;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 8px;
 }
 
-.advisor-bar-copy span {
-  color: rgba(219, 224, 255, 0.7);
+.advisor-vertical-fill {
+  width: 100%;
+  border-radius: 12px 12px 8px 8px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--agent-accent) 88%, white 10%), color-mix(in srgb, var(--agent-accent) 38%, transparent));
+}
+
+.advisor-vertical-label {
+  color: rgba(219, 224, 255, 0.66);
+  font-size: 0.7rem;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.advisor-pie-panel {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.advisor-pie-chart {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  margin: 0 auto;
+  border-radius: 999px;
+}
+
+.advisor-pie-core {
+  position: absolute;
+  inset: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(7, 13, 31, 0.92);
+  color: #eef2ff;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.advisor-pie-legend {
+  display: grid;
+  gap: 8px;
+}
+
+.advisor-pie-legend-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  color: rgba(226, 230, 250, 0.82);
   font-size: 0.78rem;
 }
 
-.advisor-bar-copy strong {
+.advisor-pie-legend-item i {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.advisor-pie-legend-item strong {
   color: #eef2ff;
   font-family: "Manrope", sans-serif;
-  font-size: 0.82rem;
-}
-
-.advisor-bar-track {
-  height: 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
-}
-
-.advisor-bar-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--agent-accent) 74%, white 10%), color-mix(in srgb, var(--agent-accent) 38%, white 8%));
+  font-size: 0.78rem;
 }
 
 .advisor-dashboard-section,
@@ -4665,6 +4742,14 @@ a {
   .advisor-dashboard-grid.focused,
   .advisor-dashboard-metrics {
     grid-template-columns: 1fr;
+  }
+
+  .advisor-dashboard-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .advisor-vertical-chart {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .obsidian-sidebar,

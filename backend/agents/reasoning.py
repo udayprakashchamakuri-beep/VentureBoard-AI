@@ -396,6 +396,7 @@ class StrategicReasoner:
             calculations=calculations,
             memory_references=memory_references,
             research_points=research_points,
+            research_snapshot=self._build_research_snapshot(profile.definition.name, signals.external_research),
         )
 
     def _build_agent_insights(
@@ -1210,6 +1211,38 @@ class StrategicReasoner:
             if fallback:
                 points.append(f"Recent web research suggests {fallback}.")
         return points[:2]
+
+    def _build_research_snapshot(self, agent_name: str, external_research: BrightDataResearch) -> Dict[str, object]:
+        if not external_research.has_hits():
+            return {}
+
+        visible_topics = [topic for topic in self._research_topics_for_agent(agent_name) if external_research.get(topic)]
+        if not visible_topics:
+            visible_topics = external_research.topics()[:3]
+
+        topic_counts = {
+            topic: len(external_research.get(topic))
+            for topic in visible_topics
+            if external_research.get(topic)
+        }
+        source_counts: Dict[str, int] = {}
+        sample_titles: Dict[str, List[str]] = {}
+
+        for topic in visible_topics:
+            hits = external_research.get(topic)
+            if not hits:
+                continue
+            sample_titles[topic] = [hit.title for hit in hits[:2] if hit.title]
+            for hit in hits:
+                provider = getattr(hit, "provider", "") or "unknown"
+                source_counts[provider] = source_counts.get(provider, 0) + 1
+
+        return {
+            "topics": visible_topics,
+            "topic_counts": topic_counts,
+            "source_counts": source_counts,
+            "sample_titles": sample_titles,
+        }
 
     def _research_topics_for_agent(self, agent_name: str) -> List[str]:
         mapping = {

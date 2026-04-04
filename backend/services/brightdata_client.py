@@ -22,6 +22,7 @@ class BrightDataHit:
     snippet: str
     url: str = ""
     rank: int = 0
+    provider: str = "brightdata"
 
     def summary(self) -> str:
         parts = [self.title.strip(), self.snippet.strip()]
