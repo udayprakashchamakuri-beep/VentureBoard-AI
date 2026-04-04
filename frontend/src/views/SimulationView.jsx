@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BadgeDollarSign,
   Bot,
@@ -287,6 +287,44 @@ function buildLineChartPoints(items = []) {
       return `${x},${y}`;
     })
     .join(" ");
+}
+
+function getLineChartCoordinates(items = [], index = 0) {
+  const count = items.length;
+  const x = count === 1 ? 110 : 16 + (index * 188) / Math.max(1, count - 1);
+  const numeric = Number(items[index]?.value ?? 0);
+  const y = 108 - clampValue(numeric, 0, 100) * 0.9;
+  return { x, y };
+}
+
+function buildChartLabelLines(label = "") {
+  const words = String(label).trim().split(/\s+/).filter(Boolean);
+  if (words.length <= 1) {
+    return [label];
+  }
+  if (words.length === 2) {
+    return words;
+  }
+  return [words.slice(0, 2).join(" "), words.slice(2).join(" ")];
+}
+
+function buildTooltipLines(item) {
+  const detail = toPlainText(item?.detail ?? "");
+  if (!detail) {
+    return [];
+  }
+  const sentences = detail.split(/(?<=[.!?])\s+/).filter(Boolean);
+  if (sentences.length >= 2) {
+    return sentences.slice(0, 2);
+  }
+  if (detail.length <= 110) {
+    return [detail];
+  }
+  const midpoint = detail.lastIndexOf(" ", 95);
+  if (midpoint > 40) {
+    return [detail.slice(0, midpoint), detail.slice(midpoint + 1, midpoint + 95)];
+  }
+  return [detail.slice(0, 95), detail.slice(95, 190)];
 }
 
 function getTurnHighlights(turn) {
@@ -956,6 +994,10 @@ function AgentDashboardCard({
   const graph = buildAgentGraph(turn);
   const Icon = getAgentIcon(turn.agent_name);
   const linePoints = buildLineChartPoints(graph.ideaItems);
+  const [hoveredIdeaIndex, setHoveredIdeaIndex] = useState(-1);
+  const hoveredIdea = hoveredIdeaIndex >= 0 ? graph.ideaItems[hoveredIdeaIndex] : null;
+  const hoveredCoordinates =
+    hoveredIdeaIndex >= 0 ? getLineChartCoordinates(graph.ideaItems, hoveredIdeaIndex) : null;
 
   return (
     <article
@@ -989,39 +1031,50 @@ function AgentDashboardCard({
         </div>
         <div className="advisor-dashboard-chart-grid">
           <div className="advisor-line-panel">
+            {hoveredIdea && hoveredCoordinates ? (
+              <div
+                className="advisor-line-tooltip"
+                style={{
+                  left: `${(hoveredCoordinates.x / 220) * 100}%`,
+                  top: `${Math.max(6, (hoveredCoordinates.y / 132) * 100 - 10)}%`,
+                }}
+              >
+                <strong>
+                  {hoveredIdea.label} {Math.round(hoveredIdea.value)}
+                </strong>
+                {buildTooltipLines(hoveredIdea).map((line, index) => (
+                  <span key={`${hoveredIdea.label}-tooltip-${index}`}>{line}</span>
+                ))}
+              </div>
+            ) : null}
             <svg viewBox="0 0 220 132" className="advisor-line-chart" aria-hidden="true">
               {[24, 52, 80, 108].map((y) => (
                 <line key={`h-${y}`} x1="12" y1={y} x2="208" y2={y} className="advisor-line-grid" />
               ))}
               {graph.ideaItems.map((item, index) => {
-                const count = graph.ideaItems.length;
-                const x = count === 1 ? 110 : 16 + (index * 188) / (count - 1);
-                const y = 108 - clampValue(Number(item.value ?? 0), 0, 100) * 0.9;
+                const { x, y } = getLineChartCoordinates(graph.ideaItems, index);
+                const labelLines = buildChartLabelLines(item.label);
                 return (
-                  <g key={item.label}>
+                  <g
+                    key={item.label}
+                    className="advisor-line-hotspot"
+                    onMouseEnter={() => setHoveredIdeaIndex(index)}
+                    onMouseLeave={() => setHoveredIdeaIndex(-1)}
+                  >
                     <circle cx={x} cy={y} r="5.5" className="advisor-line-point" />
-                    <text x={x} y="126" textAnchor="middle" className="advisor-line-label">
-                      {item.label}
+                    <circle cx={x} cy={y} r="14" className="advisor-line-hitbox" />
+                    <text x={x} y="121" textAnchor="middle" className="advisor-line-label">
+                      {labelLines.map((line, lineIndex) => (
+                        <tspan key={`${item.label}-${lineIndex}`} x={x} dy={lineIndex === 0 ? 0 : 8}>
+                          {line}
+                        </tspan>
+                      ))}
                     </text>
                   </g>
                 );
               })}
               <polyline points={linePoints} className="advisor-line-path" />
             </svg>
-
-            {graph.ideaItems.length ? (
-              <div className="advisor-line-detail-list">
-                {graph.ideaItems.map((item) => (
-                  <div key={`${turn.agent_name}-${item.label}`} className="advisor-line-detail-item">
-                    <div className="advisor-line-detail-top">
-                      <strong>{item.label}</strong>
-                      <span>{Math.round(item.value)}</span>
-                    </div>
-                    <p>{item.detail}</p>
-                  </div>
-                ))}
-              </div>
-            ) : null}
           </div>
 
           <div className="advisor-vertical-chart">
