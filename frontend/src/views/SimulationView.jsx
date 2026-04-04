@@ -988,18 +988,6 @@ function AgentDashboardCard({
           </div>
         </div>
         <div className="advisor-dashboard-chart-grid">
-          <div className="advisor-vertical-chart">
-            {graph.barItems.map((item) => (
-              <div key={item.label} className="advisor-vertical-item">
-                <span className="advisor-vertical-value">{item.display}</span>
-                <div className="advisor-vertical-track">
-                  <div className="advisor-vertical-fill" style={{ height: item.height }} />
-                </div>
-                <span className="advisor-vertical-label">{item.label}</span>
-              </div>
-            ))}
-          </div>
-
           <div className="advisor-line-panel">
             <svg viewBox="0 0 220 132" className="advisor-line-chart" aria-hidden="true">
               {[24, 52, 80, 108].map((y) => (
@@ -1034,19 +1022,31 @@ function AgentDashboardCard({
                 ))}
               </div>
             ) : null}
-
-            {graph.sourceItems.length ? (
-              <div className="advisor-source-legend">
-                {graph.sourceItems.map((item) => (
-                  <div key={item.label} className="advisor-source-chip">
-                    <i style={{ background: item.color }} />
-                    <span>{item.label}</span>
-                    <strong>{item.value}</strong>
-                  </div>
-                ))}
-              </div>
-            ) : null}
           </div>
+
+          <div className="advisor-vertical-chart">
+            {graph.barItems.map((item) => (
+              <div key={item.label} className="advisor-vertical-item">
+                <span className="advisor-vertical-value">{item.display}</span>
+                <div className="advisor-vertical-track">
+                  <div className="advisor-vertical-fill" style={{ height: item.height }} />
+                </div>
+                <span className="advisor-vertical-label">{item.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {graph.sourceItems.length ? (
+            <div className="advisor-source-legend advisor-source-legend-wide">
+              {graph.sourceItems.map((item) => (
+                <div key={item.label} className="advisor-source-chip">
+                  <i style={{ background: item.color }} />
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
 
