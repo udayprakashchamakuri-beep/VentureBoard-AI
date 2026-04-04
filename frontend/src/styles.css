@@ -846,6 +846,7 @@ a {
   color: rgba(220, 225, 251, 0.88);
   font-size: 0.92rem;
   line-height: 1.72;
+  white-space: pre-line;
 }
 
 .message-bubble.danger {

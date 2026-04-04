@@ -63,9 +63,11 @@ export function buildRoundSummary(turn) {
   const researchLine = buildResearchLine(turn);
   const metricLine = buildMetricLine(turn, inferQuestionIntent(""));
   const actions = (turn.key_points ?? []).map((item) => toPlainText(item)).filter(Boolean);
+  const assumptions = (turn.assumptions ?? []).map((item) => toPlainText(item)).filter(Boolean);
   const actionLine = actions[0] ? normalizeSentence(actions[0]) : "";
+  const followUpLine = actions[1] ? normalizeSentence(actions[1]) : assumptions[0] ? `Watch out for ${normalizeFragment(assumptions[0])}.` : "";
 
-  return [researchLine, metricLine, actionLine].filter(Boolean).join(" ");
+  return [researchLine, metricLine, actionLine, followUpLine].filter(Boolean).join("\n\n");
 }
 
 export function buildDirectAdvisorReply(turn, question = "") {
@@ -74,23 +76,19 @@ export function buildDirectAdvisorReply(turn, question = "") {
   }
 
   const intent = inferQuestionIntent(question);
-  const isDecisionQuestion = shouldShowAdvisorStanceBadge(question);
   const researchLine = buildResearchLine(turn);
   const metricLine = buildMetricLine(turn, intent);
   const actions = (turn.key_points ?? []).map((item) => toPlainText(item)).filter(Boolean);
+  const assumptions = (turn.assumptions ?? []).map((item) => toPlainText(item)).filter(Boolean);
   const supportingLine = actions[0] ? normalizeSentence(actions[0]) : "";
-  const cautionLine = actions[1] ? normalizeSentence(actions[1]) : "";
-
-  if (metricLine && supportingLine) {
-    return [researchLine, metricLine, supportingLine, cautionLine].filter(Boolean).join(" ");
-  }
-
-  if (isDecisionQuestion) {
-    return [researchLine, metricLine, supportingLine, cautionLine].filter(Boolean).join(" ");
-  }
+  const cautionLine = actions[1]
+    ? normalizeSentence(actions[1])
+    : assumptions[0]
+      ? `Watch out for ${normalizeFragment(assumptions[0])}.`
+      : "";
 
   return (
-    [researchLine, metricLine, supportingLine, cautionLine].filter(Boolean).join(" ") ||
+    [researchLine, metricLine, supportingLine, cautionLine].filter(Boolean).join("\n\n") ||
     researchLine ||
     supportingLine ||
     cautionLine ||
@@ -213,6 +211,10 @@ function normalizeSentence(text) {
   }
 
   return /[.!?]$/.test(clean) ? clean : `${clean}.`;
+}
+
+function normalizeFragment(text) {
+  return String(text || "").trim().replace(/[.!?]+$/, "");
 }
 
 function rewriteMachineText(value) {
