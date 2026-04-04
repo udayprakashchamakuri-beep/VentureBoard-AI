@@ -75,6 +75,70 @@ function buildExpandedReasoningText(turn) {
   return sections.join("\n\n");
 }
 
+function formatMetricValue(value, formatter = (input) => input) {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+  return formatter(value);
+}
+
+function getTurnMetrics(turn) {
+  const metrics = turn?.estimated_metrics ?? {};
+  const metricItems = [
+    {
+      label: "Payback",
+      value: formatMetricValue(metrics.estimated_payback_months, (input) => `${Math.round(Number(input))} mo`),
+    },
+    {
+      label: "Runway",
+      value: formatMetricValue(metrics.runway_months, (input) => `${Math.round(Number(input))} mo`),
+    },
+    {
+      label: "Price",
+      value: formatMetricValue(metrics.price_point, (input) => {
+        const numeric = Number(input);
+        if (!Number.isFinite(numeric) || numeric <= 0) {
+          return "";
+        }
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+          maximumFractionDigits: 0,
+        }).format(numeric);
+      }),
+    },
+    {
+      label: "Margin",
+      value: formatMetricValue(metrics.gross_margin_pct, (input) => `${Math.round(Number(input))}%`),
+    },
+    {
+      label: "Launch Budget",
+      value: formatMetricValue(metrics.launch_budget, (input) => {
+        const numeric = Number(input);
+        if (!Number.isFinite(numeric) || numeric <= 0) {
+          return "";
+        }
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+          maximumFractionDigits: 0,
+        }).format(numeric);
+      }),
+    },
+  ];
+
+  return metricItems.filter((item) => item.value).slice(0, 3);
+}
+
+function getTurnHighlights(turn) {
+  return (turn?.key_points ?? []).map((item) => toPlainText(item)).filter(Boolean).slice(0, 2);
+}
+
+function getTurnRiskLine(turn) {
+  const assumptions = (turn?.assumptions ?? []).map((item) => toPlainText(item)).filter(Boolean);
+  return assumptions[0] ?? "";
+}
+
 function SimulationView({
   agentMeta,
   result,
@@ -311,42 +375,30 @@ function SimulationView({
                     <div />
                   </div>
 
-                  {advisorReplyTurns.map((turn) => {
-                    const meta = getConversationMeta(agentMeta, turn.agent_name);
-                    const stanceClassName = getStanceClassName(turn.stance);
+                  <div className="advisor-dashboard-grid focused">
+                    {advisorReplyTurns.map((turn) => {
+                      const meta = getConversationMeta(agentMeta, turn.agent_name);
+                      const stanceClassName = getStanceClassName(turn.stance);
 
-                    return (
-                      <article
-                        key={`${turn.agent_name}-${turn.round}-direct`}
-                        className={turn.agent_name === speakingAgent && !loading ? "debate-message active" : "debate-message"}
-                        style={{ "--agent-accent": meta.accent }}
-                      >
-                        <div className="message-icon">
-                          <span className="material-symbols-outlined">{meta.symbol}</span>
-                        </div>
-                        <div className="message-content">
-                          <div className="message-meta">
-                            <span className="message-name">{meta.label}</span>
-                            <span className="message-time">Latest reply</span>
-                          </div>
-                          <div className={turn.stance === "NO GO" ? "message-bubble danger" : "message-bubble"}>
-                            {buildAdvisorParagraph(turn) || buildDirectAdvisorReply(turn, latestUserMessage?.content ?? "")}
-                          </div>
-                          {shouldShowFocusedReplyBadge && turn.agent_name !== "General Assistant" ? (
-                            <div className="message-tags">
-                              <span className={`message-tag ${stanceClassName}`}>{formatAdvisorStanceLabel(turn.stance)}</span>
-                            </div>
-                          ) : null}
-                          {turn.agent_name !== "General Assistant" && buildExpandedReasoningText(turn) ? (
-                            <details className="message-reasoning">
-                              <summary>View full reasoning</summary>
-                              <div className="message-reasoning-body">{buildExpandedReasoningText(turn)}</div>
-                            </details>
-                          ) : null}
-                        </div>
-                      </article>
-                    );
-                  })}
+                      return (
+                        <AgentDashboardCard
+                          key={`${turn.agent_name}-${turn.round}-direct`}
+                          meta={meta}
+                          turn={turn}
+                          stanceClassName={stanceClassName}
+                          summary={buildAdvisorParagraph(turn) || buildDirectAdvisorReply(turn, latestUserMessage?.content ?? "")}
+                          highlightItems={getTurnHighlights(turn)}
+                          riskLine={getTurnRiskLine(turn)}
+                          metrics={getTurnMetrics(turn)}
+                          showFocusedReplyBadge={shouldShowFocusedReplyBadge}
+                          onOpenAgentConversation={onOpenAgentConversation}
+                          onOpenAgentProfile={onOpenAgentProfile}
+                          isActive={turn.agent_name === speakingAgent && !loading}
+                          showLatestReply
+                        />
+                      );
+                    })}
+                  </div>
                 </section>
               ) : hasAnyDiscussion && !loading ? (
                 <div className="stream-empty conversation-empty">
@@ -376,44 +428,32 @@ function SimulationView({
                     </div>
                   ) : null}
 
-                  {turns.map((turn) => {
-                    const meta = getConversationMeta(agentMeta, turn.agent_name);
-                    const stanceClassName = getStanceClassName(turn.stance);
+                  <div className="advisor-dashboard-grid">
+                    {turns.map((turn) => {
+                      const meta = getConversationMeta(agentMeta, turn.agent_name);
+                      const stanceClassName = getStanceClassName(turn.stance);
 
-                    return (
-                      <article
-                        key={`${turn.agent_name}-${turn.round}`}
-                        className={turn.agent_name === speakingAgent && !loading ? "debate-message active" : "debate-message"}
-                        style={{ "--agent-accent": meta.accent }}
-                      >
-                        <div className="message-icon">
-                          <span className="material-symbols-outlined">{meta.symbol}</span>
-                        </div>
-                        <div className="message-content">
-                          <div className="message-meta">
-                            <span className="message-name">{meta.label}</span>
-                            <span className="message-time">Round {turn.round}</span>
-                          </div>
-                          <div className={turn.stance === "NO GO" ? "message-bubble danger" : "message-bubble"}>
-                            {turn.agent_name === "General Assistant" ? toPlainText(turn.message) : buildAdvisorParagraph(turn) || buildRoundSummary(turn)}
-                          </div>
-                          {turn.agent_name !== "General Assistant" ? (
-                            <>
-                              <div className="message-tags">
-                                <span className={`message-tag ${stanceClassName}`}>{formatDecisionLabel(turn.stance)}</span>
-                              </div>
-                              {buildExpandedReasoningText(turn) ? (
-                                <details className="message-reasoning">
-                                  <summary>View full reasoning</summary>
-                                  <div className="message-reasoning-body">{buildExpandedReasoningText(turn)}</div>
-                                </details>
-                              ) : null}
-                            </>
-                          ) : null}
-                        </div>
-                      </article>
-                    );
-                  })}
+                      return (
+                        <AgentDashboardCard
+                          key={`${turn.agent_name}-${turn.round}`}
+                          meta={meta}
+                          turn={turn}
+                          stanceClassName={stanceClassName}
+                          summary={
+                            turn.agent_name === "General Assistant"
+                              ? toPlainText(turn.message)
+                              : buildAdvisorParagraph(turn) || buildRoundSummary(turn)
+                          }
+                          highlightItems={getTurnHighlights(turn)}
+                          riskLine={getTurnRiskLine(turn)}
+                          metrics={getTurnMetrics(turn)}
+                          onOpenAgentConversation={onOpenAgentConversation}
+                          onOpenAgentProfile={onOpenAgentProfile}
+                          isActive={turn.agent_name === speakingAgent && !loading}
+                        />
+                      );
+                    })}
+                  </div>
                 </section>
               ))
             )}
@@ -740,6 +780,95 @@ function InsightCard({ icon, accent, title, body, kicker }) {
 
 function ValidationPill({ label, ok }) {
   return <span className={ok ? "validation-pill ok" : "validation-pill"}>{label}</span>;
+}
+
+function AgentDashboardCard({
+  meta,
+  turn,
+  stanceClassName,
+  summary,
+  highlightItems,
+  riskLine,
+  metrics,
+  onOpenAgentConversation,
+  onOpenAgentProfile,
+  isActive,
+  showLatestReply = false,
+  showFocusedReplyBadge = false,
+}) {
+  const reasoning = buildExpandedReasoningText(turn);
+
+  return (
+    <article
+      className={isActive ? "advisor-dashboard-card active" : "advisor-dashboard-card"}
+      style={{ "--agent-accent": meta.accent }}
+    >
+      <div className="advisor-dashboard-top">
+        <div className="advisor-dashboard-id">
+          <div className="advisor-dashboard-icon">
+            <span className="material-symbols-outlined">{meta.symbol}</span>
+          </div>
+          <div>
+            <strong>{meta.label}</strong>
+            <span>{showLatestReply ? "Latest reply" : `Round ${turn.round}`}</span>
+          </div>
+        </div>
+        <div className="advisor-dashboard-badges">
+          <span className={`message-tag ${stanceClassName}`}>
+            {showFocusedReplyBadge ? formatAdvisorStanceLabel(turn.stance) : formatDecisionLabel(turn.stance)}
+          </span>
+          <span className="message-tag soft">{turn.confidence}% confidence</span>
+        </div>
+      </div>
+
+      {metrics.length ? (
+        <div className="advisor-dashboard-metrics">
+          {metrics.map((item) => (
+            <div key={item.label} className="advisor-metric-tile">
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <p className="advisor-dashboard-summary">{summary}</p>
+
+      {highlightItems.length ? (
+        <div className="advisor-dashboard-section">
+          <span className="advisor-dashboard-label">Key Moves</span>
+          <ul className="advisor-dashboard-list">
+            {highlightItems.map((item, index) => (
+              <li key={`${item}-${index}`}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {riskLine ? (
+        <div className="advisor-dashboard-risk">
+          <span className="advisor-dashboard-label">Watchout</span>
+          <p>{riskLine}</p>
+        </div>
+      ) : null}
+
+      <div className="advisor-dashboard-actions">
+        <button type="button" className="footer-link" onClick={() => onOpenAgentConversation(turn.agent_name)}>
+          View advisor
+        </button>
+        <button type="button" className="footer-link" onClick={() => onOpenAgentProfile(turn.agent_name)}>
+          Open profile
+        </button>
+      </div>
+
+      {reasoning ? (
+        <details className="message-reasoning">
+          <summary>View full reasoning</summary>
+          <div className="message-reasoning-body">{reasoning}</div>
+        </details>
+      ) : null}
+    </article>
+  );
 }
 
 export default SimulationView;
