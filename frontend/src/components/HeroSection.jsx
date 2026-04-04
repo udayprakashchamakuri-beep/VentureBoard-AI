@@ -1,8 +1,6 @@
-import React, { Suspense } from "react";
+import React from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles } from "lucide-react";
-
-const Spline = React.lazy(() => import("@splinetool/react-spline"));
+import { ArrowRight, Sparkles, Activity, ShieldCheck, Workflow } from "lucide-react";
 
 export default function HeroSection({ onApplySample, onOpenForm }) {
   return (
@@ -67,10 +65,80 @@ export default function HeroSection({ onApplySample, onOpenForm }) {
           transition={{ duration: 1, delay: 0.2 }}
           className="relative h-[420px] w-full overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.03] backdrop-blur-sm"
         >
-          <div className="absolute inset-0 z-0">
-            <Suspense fallback={<div className="h-full w-full bg-[radial-gradient(circle_at_50%_35%,rgba(168,85,247,0.2),transparent_35%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0))]" />}>
-              <Spline scene="https://prod.spline.design/6Wq1Q7Y9S7Y6QZ7Y/scene.splinecode" />
-            </Suspense>
+          <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_35%_30%,rgba(168,85,247,0.24),transparent_28%),radial-gradient(circle_at_70%_35%,rgba(59,130,246,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0))]">
+            <motion.div
+              className="absolute left-[14%] top-[12%] h-48 w-48 rounded-full border border-purple-400/20 bg-purple-400/10 blur-[2px]"
+              animate={{ y: [0, -16, 0], x: [0, 10, 0], scale: [1, 1.06, 1] }}
+              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <motion.div
+              className="absolute bottom-[16%] right-[14%] h-56 w-56 rounded-full border border-blue-400/20 bg-blue-400/10 blur-[2px]"
+              animate={{ y: [0, 18, 0], x: [0, -12, 0], scale: [1, 0.96, 1] }}
+              transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <div className="absolute inset-[14%] rounded-[28px] border border-white/8 bg-black/20 backdrop-blur-sm">
+              <div className="grid h-full grid-cols-[1.15fr_0.85fr] gap-4 p-6">
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-4">
+                    <div className="mb-4 flex items-center justify-between">
+                      <span className="text-xs uppercase tracking-[0.22em] text-white/45">Live Portfolio Graph</span>
+                      <Activity className="h-4 w-4 text-emerald-300" />
+                    </div>
+                    <div className="flex h-32 items-end gap-2">
+                      {[35, 54, 48, 66, 78, 74, 92, 88].map((value, index) => (
+                        <motion.div
+                          key={index}
+                          className="flex-1 rounded-t-full bg-gradient-to-t from-purple-500/80 to-cyan-400/80"
+                          initial={{ height: 18 }}
+                          animate={{ height: `${value}%` }}
+                          transition={{ duration: 1.2, delay: index * 0.06 }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/40">Decision velocity</p>
+                      <p className="mt-3 text-3xl font-bold text-white">4.8x</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/40">Risk surface</p>
+                      <p className="mt-3 text-3xl font-bold text-white">Low</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-medium text-white/80">
+                      <Workflow className="h-4 w-4 text-purple-300" />
+                      Autonomous Pipeline
+                    </div>
+                    <div className="space-y-3">
+                      {["Market Scan", "Finance Review", "Launch Plan", "Risk Gate"].map((item, index) => (
+                        <div key={item} className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3 py-2">
+                          <span className="text-sm text-white/72">{item}</span>
+                          <span className={`h-2.5 w-2.5 rounded-full ${index < 3 ? "bg-emerald-400" : "bg-amber-300"}`} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-medium text-white/80">
+                      <ShieldCheck className="h-4 w-4 text-cyan-300" />
+                      Portfolio Guardrails
+                    </div>
+                    <div className="space-y-3">
+                      <div className="h-2 rounded-full bg-white/8">
+                        <div className="h-2 w-[72%] rounded-full bg-gradient-to-r from-cyan-400 to-purple-400" />
+                      </div>
+                      <p className="text-xs leading-5 text-white/50">
+                        Allocation balance, downside exposure, and scenario confidence are being monitored continuously.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <motion.div
