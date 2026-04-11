@@ -418,6 +418,99 @@ function getIdeaValue(graph, matcher, fallback = 50) {
   return clampValue(Number(match?.value ?? fallback));
 }
 
+function inferCustomerProfile(problem = "") {
+  const lower = String(problem || "").toLowerCase();
+
+  if (/hospital|clinic|insurance approval|ehr|patient/i.test(lower)) {
+    return {
+      customer: "Hospital ops lead",
+      offer: "this workflow tool",
+      urgentNeed: "clearing insurance approvals faster",
+      blocker: "integration and compliance effort",
+    };
+  }
+  if (/game center|gaming center|pc gaming|console gaming|esports/i.test(lower)) {
+    return {
+      customer: "Student gamer",
+      offer: "this gaming center",
+      urgentNeed: "a nearby place worth returning to every week",
+      blocker: "price sensitivity and whether the setup feels premium enough",
+    };
+  }
+  if (/skincare|serum|beauty|cosmetic/i.test(lower)) {
+    return {
+      customer: "Repeat skincare buyer",
+      offer: "this skincare brand",
+      urgentNeed: "a product that clearly works for their skin",
+      blocker: "trust, ingredient proof, and pricing",
+    };
+  }
+  if (/ev|charging|charger|electric vehicle/i.test(lower)) {
+    return {
+      customer: "EV driver",
+      offer: "this charging product",
+      urgentNeed: "a reliable charging flow with less booking friction",
+      blocker: "coverage gaps and unreliable availability",
+    };
+  }
+  if (/tutoring|test prep|education|students/i.test(lower)) {
+    return {
+      customer: "Parent or student",
+      offer: "this tutoring offer",
+      urgentNeed: "a clear score improvement path",
+      blocker: "credibility, outcomes, and price",
+    };
+  }
+  return {
+    customer: "Target customer",
+    offer: "this offer",
+    urgentNeed: "a problem that feels painful enough to pay for",
+    blocker: "switching effort and proof of value",
+  };
+}
+
+function buildCustomerIntentExamples({ businessProblem, graph }) {
+  const profile = inferCustomerProfile(businessProblem);
+  const demandValue = getIdeaValue(graph, (item) => /demand|audience|urgency/i.test(item.label), 56);
+  const priceValue = getIdeaValue(graph, (item) => /price|budget|ticket|offer|revenue/i.test(item.label), 52);
+  const frictionValue = getIdeaValue(graph, (item) => /friction|cycle|ops|execution/i.test(item.label), 48);
+  const competitionValue = getIdeaValue(graph, (item) => /competition|noise|dependence/i.test(item.label), 50);
+
+  const lowConcern =
+    frictionValue >= 58 || competitionValue >= 58
+      ? `${profile.blocker} still feels too high for me.`
+      : `I still do not feel enough urgency around ${profile.urgentNeed}.`;
+  const mediumTrigger =
+    demandValue >= 58
+      ? `If you can prove the value quickly, I would consider a small pilot.`
+      : `I might test it, but I would need stronger proof before I commit.`;
+  const highTrigger =
+    priceValue >= 54 && frictionValue <= 48
+      ? `If onboarding is simple, I would be ready to move soon.`
+      : `If the experience feels credible and the economics make sense, I would buy.`;
+
+  return [
+    {
+      speaker: `${profile.customer} - skeptical buyer`,
+      quote: `I can see why ${profile.urgentNeed} matters, but ${profile.offer} still feels risky for me because ${lowConcern}`,
+      status: "LOW INTENT",
+      tone: "danger",
+    },
+    {
+      speaker: `${profile.customer} - cautious buyer`,
+      quote: `I am interested in ${profile.offer}, but I would start carefully. ${mediumTrigger}`,
+      status: "MEDIUM INTENT",
+      tone: "warning",
+    },
+    {
+      speaker: `${profile.customer} - ready buyer`,
+      quote: `${profile.offer} feels like it could solve a real problem for me. ${highTrigger}`,
+      status: "HIGH INTENT",
+      tone: "success",
+    },
+  ];
+}
+
 function buildPrimaryDecisionView({
   result,
   leadTurn,
@@ -425,8 +518,7 @@ function buildPrimaryDecisionView({
   recommendedDirective,
   actionPlan,
   explainability,
-  latestTurnsByAgent,
-  agentMeta,
+  businessProblem,
   loading,
 }) {
   const graph = buildAgentGraph(leadTurn);
@@ -467,43 +559,7 @@ function buildPrimaryDecisionView({
     { label: "RISK_SURFACE", value: downsideRisk, tone: toneClassForScore(downsideRisk) },
     { label: "BOARD_ALIGNMENT", value: clampValue(100 - conflictCount * 12), tone: toneClassForScore(conflictCount * 18) },
   ];
-
-  const signalTurns = Array.from(latestTurnsByAgent.values())
-    .filter((turn) => turn.agent_name !== "CEO Agent" && turn.agent_name !== "General Assistant")
-    .sort((left, right) => Number(right.confidence ?? 0) - Number(left.confidence ?? 0))
-    .slice(0, 3);
-
-  const signalCards = signalTurns.length
-    ? signalTurns.map((turn) => ({
-        speaker: agentMeta[turn.agent_name]?.label ?? turn.agent_name.replace(" Agent", ""),
-        quote:
-          trimToSentences(buildAdvisorParagraph(turn), 1) ||
-          trimToSentences(buildRoundSummary(turn), 1) ||
-          "Signal pending.",
-        status:
-          turn.stance === "GO" ? "HIGH INTENT" : turn.stance === "MODIFY" ? "MEDIUM INTENT" : "LOW INTENT",
-        tone: turn.stance === "GO" ? "success" : turn.stance === "MODIFY" ? "warning" : "danger",
-      }))
-    : [
-        {
-          speaker: "Market Research",
-          quote: "Demand evidence is being gathered and cleaned for the CEO memo.",
-          status: "MEDIUM INTENT",
-          tone: "warning",
-        },
-        {
-          speaker: "Finance",
-          quote: "Commercial viability is being pressure-tested before the decision lands.",
-          status: "LOW INTENT",
-          tone: "danger",
-        },
-        {
-          speaker: "Operations",
-          quote: "Execution blockers are being checked before the launch call is locked.",
-          status: "MEDIUM INTENT",
-          tone: "warning",
-        },
-      ];
+  const signalCards = buildCustomerIntentExamples({ businessProblem, graph });
 
   const timelineItems =
     actionPlan?.execution_plan?.slice(0, 4).map((step, index) => ({
@@ -671,18 +727,16 @@ function SimulationView({
         recommendedDirective,
         actionPlan,
         explainability,
-        latestTurnsByAgent,
-        agentMeta,
+        businessProblem: latestUserMessage?.content ?? result?.company_name ?? "",
         loading,
       }),
     [
       actionPlan,
-      agentMeta,
       explainability,
       highestRisk,
-      latestTurnsByAgent,
       leadDecisionTurn,
       loading,
+      latestUserMessage?.content,
       recommendedDirective,
       result,
     ],
@@ -1204,8 +1258,8 @@ function PrimaryDecisionDashboard({ loading, showConversation, onToggleConversat
           <article className="decision-panel">
             <div className="decision-panel-head">
               <div>
-                <span className="decision-panel-kicker">Advisor pressure</span>
-                <strong>How the room is leaning</strong>
+                <span className="decision-panel-kicker">Customer intent</span>
+                <strong>How buyers are likely to react</strong>
               </div>
             </div>
             <div className="decision-signal-grid">
