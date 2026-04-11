@@ -388,6 +388,205 @@ function buildDirectAssistantNotice(message) {
   return `This question is not related to a business case. ${clean}`;
 }
 
+function trimToSentences(text, count = 2) {
+  const clean = toPlainText(String(text ?? "").trim());
+  if (!clean) {
+    return "";
+  }
+
+  const sentences = clean.match(/[^.!?]+[.!?]+/g) ?? [clean];
+  return sentences.slice(0, count).join(" ").trim();
+}
+
+function formatMetricPercent(value) {
+  return `${Math.round(clampValue(Number(value ?? 0)))}%`;
+}
+
+function toneClassForScore(value) {
+  const score = Number(value ?? 0);
+  if (score >= 60) {
+    return "danger";
+  }
+  if (score >= 42) {
+    return "warning";
+  }
+  return "success";
+}
+
+function getIdeaValue(graph, matcher, fallback = 50) {
+  const match = (graph?.ideaItems ?? []).find((item) => matcher(item));
+  return clampValue(Number(match?.value ?? fallback));
+}
+
+function buildPrimaryDecisionView({
+  result,
+  leadTurn,
+  highestRisk,
+  recommendedDirective,
+  actionPlan,
+  explainability,
+  latestTurnsByAgent,
+  agentMeta,
+  loading,
+}) {
+  const graph = buildAgentGraph(leadTurn);
+  const snapshot = leadTurn?.score_snapshot ?? {};
+  const demandValue = getIdeaValue(graph, (item) => /demand|audience|urgency/i.test(item.label), 56);
+  const priceValue = getIdeaValue(graph, (item) => /price|budget|ticket|offer|revenue/i.test(item.label), 52);
+  const frictionValue = getIdeaValue(graph, (item) => /friction|cycle|ops|execution/i.test(item.label), 48);
+  const competitionValue = getIdeaValue(graph, (item) => /competition|noise|dependence/i.test(item.label), 50);
+
+  const marketRisk = clampValue(Math.round((100 - demandValue + competitionValue) / 2));
+  const executionRisk = clampValue(
+    Math.round((frictionValue + Number(snapshot.operational_complexity ?? frictionValue)) / 2),
+  );
+  const financialRisk = clampValue(
+    Math.round(((100 - priceValue) + (100 - Number(snapshot.financial_viability ?? 54))) / 2),
+  );
+  const downsideRisk = clampValue(
+    Math.round((executionRisk + financialRisk + Number(snapshot.compliance_risk ?? 48)) / 3),
+  );
+
+  const confidence = clampValue(Number(result?.final_output?.confidence ?? Math.round((100 - downsideRisk + demandValue) / 2)));
+  const conflictCount = result?.conflicts?.length ?? 0;
+  const scenarioCount = result?.scenario_results?.length ?? 0;
+
+  const riskItems = [
+    { label: "Market risk", value: marketRisk },
+    { label: "Execution risk", value: executionRisk },
+    { label: "Financial risk", value: financialRisk },
+    { label: "Downside risk", value: downsideRisk },
+  ].map((item) => ({
+    ...item,
+    tone: toneClassForScore(item.value),
+  }));
+
+  const metricItems = [
+    { label: "MARKET_CONFIDENCE", value: 100 - marketRisk, tone: toneClassForScore(marketRisk * 0.7) },
+    { label: "EXECUTION_BARRIER", value: executionRisk, tone: toneClassForScore(executionRisk) },
+    { label: "RISK_SURFACE", value: downsideRisk, tone: toneClassForScore(downsideRisk) },
+    { label: "BOARD_ALIGNMENT", value: clampValue(100 - conflictCount * 12), tone: toneClassForScore(conflictCount * 18) },
+  ];
+
+  const signalTurns = Array.from(latestTurnsByAgent.values())
+    .filter((turn) => turn.agent_name !== "CEO Agent" && turn.agent_name !== "General Assistant")
+    .sort((left, right) => Number(right.confidence ?? 0) - Number(left.confidence ?? 0))
+    .slice(0, 3);
+
+  const signalCards = signalTurns.length
+    ? signalTurns.map((turn) => ({
+        speaker: agentMeta[turn.agent_name]?.label ?? turn.agent_name.replace(" Agent", ""),
+        quote:
+          trimToSentences(buildAdvisorParagraph(turn), 1) ||
+          trimToSentences(buildRoundSummary(turn), 1) ||
+          "Signal pending.",
+        status:
+          turn.stance === "GO" ? "HIGH INTENT" : turn.stance === "MODIFY" ? "MEDIUM INTENT" : "LOW INTENT",
+        tone: turn.stance === "GO" ? "success" : turn.stance === "MODIFY" ? "warning" : "danger",
+      }))
+    : [
+        {
+          speaker: "Market Research",
+          quote: "Demand evidence is being gathered and cleaned for the CEO memo.",
+          status: "MEDIUM INTENT",
+          tone: "warning",
+        },
+        {
+          speaker: "Finance",
+          quote: "Commercial viability is being pressure-tested before the decision lands.",
+          status: "LOW INTENT",
+          tone: "danger",
+        },
+        {
+          speaker: "Operations",
+          quote: "Execution blockers are being checked before the launch call is locked.",
+          status: "MEDIUM INTENT",
+          tone: "warning",
+        },
+      ];
+
+  const timelineItems =
+    actionPlan?.execution_plan?.slice(0, 4).map((step, index) => ({
+      window: step.timeline || `[Week ${index + 1}]`,
+      title: toPlainText(step.step),
+      note: `${step.owner} | KPI: ${toPlainText(step.success_metric)}`,
+    })) ?? [];
+
+  if (!timelineItems.length) {
+    timelineItems.push(
+      {
+        window: "[Week 1]",
+        title: loading
+          ? "Pull research, isolate the core risk, and draft the first launch conditions."
+          : toPlainText(recommendedDirective || "Define the first pilot scope and lock the main risk trigger."),
+        note: "CEO Agent | KPI: one clear go / hold / change threshold is defined.",
+      },
+      {
+        window: "[Weeks 1-2]",
+        title: "Validate the strongest demand and pricing assumptions with real customer evidence.",
+        note: "Market Research Agent | KPI: at least one hard proof point is collected.",
+      },
+      {
+        window: "[Weeks 3-4]",
+        title: "Pressure-test execution blockers, support load, and implementation drag.",
+        note: "Operations + Finance | KPI: the downside case is modeled before spend expands.",
+      },
+    );
+  }
+
+  const decision = result?.final_output?.decision;
+  const title = loading ? "CEO memo in progress" : formatDecisionLabel(decision ?? leadTurn?.stance ?? "MODIFY");
+  const summary =
+    trimToSentences(
+      explainability?.final_reasoning_summary ??
+        buildAdvisorParagraph(leadTurn) ??
+        result?.final_output?.key_reasons?.join(" ") ??
+        recommendedDirective ??
+        "The advisory team is reviewing the case and drafting a final board call.",
+      loading ? 2 : 3,
+    ) || "The advisory team is reviewing the case and drafting a final board call.";
+
+  return {
+    title,
+    summary,
+    confidence,
+    conflictCount,
+    scenarioCount,
+    graph,
+    riskItems,
+    metricItems,
+    signalCards,
+    timelineItems,
+    biggestRisk: toPlainText(highestRisk),
+    nextMove: toPlainText(recommendedDirective || "No action step yet."),
+  };
+}
+
+function buildRadarPoints(items = []) {
+  const centerX = 180;
+  const centerY = 150;
+  const radius = 102;
+  return items
+    .map((item, index) => {
+      const angle = (-Math.PI / 2) + (index * (Math.PI * 2)) / Math.max(items.length, 1);
+      const distance = (clampValue(Number(item.value ?? 0)) / 100) * radius;
+      const x = centerX + Math.cos(angle) * distance;
+      const y = centerY + Math.sin(angle) * distance;
+      return `${x},${y}`;
+    })
+    .join(" ");
+}
+
+function getRadarLabelPosition(index, total, radius = 124) {
+  const centerX = 180;
+  const centerY = 150;
+  const angle = (-Math.PI / 2) + (index * (Math.PI * 2)) / Math.max(total, 1);
+  return {
+    x: centerX + Math.cos(angle) * radius,
+    y: centerY + Math.sin(angle) * radius,
+  };
+}
+
 function SimulationView({
   agentMeta,
   result,
@@ -408,9 +607,6 @@ function SimulationView({
   recommendedDirective,
   actionPlan,
   explainability,
-  memorySummary,
-  scenarioResults,
-  validation,
   onToggleConsole,
   onApplySample,
   onChatDraftChange,
@@ -458,6 +654,44 @@ function SimulationView({
   const directAnswerText = buildDirectAssistantNotice(
     result?.conversation?.[0]?.message ?? "The model will answer directly here.",
   );
+  const [showConversation, setShowConversation] = useState(false);
+  const leadDecisionTurn = useMemo(
+    () =>
+      latestTurnsByAgent.get("CEO Agent") ??
+      Array.from(latestTurnsByAgent.values()).sort((left, right) => Number(right.round ?? 0) - Number(left.round ?? 0))[0] ??
+      null,
+    [latestTurnsByAgent],
+  );
+  const primaryDecisionView = useMemo(
+    () =>
+      buildPrimaryDecisionView({
+        result,
+        leadTurn: leadDecisionTurn,
+        highestRisk,
+        recommendedDirective,
+        actionPlan,
+        explainability,
+        latestTurnsByAgent,
+        agentMeta,
+        loading,
+      }),
+    [
+      actionPlan,
+      agentMeta,
+      explainability,
+      highestRisk,
+      latestTurnsByAgent,
+      leadDecisionTurn,
+      loading,
+      recommendedDirective,
+      result,
+    ],
+  );
+  const shouldShowPrimaryDashboard = !isDirectAnswerThread && (loading || hasAnyDiscussion || Boolean(result?.final_output));
+
+  useEffect(() => {
+    setShowConversation(false);
+  }, [latestUserMessage?.id]);
 
   useEffect(() => {
     if (!conversationEndRef.current) {
@@ -472,7 +706,7 @@ function SimulationView({
 
   return (
     <>
-      <main className="obsidian-main">
+      <main className="obsidian-main single-dashboard-mode">
         <section className="obsidian-stream">
           <header className="stream-header">
             <div>
@@ -517,31 +751,6 @@ function SimulationView({
                 <span className="material-symbols-outlined">terminal</span>
                 <h2>Ready To Start</h2>
                 <p>Type your business question below or open the detailed form if you want to add numbers first.</p>
-              </div>
-            ) : null}
-
-            {conversationAgentNames.length ? (
-              <div className="conversation-filter-bar" style={{ "--agent-accent": activeConversationMeta?.accent ?? "#ffe16d" }}>
-                <div>
-                  <strong>
-                    {conversationAgentNames.length === 1
-                      ? `${activeConversationMeta?.label ?? "Advisor"} conversation`
-                      : "Selected advisor conversations"}
-                  </strong>
-                  <p>
-                    Showing only replies from {selectedAdvisorLabels.join(", ")}.
-                  </p>
-                </div>
-                <div className="conversation-filter-actions">
-                  {conversationAgentNames.length === 1 ? (
-                    <button type="button" className="footer-link" onClick={() => onOpenAgentProfile(conversationAgentNames[0])}>
-                      Open advisor profile
-                    </button>
-                  ) : null}
-                  <button type="button" className="footer-link" onClick={onClearAgentConversation}>
-                    Show all advisors
-                  </button>
-                </div>
               </div>
             ) : null}
 
@@ -617,47 +826,21 @@ function SimulationView({
               </section>
             ) : null}
 
-            {showingFocusedReplies ? (
-              advisorReplyTurns.length ? (
-                <section className="round-section advisor-reply-section">
-                  <div className="round-divider">
-                    <div />
-                    <span>{advisorReplyTurns.length === 1 ? "Advisor answer" : "Advisor answers"}</span>
-                    <div />
-                  </div>
+            {shouldShowPrimaryDashboard ? (
+              <PrimaryDecisionDashboard
+                loading={loading}
+                showConversation={showConversation}
+                onToggleConversation={() => {
+                  if (!showConversation) {
+                    onClearAgentConversation();
+                  }
+                  setShowConversation((current) => !current);
+                }}
+                view={primaryDecisionView}
+              />
+            ) : null}
 
-                  <div className="advisor-dashboard-grid focused">
-                    {advisorReplyTurns.map((turn) => {
-                      const meta = getConversationMeta(agentMeta, turn.agent_name);
-                      const stanceClassName = getStanceClassName(turn.stance);
-
-                      return (
-                        <AgentDashboardCard
-                          key={`${turn.agent_name}-${turn.round}-direct`}
-                          meta={meta}
-                          turn={turn}
-                          stanceClassName={stanceClassName}
-                          summary={buildAdvisorParagraph(turn) || buildDirectAdvisorReply(turn, latestUserMessage?.content ?? "")}
-                          highlightItems={getTurnHighlights(turn)}
-                          riskLine={getTurnRiskLine(turn)}
-                          showFocusedReplyBadge={shouldShowFocusedReplyBadge}
-                          onOpenAgentConversation={onOpenAgentConversation}
-                          onOpenAgentProfile={onOpenAgentProfile}
-                          isActive={turn.agent_name === speakingAgent && !loading}
-                          showLatestReply
-                        />
-                      );
-                    })}
-                  </div>
-                </section>
-              ) : hasAnyDiscussion && !loading ? (
-                <div className="stream-empty conversation-empty">
-                  <span className="material-symbols-outlined">{activeConversationMeta?.symbol ?? "groups"}</span>
-                  <h2>Waiting for advisor replies</h2>
-                  <p>The selected advisors have not replied yet. Send your question and their answers will appear here.</p>
-                </div>
-              ) : null
-            ) : isDirectAnswerThread ? (
+            {!showConversation && isDirectAnswerThread ? (
               <section className="round-section direct-answer-section">
                 <div className="round-divider">
                   <div />
@@ -678,7 +861,107 @@ function SimulationView({
                   <p>{directAnswerText}</p>
                 </article>
               </section>
-            ) : (
+            ) : null}
+
+            {showConversation && conversationAgentNames.length ? (
+              <div className="conversation-filter-bar" style={{ "--agent-accent": activeConversationMeta?.accent ?? "#ffe16d" }}>
+                <div>
+                  <strong>
+                    {conversationAgentNames.length === 1
+                      ? `${activeConversationMeta?.label ?? "Advisor"} conversation`
+                      : "Selected advisor conversations"}
+                  </strong>
+                  <p>
+                    Showing only replies from {selectedAdvisorLabels.join(", ")}.
+                  </p>
+                </div>
+                <div className="conversation-filter-actions">
+                  {conversationAgentNames.length === 1 ? (
+                    <button type="button" className="footer-link" onClick={() => onOpenAgentProfile(conversationAgentNames[0])}>
+                      Open advisor profile
+                    </button>
+                  ) : null}
+                  <button type="button" className="footer-link" onClick={onClearAgentConversation}>
+                    Show all advisors
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {showConversation && earlierUserMessages.length ? (
+              <section className="round-section user-history-section">
+                <div className="round-divider">
+                  <div />
+                  <span>Earlier notes from you</span>
+                  <div />
+                </div>
+
+                {earlierUserMessages.map((message, index) => (
+                  <article key={message.id ?? `${message.timestamp}-${index}`} className="debate-message user">
+                    <div className="message-icon user">
+                      <span className="material-symbols-outlined">person</span>
+                    </div>
+                    <div className="message-content">
+                      <div className="message-meta">
+                        <span className="message-name">You</span>
+                        <span className="message-time">Earlier message</span>
+                      </div>
+                      <div className="message-bubble user">{toPlainText(message.content)}</div>
+                      {message.targetAgentNames?.length ? (
+                        <div className="message-tags">
+                          <span className="message-tag soft">
+                            Sent to {message.targetAgentNames.map((name) => agentMeta[name]?.label ?? name).join(", ")}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  </article>
+                ))}
+              </section>
+            ) : null}
+
+            {showConversation ? (
+              showingFocusedReplies ? (
+                advisorReplyTurns.length ? (
+                  <section className="round-section advisor-reply-section">
+                    <div className="round-divider">
+                      <div />
+                      <span>{advisorReplyTurns.length === 1 ? "Advisor answer" : "Advisor answers"}</span>
+                      <div />
+                    </div>
+
+                    <div className="advisor-dashboard-grid focused">
+                      {advisorReplyTurns.map((turn) => {
+                        const meta = getConversationMeta(agentMeta, turn.agent_name);
+                        const stanceClassName = getStanceClassName(turn.stance);
+
+                        return (
+                          <AgentDashboardCard
+                            key={`${turn.agent_name}-${turn.round}-direct`}
+                            meta={meta}
+                            turn={turn}
+                            stanceClassName={stanceClassName}
+                            summary={buildAdvisorParagraph(turn) || buildDirectAdvisorReply(turn, latestUserMessage?.content ?? "")}
+                            highlightItems={getTurnHighlights(turn)}
+                            riskLine={getTurnRiskLine(turn)}
+                            showFocusedReplyBadge={shouldShowFocusedReplyBadge}
+                            onOpenAgentConversation={onOpenAgentConversation}
+                            onOpenAgentProfile={onOpenAgentProfile}
+                            isActive={turn.agent_name === speakingAgent && !loading}
+                            showLatestReply
+                          />
+                        );
+                      })}
+                    </div>
+                  </section>
+                ) : hasAnyDiscussion && !loading ? (
+                  <div className="stream-empty conversation-empty">
+                    <span className="material-symbols-outlined">{activeConversationMeta?.symbol ?? "groups"}</span>
+                    <h2>Waiting for advisor replies</h2>
+                    <p>The selected advisors have not replied yet. Send your question and their answers will appear here.</p>
+                  </div>
+                ) : null
+              ) : !isDirectAnswerThread ? (
               filteredRounds.map(([round, turns]) => (
                 <section key={round} className="round-section">
                   <div className="round-divider">
@@ -726,7 +1009,8 @@ function SimulationView({
                   </div>
                 </section>
               ))
-            )}
+              ) : null
+            ) : null}
 
             {loading ? (
               <div className="typing-row">
@@ -786,7 +1070,7 @@ function SimulationView({
                       ? `Ask ${agentMeta[focusedAgentNames[0]]?.label ?? "this advisor"} something in plain language...`
                       : focusedAgentNames.length > 1
                         ? `Ask ${chatTargetLabels.join(", ")} something in plain language...`
-                        : "Example: We are a small SaaS company thinking about expanding into hospitals, but we only have 10 months of cash left. Should we launch now or wait?"
+                        : "Describe the company, the decision, and what could make it fail..."
                   }
                   value={chatDraft}
                   onChange={(event) => onChatDraftChange(event.target.value)}
@@ -805,11 +1089,11 @@ function SimulationView({
                       ? `Your next message will focus on ${agentMeta[focusedAgentNames[0]]?.label ?? "that advisor"}.`
                       : focusedAgentNames.length > 1
                         ? `Your next message will focus on ${chatTargetLabels.join(", ")}.`
-                        : "Tip: mention your market, cash situation, team size, pricing, or any big concern."}
+                        : "Tip: mention the customer, pricing, constraints, and what could break the plan."}
                   </span>
                   <div className="composer-action-group">
                     <span className="composer-status">
-                      {loading ? "Advisors are reviewing..." : result ? "Latest reply visible above" : "Ready for your question"}
+                      {loading ? "CEO memo is being drafted..." : result ? "Primary decision dashboard is visible above" : "Ready for your question"}
                     </span>
                     <button type="submit" className="primary-action" disabled={loading || chatDraft.trim().length < 20}>
                       {loading ? "Reviewing..." : "Send"}
@@ -830,197 +1114,157 @@ function SimulationView({
             )}
           </footer>
         </section>
-
-        <aside className="obsidian-insights">
-          <div className="directive-card">
-            <div className="directive-mark">
-              <span className="material-symbols-outlined">{isDirectAnswerThread ? "smart_toy" : "gavel"}</span>
-            </div>
-            <h2>{isDirectAnswerThread ? "Direct Answer" : "Final Recommendation"}</h2>
-            <div className="directive-body">
-              <p className="directive-title">
-                {isDirectAnswerThread
-                  ? directAnswerText
-                  : result?.final_output
-                  ? `${formatDecisionLabel(result.final_output.decision)}: ${toPlainText(recommendedDirective)}`
-                  : "Waiting for the team to finish its review"}
-              </p>
-              {!isDirectAnswerThread ? (
-                <div className="directive-score">
-                  <div>
-                    <span>Confidence</span>
-                    <strong>{result?.final_output?.confidence ?? 0}%</strong>
-                  </div>
-                  <div className="meter-track">
-                    <div className="meter-fill" style={{ width: `${result?.final_output?.confidence ?? 0}%` }} />
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          <section className="insight-section">
-            <h3>{isDirectAnswerThread ? "About This Answer" : "Main Reasons And Risks"}</h3>
-            <div className="insight-grid">
-              <InsightCard
-                icon={isDirectAnswerThread ? "info" : "lightbulb"}
-                accent="#ddb7ff"
-                title={isDirectAnswerThread ? "Why you got this answer" : "Main Reason"}
-                body={toPlainText(
-                  result?.final_output?.key_reasons?.[0] ??
-                    (isDirectAnswerThread
-                      ? "The prompt was handled as a general question instead of a business case."
-                      : "The team is waiting to review your case."),
-                )}
-              />
-              <InsightCard
-                icon={isDirectAnswerThread ? "tips_and_updates" : "dangerous"}
-                accent="#ff8f8f"
-                title={isDirectAnswerThread ? "Tip" : "Biggest Risk"}
-                body={toPlainText(highestRisk)}
-                kicker={!isDirectAnswerThread && result?.final_output?.risks?.length ? "Critical" : ""}
-              />
-              <InsightCard
-                icon={isDirectAnswerThread ? "forum" : "account_balance"}
-                accent="#00ff94"
-                title={isDirectAnswerThread ? "Try this next" : "Best Next Step"}
-                body={toPlainText(result?.final_output?.recommended_actions?.[0] ?? "No action steps yet.")}
-              />
-            </div>
-          </section>
-
-          <section className="health-panel">
-            <h3>{isDirectAnswerThread ? "Suggested Business Prompts" : "Action Plan"}</h3>
-            {isDirectAnswerThread ? (
-              <div className="execution-list">
-                {(result?.final_output?.recommended_actions ?? []).slice(0, 4).map((prompt, index) => (
-                  <div key={`${prompt}-${index}`} className="execution-item">
-                    <strong>{index === 0 ? "Try now" : "Example"}</strong>
-                    <div>
-                      <p>{toPlainText(prompt)}</p>
-                      <span>Use one of these if you want the advisor team to debate a business case.</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <>
-                <div className="execution-list">
-                  {(actionPlan?.execution_plan ?? []).slice(0, 4).map((step, index) => (
-                    <div key={`${step.owner}-${index}`} className="execution-item">
-                      <strong>{step.timeline}</strong>
-                      <div>
-                        <p>{toPlainText(step.step)}</p>
-                        <span>
-                          {step.owner} - {toPlainText(step.success_metric)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  {!actionPlan?.execution_plan?.length ? (
-                    <p className="compact-placeholder">Action steps will appear after the team makes a recommendation.</p>
-                  ) : null}
-                </div>
-                <div className="scenario-grid">
-                  {(scenarioResults ?? []).map((scenario) => (
-                    <article key={scenario.scenario} className="scenario-card">
-                      <div className="scenario-card-top">
-                        <strong>{scenario.scenario}</strong>
-                        <span>{formatDecisionLabel(scenario.decision)}</span>
-                      </div>
-                      <p>{toPlainText(scenario.difference_from_base)}</p>
-                      <small>{toPlainText(scenario.reasoning_shift?.[0] ?? "The recommendation stayed mostly the same.")}</small>
-                    </article>
-                  ))}
-                </div>
-              </>
-            )}
-          </section>
-
-          <section className="health-panel">
-            <h3>{isDirectAnswerThread ? "Why The Advisor Team Was Skipped" : "Why This Recommendation Was Made"}</h3>
-            <div className="health-block">
-              <div className="health-meta">
-                <span>{isDirectAnswerThread ? "Answered by" : "Most influential advisor"}</span>
-                <span>{explainability?.top_influencer ?? "Pending"}</span>
-              </div>
-              <p className="insight-paragraph">
-                {toPlainText(
-                  explainability?.final_reasoning_summary ??
-                    (isDirectAnswerThread
-                      ? "The model handled this as a general question instead of a business case."
-                      : "The team will summarize why it reached this recommendation."),
-                )}
-              </p>
-            </div>
-            <div className="health-block">
-              {isDirectAnswerThread ? (
-                <p className="insight-paragraph">
-                  Ask about launch timing, pricing, customers, costs, risk, hiring, or growth if you want the full
-                  advisor debate.
-                </p>
-              ) : (
-                <>
-                  <div className="health-meta">
-                    <span>Past similar cases</span>
-                    <span>{memorySummary?.recalled_simulations ?? 0}</span>
-                  </div>
-                  <p className="insight-paragraph">
-                    {toPlainText(
-                      memorySummary?.prior_failures?.[0] ??
-                        "The system can save past cases and use them in future recommendations.",
-                    )}
-                  </p>
-                </>
-              )}
-            </div>
-            <div className="health-block">
-              <div className="health-meta">
-                <span>System checks</span>
-                <span>{validation?.passed ? "Passed" : loading ? "Running" : "Waiting"}</span>
-              </div>
-              <div className="validation-grid">
-                <ValidationPill label="Decision" ok={validation?.decisions_made} />
-                <ValidationPill label="Scenarios" ok={validation?.multiple_scenarios_simulated} />
-                <ValidationPill label="Action plan" ok={validation?.actions_generated} />
-                <ValidationPill label="Memory" ok={validation?.memory_used} />
-              </div>
-            </div>
-            <div className="health-block">
-              <div className="health-meta">
-                <span>Disagreements</span>
-                <span>{result?.conflicts?.length ?? 0}</span>
-              </div>
-              <div className="conflict-compact-list">
-                {(result?.conflicts ?? []).slice(0, 3).map((conflict, index) => (
-                  <div key={`${conflict.topic}-${index}`} className="conflict-compact-item">
-                    <strong>{toPlainText(conflict.conflict_type)}</strong>
-                    <p>{toPlainText(conflict.description)}</p>
-                  </div>
-                ))}
-                {!result?.conflicts?.length ? (
-                  <p className="compact-placeholder">Important disagreements will appear here after the discussion starts.</p>
-                ) : null}
-              </div>
-            </div>
-          </section>
-
-          <div className="synapse-strip">
-            <div className="synapse-top">
-              <span>System status</span>
-              <strong>{loading ? "5.8ms" : "2.4ms"} Latency</strong>
-            </div>
-            <div className="wave" />
-          </div>
-        </aside>
       </main>
 
     </>
   );
 }
 
-function formatAgentNames(names, agentMeta) {
-  return (names ?? []).slice(0, 3).map((name) => agentMeta[name]?.label ?? name.replace(" Agent", ""));
+function PrimaryDecisionDashboard({ loading, showConversation, onToggleConversation, view }) {
+  const radarPoints = buildRadarPoints(view.graph.ideaItems);
+
+  return (
+    <section className="decision-dashboard-shell">
+      <div className="decision-dashboard-head">
+        <div className="decision-dashboard-intro">
+          <span className="decision-dashboard-kicker">{loading ? "CEO memo in progress" : "CEO decision memo"}</span>
+          <h2>{view.title}</h2>
+          <p>{view.summary}</p>
+        </div>
+        <div className="decision-dashboard-actions">
+          <div className="decision-chip-cluster">
+            <span className="decision-chip">{formatMetricPercent(view.confidence)} confidence</span>
+            <span className="decision-chip">{view.conflictCount} disagreements</span>
+            <span className="decision-chip">{view.scenarioCount} scenarios</span>
+          </div>
+          <button
+            type="button"
+            className={showConversation ? "secondary-action conversation-button active" : "secondary-action conversation-button"}
+            onClick={onToggleConversation}
+          >
+            Conversation
+          </button>
+        </div>
+      </div>
+
+      <div className="decision-dashboard-layout">
+        <div className="decision-dashboard-main">
+          <article className="decision-panel decision-radar-panel">
+            <div className="decision-panel-head">
+              <div>
+                <span className="decision-panel-kicker">Idea profile</span>
+                <strong>{view.graph.title}</strong>
+                <p>{view.graph.subtitle}</p>
+              </div>
+            </div>
+            <svg viewBox="0 0 360 300" className="decision-radar-chart" aria-hidden="true">
+              {[28, 56, 84, 112].map((radius) => (
+                <polygon
+                  key={radius}
+                  points={Array.from({ length: Math.max(view.graph.ideaItems.length, 4) }, (_, index) => {
+                    const position = getRadarLabelPosition(index, Math.max(view.graph.ideaItems.length, 4), radius);
+                    return `${position.x},${position.y}`;
+                  }).join(" ")}
+                  className="decision-radar-ring"
+                />
+              ))}
+              {view.graph.ideaItems.map((item, index) => {
+                const position = getRadarLabelPosition(index, view.graph.ideaItems.length, 132);
+                return (
+                  <text key={item.label} x={position.x} y={position.y} className="decision-radar-label" textAnchor="middle">
+                    {item.label}
+                  </text>
+                );
+              })}
+              <polygon points={radarPoints} className="decision-radar-shape" />
+            </svg>
+          </article>
+
+          <article className="decision-panel">
+            <div className="decision-panel-head">
+              <div>
+                <span className="decision-panel-kicker">Risk heatmap</span>
+                <strong>What would break this call</strong>
+              </div>
+            </div>
+            <div className="decision-risk-list">
+              {view.riskItems.map((item) => (
+                <div key={item.label} className="decision-risk-row">
+                  <span>{item.label}</span>
+                  <div className="decision-risk-track">
+                    <div className={`decision-risk-fill ${item.tone}`} style={{ width: `${item.value}%` }} />
+                  </div>
+                  <strong className={`decision-risk-score ${item.tone}`}>{Math.round(item.value)}</strong>
+                </div>
+              ))}
+            </div>
+            <p className="decision-risk-footnote">{view.biggestRisk}</p>
+          </article>
+
+          <article className="decision-panel">
+            <div className="decision-panel-head">
+              <div>
+                <span className="decision-panel-kicker">Advisor pressure</span>
+                <strong>How the room is leaning</strong>
+              </div>
+            </div>
+            <div className="decision-signal-grid">
+              {view.signalCards.map((card) => (
+                <article key={`${card.speaker}-${card.status}`} className="decision-signal-card">
+                  <span className="decision-signal-speaker">[{card.speaker}]</span>
+                  <p>"{card.quote}"</p>
+                  <span className={`decision-signal-pill ${card.tone}`}>{card.status}</span>
+                </article>
+              ))}
+            </div>
+          </article>
+        </div>
+
+        <div className="decision-dashboard-side">
+          <article className="decision-panel">
+            <div className="decision-panel-head">
+              <div>
+                <span className="decision-panel-kicker">Execution path</span>
+                <strong>What happens next if we proceed</strong>
+              </div>
+            </div>
+            <div className="decision-timeline">
+              {view.timelineItems.map((item) => (
+                <article key={`${item.window}-${item.title}`} className="decision-timeline-item">
+                  <strong>{item.window}</strong>
+                  <div>
+                    <p>{item.title}</p>
+                    <span>{item.note}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </article>
+
+          <article className="decision-panel">
+            <div className="decision-panel-head">
+              <div>
+                <span className="decision-panel-kicker">Decision metrics</span>
+                <strong>Board readout</strong>
+              </div>
+            </div>
+            <div className="decision-metric-list">
+              {view.metricItems.map((metric) => (
+                <div key={metric.label} className="decision-metric-row">
+                  <span>{metric.label}</span>
+                  <strong className={metric.tone}>{formatMetricPercent(metric.value)}</strong>
+                </div>
+              ))}
+            </div>
+            <div className="decision-next-move">
+              <span className="decision-panel-kicker">Next move</span>
+              <p>{view.nextMove}</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function getStanceClassName(stance) {
@@ -1031,25 +1275,6 @@ function getStanceClassName(stance) {
     return "tone-modify";
   }
   return "tone-no-go";
-}
-
-function InsightCard({ icon, accent, title, body, kicker }) {
-  return (
-    <article className="insight-card" style={{ "--insight-accent": accent }}>
-      <div className="insight-title-row">
-        <div className="insight-title">
-          <span className="material-symbols-outlined">{icon}</span>
-          <strong>{title}</strong>
-        </div>
-        {kicker ? <span className="insight-kicker">{kicker}</span> : null}
-      </div>
-      <p>{body}</p>
-    </article>
-  );
-}
-
-function ValidationPill({ label, ok }) {
-  return <span className={ok ? "validation-pill ok" : "validation-pill"}>{label}</span>;
 }
 
 function AgentDashboardCard({

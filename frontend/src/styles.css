@@ -347,6 +347,10 @@ a {
   height: calc(100vh - 54px);
 }
 
+.obsidian-main.single-dashboard-mode {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .obsidian-sidebar,
 .obsidian-insights {
   overflow-y: auto;
@@ -759,6 +763,338 @@ a {
   display: grid;
   gap: 18px;
   margin-bottom: 26px;
+}
+
+.decision-dashboard-shell {
+  display: grid;
+  gap: 22px;
+  margin-bottom: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(0, 255, 148, 0.08), transparent 26%),
+    linear-gradient(180deg, rgba(7, 13, 31, 0.94), rgba(8, 10, 18, 0.92));
+  padding: 24px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.decision-dashboard-head,
+.decision-dashboard-actions,
+.decision-chip-cluster,
+.decision-panel-head,
+.decision-risk-row,
+.decision-metric-row {
+  display: flex;
+  align-items: center;
+}
+
+.decision-dashboard-head,
+.decision-panel-head,
+.decision-risk-row,
+.decision-metric-row {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.decision-dashboard-head {
+  align-items: flex-start;
+}
+
+.decision-dashboard-intro {
+  display: grid;
+  gap: 10px;
+  max-width: 820px;
+}
+
+.decision-dashboard-kicker,
+.decision-panel-kicker,
+.decision-signal-speaker,
+.decision-timeline-item strong,
+.decision-metric-row span,
+.decision-risk-row span {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.decision-dashboard-kicker,
+.decision-panel-kicker,
+.decision-signal-speaker,
+.decision-metric-row span {
+  color: rgba(193, 199, 207, 0.58);
+}
+
+.decision-dashboard-intro h2,
+.decision-panel strong,
+.decision-metric-row strong {
+  margin: 0;
+  font-family: "Manrope", sans-serif;
+  color: #eef2ff;
+}
+
+.decision-dashboard-intro h2 {
+  font-size: clamp(1.7rem, 2.2vw, 2.4rem);
+  letter-spacing: -0.05em;
+}
+
+.decision-dashboard-intro p,
+.decision-panel-head p,
+.decision-next-move p,
+.decision-risk-footnote {
+  margin: 0;
+  color: rgba(226, 230, 250, 0.72);
+  line-height: 1.7;
+}
+
+.decision-dashboard-actions {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.decision-chip-cluster {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.decision-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 8px 12px;
+  color: #dde3eb;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.conversation-button.active {
+  border-color: rgba(0, 255, 148, 0.22);
+  background: rgba(0, 255, 148, 0.08);
+  color: #d9fff0;
+}
+
+.decision-dashboard-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 18px;
+}
+
+.decision-dashboard-main,
+.decision-dashboard-side,
+.decision-risk-list,
+.decision-signal-grid,
+.decision-timeline,
+.decision-metric-list {
+  display: grid;
+  gap: 16px;
+}
+
+.decision-panel {
+  display: grid;
+  gap: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 20px;
+}
+
+.decision-panel-head strong {
+  display: block;
+  font-size: 1.08rem;
+  letter-spacing: -0.03em;
+}
+
+.decision-radar-panel {
+  min-height: 380px;
+}
+
+.decision-radar-chart {
+  width: 100%;
+  height: auto;
+}
+
+.decision-radar-ring {
+  fill: none;
+  stroke: rgba(0, 255, 148, 0.15);
+  stroke-width: 1;
+  stroke-dasharray: 5 6;
+}
+
+.decision-radar-shape {
+  fill: rgba(0, 255, 148, 0.18);
+  stroke: #00ffb8;
+  stroke-width: 2.5;
+}
+
+.decision-radar-label {
+  fill: #00ffb8;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.decision-risk-list {
+  gap: 18px;
+}
+
+.decision-risk-row {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) 36px;
+}
+
+.decision-risk-track {
+  position: relative;
+  overflow: hidden;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.decision-risk-fill {
+  height: 100%;
+  border-radius: inherit;
+}
+
+.decision-risk-fill.success {
+  background: linear-gradient(90deg, #00ff94, #5effc4);
+}
+
+.decision-risk-fill.warning {
+  background: linear-gradient(90deg, #ffb142, #ffcf66);
+}
+
+.decision-risk-fill.danger {
+  background: linear-gradient(90deg, #ff6464, #ff9b82);
+}
+
+.decision-risk-score,
+.decision-metric-row strong {
+  font-size: clamp(1.4rem, 2vw, 1.9rem);
+  letter-spacing: -0.05em;
+}
+
+.decision-risk-score.success,
+.decision-metric-row strong.success {
+  color: #00ff94;
+}
+
+.decision-risk-score.warning,
+.decision-metric-row strong.warning {
+  color: #ffb142;
+}
+
+.decision-risk-score.danger,
+.decision-metric-row strong.danger {
+  color: #ff6464;
+}
+
+.decision-signal-grid {
+  gap: 14px;
+}
+
+.decision-signal-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 16px;
+}
+
+.decision-signal-card p {
+  margin: 0;
+  color: #f1f4ff;
+  font-size: 1.02rem;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.decision-signal-pill {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.decision-signal-pill.success {
+  border-color: rgba(0, 255, 148, 0.3);
+  background: rgba(0, 255, 148, 0.1);
+  color: #00ff94;
+}
+
+.decision-signal-pill.warning {
+  border-color: rgba(255, 177, 66, 0.3);
+  background: rgba(255, 177, 66, 0.1);
+  color: #ffb142;
+}
+
+.decision-signal-pill.danger {
+  border-color: rgba(255, 100, 100, 0.3);
+  background: rgba(255, 100, 100, 0.1);
+  color: #ff6464;
+}
+
+.decision-timeline {
+  gap: 0;
+}
+
+.decision-timeline-item {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  gap: 18px;
+  padding: 18px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.decision-timeline-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.decision-timeline-item p,
+.decision-timeline-item span {
+  margin: 0;
+}
+
+.decision-timeline-item p {
+  color: #f0f3ff;
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
+.decision-timeline-item span {
+  display: block;
+  margin-top: 10px;
+  color: rgba(193, 199, 207, 0.62);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.decision-metric-list {
+  gap: 18px;
+}
+
+.decision-metric-row {
+  padding: 2px 0;
+}
+
+.decision-next-move {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .advisor-dashboard-grid {
@@ -4618,6 +4954,10 @@ a {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .decision-dashboard-layout {
+    grid-template-columns: 1fr;
+  }
+
   .intelligence-grid,
   .automation-grid,
   .agent-detail-grid,
@@ -4676,6 +5016,23 @@ a {
 
   .utility-grid {
     grid-template-columns: 1fr;
+  }
+
+  .decision-dashboard-head,
+  .decision-dashboard-actions,
+  .decision-chip-cluster {
+    align-items: flex-start;
+    justify-content: flex-start;
+    flex-direction: column;
+  }
+
+  .decision-risk-row,
+  .decision-timeline-item {
+    grid-template-columns: 1fr;
+  }
+
+  .decision-metric-row {
+    align-items: flex-start;
   }
 
   .conversation-filter-bar {
