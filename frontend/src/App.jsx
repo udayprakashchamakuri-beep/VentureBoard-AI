@@ -689,17 +689,17 @@ function App() {
               Sign out
             </button>
           ) : null}
-          <button type="button" className="deploy-button" onClick={activeView === "home" ? openConsoleFromHome : toggleConsole}>
-            Start Analysis
-          </button>
+          {activeView !== "home" ? (
+            <button type="button" className="deploy-button" onClick={toggleConsole}>
+              Start Analysis
+            </button>
+          ) : null}
           <div className="avatar-badge">BA</div>
         </div>
       </nav>
 
       {activeView === "home" ? (
         <HomeView
-          onApplySample={applySample}
-          onOpenForm={openConsoleFromHome}
           onGoToDiscussion={() => setActiveView("simulation")}
           audienceMode={audienceMode}
           onAudienceModeChange={setAudienceMode}

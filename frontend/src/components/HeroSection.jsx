@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, Activity, ShieldCheck, Workflow } from "lucide-react";
 
-export default function HeroSection({ onApplySample, onOpenForm, audienceMode, audienceConfig, onAudienceModeChange }) {
+export default function HeroSection({ onGoToDiscussion, audienceMode, audienceConfig, onAudienceModeChange }) {
   return (
     <section className="relative isolate min-h-[62vh] w-full overflow-hidden rounded-[32px] border border-white/8 bg-[#050505] text-white shadow-[0_32px_90px_rgba(0,0,0,0.38)]">
       <div className="absolute left-[-8%] top-[-12%] h-[38vh] w-[38vh] rounded-full bg-purple-900/30 blur-[120px]" />
@@ -63,21 +63,11 @@ export default function HeroSection({ onApplySample, onOpenForm, audienceMode, a
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               type="button"
-              onClick={onOpenForm}
+              onClick={onGoToDiscussion}
               className="group inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-7 py-4 font-bold text-white shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all hover:bg-purple-500"
             >
-              Open Detailed Form
+              Go To Discussion
               <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              type="button"
-              onClick={onApplySample}
-              className="rounded-2xl border border-white/10 bg-white/5 px-7 py-4 font-semibold text-white backdrop-blur-md transition-all hover:bg-white/10"
-            >
-              Use Example
             </motion.button>
           </div>
         </motion.div>

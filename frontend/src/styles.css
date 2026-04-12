@@ -2785,10 +2785,8 @@ a {
 
 .home-detail-strip,
 .home-final-cta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 28px;
+  display: grid;
+  gap: 18px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 28px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.02));
@@ -2813,51 +2811,8 @@ a {
   max-width: 720px;
 }
 
-.home-detail-cta,
-.home-final-primary,
-.home-final-secondary {
-  border: 0;
-  border-radius: 999px;
-  cursor: pointer;
-  font-family: "Space Grotesk", sans-serif;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  transition: transform 180ms ease, opacity 180ms ease, background 180ms ease, color 180ms ease;
-}
-
-.home-detail-cta,
-.home-final-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 20px;
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.92), rgba(96, 165, 250, 0.88));
-  color: #f8f9ff;
-}
-
-.home-final-secondary {
-  padding: 14px 20px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #eef1ff;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.home-detail-cta:hover,
-.home-final-primary:hover,
-.home-final-secondary:hover {
-  transform: translateY(-1px);
-}
-
 .home-final-cta {
   margin-bottom: 8px;
-}
-
-.home-final-actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
 }
 
 .command-canvas {

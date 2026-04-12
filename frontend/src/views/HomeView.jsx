@@ -1,14 +1,12 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, BrainCircuit, Radar, ShieldCheck, Sparkles } from "lucide-react";
+import { BrainCircuit, Radar, ShieldCheck, Sparkles } from "lucide-react";
 import HeroSection from "../components/HeroSection";
 import { getAudienceModeConfig } from "../audienceMode";
 
 const featureIcons = [BrainCircuit, Radar, ShieldCheck];
 
 export default function HomeView({
-  onApplySample,
-  onOpenForm,
   onGoToDiscussion,
   audienceMode,
   onAudienceModeChange,
@@ -18,8 +16,7 @@ export default function HomeView({
   return (
     <div className="home-view-shell">
       <HeroSection
-        onApplySample={onApplySample}
-        onOpenForm={onOpenForm}
+        onGoToDiscussion={onGoToDiscussion}
         audienceMode={audienceMode}
         audienceConfig={audienceConfig}
         onAudienceModeChange={onAudienceModeChange}
@@ -53,33 +50,19 @@ export default function HomeView({
           <h2>{audienceConfig.detailTitle}</h2>
           <p>{audienceConfig.detailBody}</p>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.98 }}
-          type="button"
-          className="home-detail-cta"
-          onClick={onGoToDiscussion}
-        >
-          Go To Discussion
-          <ArrowRight size={18} />
-        </motion.button>
       </section>
 
       <section className="home-final-cta">
         <div className="home-final-copy">
           <div className="home-final-kicker">
             <Sparkles size={14} />
-            {audienceConfig.eyebrow}
+            How it works
           </div>
-          <h2>Choose your seat, then open Discussion and run the case through that lens.</h2>
-        </div>
-        <div className="home-final-actions">
-          <button type="button" className="home-final-secondary" onClick={onApplySample}>
-            Use Example
-          </button>
-          <button type="button" className="home-final-primary" onClick={onOpenForm}>
-            Open Detailed Form
-          </button>
+          <h2>Choose your seat once, then use Discussion to pressure-test the decision through that lens.</h2>
+          <p>
+            Founders get clearer language and simpler calls. Investors get a diligence-oriented read.
+            Operators get more execution detail, dependencies, and failure-surface thinking.
+          </p>
         </div>
       </section>
     </div>
