@@ -529,6 +529,29 @@ a {
   }
 }
 
+.immersive-review-mode .pixel-review-screen {
+  min-height: 100svh;
+  padding: 0;
+  background:
+    radial-gradient(circle at top left, rgba(120, 238, 255, 0.1), transparent 22%),
+    radial-gradient(circle at top right, rgba(255, 214, 113, 0.1), transparent 18%),
+    linear-gradient(180deg, #04070e 0%, #09111d 100%);
+}
+
+.immersive-review-mode .pixel-review-shell--embed {
+  width: 100%;
+  min-height: 100svh;
+  display: block;
+}
+
+.immersive-review-mode .pixel-review-iframe {
+  display: block;
+  width: 100%;
+  min-height: 100svh;
+  border: 0;
+  background: transparent;
+}
+
 /* Authoritative final pixel review layout */
 .pixel-review-screen {
   min-height: 100svh;

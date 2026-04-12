@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VentureBoard AI Pixel Review</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-phase="research">
+    <div class="runtime-shell">
+      <header class="runtime-topbar">
+        <div class="runtime-copy">
+          <p id="audience-label" class="runtime-kicker">Founder mode</p>
+          <h1 id="scenario-title">Business case review</h1>
+          <p id="prompt-copy" class="runtime-prompt">The advisory team is reviewing the case.</p>
+        </div>
+        <div class="runtime-meta">
+          <span id="phase-pill" class="runtime-pill">Researching</span>
+          <div class="runtime-countdown">
+            <strong id="countdown">00:10</strong>
+            <span>until memo</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="runtime-scene">
+        <div class="runtime-scene-head">
+          <span id="phase-label">Office research</span>
+          <span id="mini-phase">Pixel review sequence</span>
+        </div>
+        <div class="canvas-shell">
+          <canvas id="war-room-canvas" width="672" height="480" aria-label="Pixel review scene"></canvas>
+        </div>
+      </section>
+
+      <button id="replay-button" class="runtime-hidden-control" type="button" aria-hidden="true" tabindex="-1">Replay</button>
+      <ul id="agent-roster" class="runtime-hidden"></ul>
+      <div id="transcript" class="runtime-hidden"></div>
+      <div id="verdict-box" class="runtime-hidden"></div>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

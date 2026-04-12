@@ -1,0 +1,184 @@
+:root {
+  --bg: #050810;
+  --bg-2: #0b1220;
+  --panel: #0b1522;
+  --line: #1b3144;
+  --text: #eef8ff;
+  --muted: #90aac1;
+  --gold: #ffd56b;
+  --shadow: rgba(0, 0, 0, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(66, 207, 255, 0.12), transparent 28%),
+    radial-gradient(circle at top right, rgba(119, 247, 198, 0.08), transparent 24%),
+    linear-gradient(180deg, #04070e 0%, #09111d 100%);
+  color: var(--text);
+  font-family: "Courier New", monospace;
+  overflow-y: auto;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.18;
+}
+
+.runtime-shell {
+  min-height: 100svh;
+  padding: 18px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 14px;
+}
+
+.runtime-topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  padding: 18px 22px;
+  border: 2px solid var(--line);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(13, 23, 35, 0.96), rgba(8, 14, 24, 0.92));
+  box-shadow: 0 22px 40px var(--shadow);
+}
+
+.runtime-copy {
+  max-width: 840px;
+}
+
+.runtime-kicker,
+.runtime-scene-head {
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.runtime-topbar h1 {
+  margin: 10px 0 0;
+  font-size: clamp(2.6rem, 5vw, 4.8rem);
+  line-height: 0.92;
+  letter-spacing: -0.07em;
+  text-transform: uppercase;
+}
+
+.runtime-prompt {
+  margin: 12px 0 0;
+  max-width: 1040px;
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 0.98rem;
+}
+
+.runtime-meta {
+  display: grid;
+  gap: 12px;
+  justify-items: end;
+}
+
+.runtime-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border: 2px solid #265868;
+  color: var(--text);
+  background: #11333d;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.runtime-countdown {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+}
+
+.runtime-countdown strong {
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  line-height: 0.9;
+  color: var(--gold);
+}
+
+.runtime-countdown span {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.82rem;
+}
+
+.runtime-scene {
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+}
+
+.runtime-scene-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 0 4px;
+}
+
+.canvas-shell {
+  border: 2px solid var(--line);
+  border-radius: 28px;
+  background: #081119;
+  padding: 12px;
+  box-shadow: 0 26px 48px var(--shadow);
+}
+
+#war-room-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 672 / 480;
+  border-radius: 18px;
+  background: #08151c;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.runtime-hidden,
+.runtime-hidden-control {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .runtime-shell {
+    padding: 12px;
+  }
+
+  .runtime-topbar {
+    grid-template-columns: 1fr;
+    display: grid;
+    padding: 16px;
+  }
+
+  .runtime-meta {
+    justify-items: start;
+  }
+
+  .runtime-countdown {
+    justify-items: start;
+  }
+}
