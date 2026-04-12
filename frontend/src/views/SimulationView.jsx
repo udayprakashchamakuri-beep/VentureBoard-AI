@@ -561,6 +561,161 @@ function isOpportunityDiscoveryPrompt(text = "") {
   ].some((pattern) => pattern.test(lowered));
 }
 
+function toDisplayCase(value = "") {
+  return String(value)
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function extractDiscoveryLocation(text = "") {
+  const plain = toPlainText(text);
+  if (!plain) {
+    return "";
+  }
+
+  const patterns = [
+    /\bin\s+([A-Za-z][A-Za-z\s-]{2,40})/i,
+    /\bnear\s+([A-Za-z][A-Za-z\s-]{2,40})/i,
+    /\baround\s+([A-Za-z][A-Za-z\s-]{2,40})/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = plain.match(pattern);
+    if (match?.[1]) {
+      const cleaned = match[1]
+        .replace(/\b(with|for|because|where|what|which|should|can|and)\b.*$/i, "")
+        .trim();
+      if (cleaned) {
+        return toDisplayCase(cleaned);
+      }
+    }
+  }
+
+  return "";
+}
+
+function buildDiscoveryIdeas({ businessProblem, audienceMode, graph }) {
+  const lowered = toPlainText(businessProblem).toLowerCase();
+  const location = extractDiscoveryLocation(businessProblem);
+  const placeLabel = location ? ` in ${location}` : "";
+  const demandValue = getIdeaValue(graph, (item) => /demand|audience|urgency/i.test(item.label), 56);
+  const priceValue = getIdeaValue(graph, (item) => /price|budget|ticket|offer|revenue/i.test(item.label), 52);
+  const frictionValue = getIdeaValue(graph, (item) => /friction|cycle|ops|execution/i.test(item.label), 48);
+  const competitionValue = getIdeaValue(graph, (item) => /competition|noise|dependence/i.test(item.label), 50);
+
+  const hasStudents = /\b(student|college|campus|hostel|tuition|coaching|exam|school)\b/.test(lowered);
+  const hasFamilies = /\b(family|kids|children|residential|parents)\b/.test(lowered);
+  const hasTech = /\b(tech|software|ai|saas|app|digital|it|startup)\b/.test(lowered) || /\bhyderabad\b/.test(lowered);
+  const hasFood = /\b(food|cafe|restaurant|kitchen|snack|delivery)\b/.test(lowered);
+
+  const templates = [];
+
+  if (hasTech) {
+    templates.push({
+      id: "ops-services",
+      title: `AI automation service${placeLabel}`,
+      founderFit: "This is easier to start than a heavy physical business because you can validate demand before renting space or buying inventory.",
+      investorFit: "This can become interesting if the wedge is narrow, the buyer pain is urgent, and the sales motion proves repeatable.",
+      operatorFit: "This is operationally cleaner than a capex-heavy business if delivery is standardized and the implementation loop is controlled.",
+      test: "First test: sell one narrow workflow improvement to a local clinic, school, or SME and see if they will pay for a pilot.",
+      watchout: "Watchout: custom work can eat margin if every client asks for a different solution.",
+      scoreBias: 6,
+    });
+  }
+
+  if (hasStudents || /\bhyderabad\b/.test(lowered)) {
+    templates.push({
+      id: "skills-center",
+      title: `Test prep and skills center${placeLabel}`,
+      founderFit: "This works well when there is dense student traffic and clear parent or student willingness to pay for outcomes.",
+      investorFit: "This can be attractive if retention, referrals, and center economics are strong enough to support expansion.",
+      operatorFit: "This is manageable if scheduling, faculty utilization, and seat fill are instrumented tightly from day one.",
+      test: "First test: run a small weekend cohort or trial batch before committing to a full center.",
+      watchout: "Watchout: quality drops fast if faculty consistency and scheduling discipline are weak.",
+      scoreBias: 4,
+    });
+  }
+
+  if (hasFood || hasStudents || hasFamilies || /\bhyderabad\b/.test(lowered)) {
+    templates.push({
+      id: "cloud-kitchen",
+      title: `Focused cloud kitchen${placeLabel}`,
+      founderFit: "A focused food concept can create repeat demand quickly if you choose one strong audience and one dependable menu.",
+      investorFit: "This is only attractive if repeat order behavior and contribution margin stay strong despite competition.",
+      operatorFit: "This can work if prep, delivery radius, and wastage are tightly controlled rather than treated casually.",
+      test: "First test: launch one cuisine or meal category from a shared kitchen and measure repeat orders before expanding.",
+      watchout: "Watchout: food businesses look exciting early but become fragile if consistency and margin control slip.",
+      scoreBias: 2,
+    });
+  }
+
+  if (hasFamilies || /\bhyderabad\b/.test(lowered)) {
+    templates.push({
+      id: "home-services",
+      title: `Premium home services brand${placeLabel}`,
+      founderFit: "This is usually easier to test with simple service packages before building a larger brand or team.",
+      investorFit: "This can be interesting when repeat bookings and local density make acquisition costs efficient.",
+      operatorFit: "This works operationally only if technician quality, routing, and service reliability stay tight.",
+      test: "First test: offer one high-trust service category in two or three neighborhoods and track repeat bookings.",
+      watchout: "Watchout: quality control and worker reliability become the real business very quickly.",
+      scoreBias: 1,
+    });
+  }
+
+  const fallbackTemplates = [
+    {
+      id: "specialty-retail",
+      title: `Specialty neighborhood retail${placeLabel}`,
+      founderFit: "A focused retail concept can work if the offer is specific enough that people know exactly why they should visit.",
+      investorFit: "This only becomes attractive if same-store demand and margin are strong enough to justify fixed costs.",
+      operatorFit: "This is manageable when inventory turns, staffing, and repeat footfall are visible early.",
+      test: "First test: validate demand through pop-ups, subscriptions, or a tiny store format before committing fully.",
+      watchout: "Watchout: fixed costs can outrun demand if the concept is too broad.",
+      scoreBias: 0,
+    },
+    {
+      id: "b2b-services",
+      title: `Local B2B services business${placeLabel}`,
+      founderFit: "This can start lean because you can sell first and build the delivery system around a narrow need.",
+      investorFit: "This becomes interesting only if there is a path from service revenue to repeatable margins.",
+      operatorFit: "This is viable when service quality and delivery steps can be standardized quickly.",
+      test: "First test: sell one service package to a narrow buyer segment and measure repeat demand.",
+      watchout: "Watchout: it gets messy fast if each client expects a different outcome.",
+      scoreBias: 3,
+    },
+  ];
+
+  for (const template of fallbackTemplates) {
+    if (!templates.some((item) => item.id === template.id) && templates.length < 3) {
+      templates.push(template);
+    }
+  }
+
+  return templates.slice(0, 3).map((template, index) => {
+    const score = clampValue(
+      Math.round((demandValue + priceValue + (100 - frictionValue) + (100 - competitionValue)) / 4 + template.scoreBias - index * 2),
+    );
+    const fit =
+      audienceMode === "founder"
+        ? template.founderFit
+        : audienceMode === "operator"
+          ? template.operatorFit
+          : template.investorFit;
+
+    return {
+      title: template.title,
+      score,
+      fit,
+      test: template.test,
+      watchout: template.watchout,
+    };
+  });
+}
+
 function buildAudienceTimelineItems({
   audienceMode,
   loading,
@@ -754,6 +909,7 @@ function buildPrimaryDecisionView({
   const audienceConfig = getAudienceModeConfig(audienceMode);
   const dashboardConfig = audienceConfig.dashboard;
   const graph = buildAgentGraph(leadTurn);
+  const isDiscovery = isOpportunityDiscoveryPrompt(businessProblem);
   const snapshot = leadTurn?.score_snapshot ?? {};
   const demandValue = getIdeaValue(graph, (item) => /demand|audience|urgency/i.test(item.label), 56);
   const priceValue = getIdeaValue(graph, (item) => /price|budget|ticket|offer|revenue/i.test(item.label), 52);
@@ -836,7 +992,12 @@ function buildPrimaryDecisionView({
 
   const decision = result?.final_output?.decision;
   const decisionLabel = formatDecisionLabel(decision ?? leadTurn?.stance ?? "MODIFY");
-  const title = loading ? dashboardConfig.loadingLabel : `${dashboardConfig.titlePrefix}: ${decisionLabel}`;
+  const discoveryIdeas = isDiscovery ? buildDiscoveryIdeas({ businessProblem, audienceMode, graph }) : [];
+  const title = loading
+    ? dashboardConfig.loadingLabel
+    : isDiscovery
+      ? `${audienceConfig.label} discovery memo: Best directions to test`
+      : `${dashboardConfig.titlePrefix}: ${decisionLabel}`;
   const summary = buildAudienceSummary({
     audienceMode,
     loading,
@@ -853,7 +1014,13 @@ function buildPrimaryDecisionView({
 
   return {
     title,
-    summary,
+    summary: isDiscovery
+      ? audienceMode === "founder"
+        ? `We are treating this as idea discovery, not a launch memo. These are the business directions that look most worth testing first${extractDiscoveryLocation(businessProblem) ? ` in ${extractDiscoveryLocation(businessProblem)}` : ""}.`
+        : audienceMode === "operator"
+          ? `We are treating this as opportunity selection, not rollout approval. These are the business directions with the cleanest operating shape to pressure-test first${extractDiscoveryLocation(businessProblem) ? ` in ${extractDiscoveryLocation(businessProblem)}` : ""}.`
+          : `We are treating this as opportunity underwriting, not launch approval. These are the business directions that appear most worthy of deeper diligence first${extractDiscoveryLocation(businessProblem) ? ` in ${extractDiscoveryLocation(businessProblem)}` : ""}.`
+      : summary,
     confidence,
     conflictCount,
     scenarioCount,
@@ -871,9 +1038,17 @@ function buildPrimaryDecisionView({
     signalCards,
     timelineItems: audienceTimelineItems,
     biggestRisk: toPlainText(highestRisk),
-    nextMove: toPlainText(recommendedDirective || "No action step yet."),
+    nextMove: isDiscovery
+      ? audienceMode === "founder"
+        ? "Pick one idea, talk to real customers this week, and run the smallest proof test you can."
+        : audienceMode === "operator"
+          ? "Pick the option with the cleanest workflow, then pilot one location or one service loop."
+          : "Choose one lead opportunity, gather proof on demand and unit economics, and decide whether it deserves deeper diligence."
+      : toPlainText(recommendedDirective || "No action step yet."),
     dashboardConfig,
     audienceLabel: audienceConfig.label,
+    discoveryIdeas,
+    isDiscovery,
   };
 }
 
@@ -1519,6 +1694,44 @@ function PrimaryDecisionDashboard({ loading, showConversation, onToggleConversat
               <polygon points={radarPoints} className="decision-radar-shape" />
             </svg>
           </article>
+
+          {view.discoveryIdeas?.length ? (
+            <article className="decision-panel">
+              <div className="decision-panel-head">
+                <div>
+                  <span className="decision-panel-kicker">Best options to test</span>
+                  <strong>
+                    {view.isDiscovery ? "Concrete business directions" : "Recommended opportunities"}
+                  </strong>
+                  <p>
+                    {view.audienceLabel === "Founder"
+                      ? "Choose one direction to test first instead of turning every idea into a full launch."
+                      : view.audienceLabel === "Operator"
+                        ? "Choose the direction with the cleanest operating shape before you scale any complexity."
+                        : "Choose the direction that deserves the next round of conviction and diligence."}
+                  </p>
+                </div>
+              </div>
+              <div className="decision-opportunity-grid">
+                {view.discoveryIdeas.map((idea) => (
+                  <article key={idea.title} className="decision-opportunity-card">
+                    <div className="decision-opportunity-top">
+                      <div>
+                        <strong>{idea.title}</strong>
+                        <span>Discovery score</span>
+                      </div>
+                      <span className="decision-opportunity-score">{idea.score}</span>
+                    </div>
+                    <p>{idea.fit}</p>
+                    <div className="decision-opportunity-lines">
+                      <span>{idea.test}</span>
+                      <span>{idea.watchout}</span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </article>
+          ) : null}
 
           <article className="decision-panel">
             <div className="decision-panel-head">
