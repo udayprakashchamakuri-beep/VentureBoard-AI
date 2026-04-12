@@ -16,7 +16,7 @@ const STREAM_TIMEOUT_MS = 6500;
 const ANALYSIS_TIMEOUT_MS = 9000;
 const FETCH_RETRIES = 0;
 const AUDIENCE_MODE_STORAGE_KEY = "ventureboard-audience-mode";
-const IMMERSIVE_REVIEW_MIN_MS = 24000;
+const IMMERSIVE_REVIEW_MIN_MS = 22000;
 
 function App() {
   const [activeView, setActiveView] = useState("home");
