@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, Activity, ShieldCheck, Workflow } from "lucide-react";
 
-export default function HeroSection({ onApplySample, onOpenForm }) {
+export default function HeroSection({ onApplySample, onOpenForm, audienceMode, audienceConfig, onAudienceModeChange }) {
   return (
     <section className="relative isolate min-h-[62vh] w-full overflow-hidden rounded-[32px] border border-white/8 bg-[#050505] text-white shadow-[0_32px_90px_rgba(0,0,0,0.38)]">
       <div className="absolute left-[-8%] top-[-12%] h-[38vh] w-[38vh] rounded-full bg-purple-900/30 blur-[120px]" />
@@ -19,19 +19,42 @@ export default function HeroSection({ onApplySample, onOpenForm }) {
         >
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-300">
             <Sparkles size={14} />
-            <span>AI-Powered Business Decision Studio</span>
+            <span>{audienceConfig.eyebrow}</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/45">{audienceConfig.chooserTitle}</span>
+            <div className="flex flex-wrap gap-2">
+              {[
+                ["founder", "Founder"],
+                ["investor", "Investor"],
+                ["operator", "Operator"],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => onAudienceModeChange(value)}
+                  className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-all ${
+                    audienceMode === value
+                      ? "border-cyan-300/60 bg-cyan-300/12 text-white shadow-[0_0_18px_rgba(103,232,249,0.12)]"
+                      : "border-white/10 bg-white/5 text-white/65 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="space-y-4">
             <h1 className="text-5xl font-extrabold leading-[1.05] tracking-tight text-white lg:text-7xl">
-              Build clarity for every
+              {audienceConfig.heroTitle}
               <span className="block bg-gradient-to-r from-purple-400 via-blue-400 to-emerald-400 bg-clip-text text-transparent">
-                venture decision
+                {audienceConfig.heroSupport}
               </span>
             </h1>
             <p className="max-w-xl text-lg leading-relaxed text-gray-400">
-              VentureBoard turns rough business questions into structured advisor debates, launch plans, risk calls, and
-              next-step guidance without losing the speed of a chat workflow.
+              {audienceConfig.heroBody}
             </p>
           </div>
 

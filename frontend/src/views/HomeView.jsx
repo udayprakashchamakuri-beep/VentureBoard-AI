@@ -2,33 +2,32 @@ import React from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, BrainCircuit, Radar, ShieldCheck, Sparkles } from "lucide-react";
 import HeroSection from "../components/HeroSection";
+import { getAudienceModeConfig } from "../audienceMode";
 
-const featureItems = [
-  {
-    icon: BrainCircuit,
-    title: "AI advisory debate",
-    body: "Turn a rough startup prompt into coordinated CEO, finance, pricing, risk, and market feedback.",
-  },
-  {
-    icon: Radar,
-    title: "Decision visibility",
-    body: "Track why the recommendation changed, where disagreement lives, and what conditions unlock a launch.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Risk-aware execution",
-    body: "Push every idea through constraints, downside cases, and staged rollout logic before you commit.",
-  },
-];
+const featureIcons = [BrainCircuit, Radar, ShieldCheck];
 
-export default function HomeView({ onApplySample, onOpenForm, onGoToDiscussion }) {
+export default function HomeView({
+  onApplySample,
+  onOpenForm,
+  onGoToDiscussion,
+  audienceMode,
+  onAudienceModeChange,
+}) {
+  const audienceConfig = getAudienceModeConfig(audienceMode);
+
   return (
     <div className="home-view-shell">
-      <HeroSection onApplySample={onApplySample} onOpenForm={onOpenForm} />
+      <HeroSection
+        onApplySample={onApplySample}
+        onOpenForm={onOpenForm}
+        audienceMode={audienceMode}
+        audienceConfig={audienceConfig}
+        onAudienceModeChange={onAudienceModeChange}
+      />
 
       <section className="home-support-grid">
-        {featureItems.map((item, index) => {
-          const Icon = item.icon;
+        {audienceConfig.featureItems.map((item, index) => {
+          const Icon = featureIcons[index] ?? BrainCircuit;
           return (
             <motion.article
               key={item.title}
@@ -50,12 +49,9 @@ export default function HomeView({ onApplySample, onOpenForm, onGoToDiscussion }
 
       <section className="home-detail-strip">
         <div>
-          <span>Built for founders, operators, and investors</span>
-          <h2>Use Home for context. Use Discussion for work.</h2>
-          <p>
-            The new landing surface sets the tone, but the product workspace still lives in Discussion, Overview, Team,
-            and Risks. Jump in when you are ready to analyze a live case.
-          </p>
+          <span>{audienceConfig.detailKicker}</span>
+          <h2>{audienceConfig.detailTitle}</h2>
+          <p>{audienceConfig.detailBody}</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.03 }}
@@ -73,9 +69,9 @@ export default function HomeView({ onApplySample, onOpenForm, onGoToDiscussion }
         <div className="home-final-copy">
           <div className="home-final-kicker">
             <Sparkles size={14} />
-            Neural Command Center
+            {audienceConfig.eyebrow}
           </div>
-          <h2>Start from a sample or open the decision form and brief the team.</h2>
+          <h2>Choose your seat, then open Discussion and run the case through that lens.</h2>
         </div>
         <div className="home-final-actions">
           <button type="button" className="home-final-secondary" onClick={onApplySample}>

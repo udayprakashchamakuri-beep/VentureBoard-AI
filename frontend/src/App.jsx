@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AuthPanel from "./components/AuthPanel";
 import CommandConsoleDrawer from "./components/CommandConsoleDrawer";
+import { DEFAULT_AUDIENCE_MODE, getAudienceModeConfig } from "./audienceMode";
 import { AGENT_META, API_BASE, API_BASE_CANDIDATES, DEMO_CASES, NAV_ITEMS, defaultTimeline } from "./dashboardData";
 import { formatDecisionLabel, toPlainText } from "./plainLanguage";
 import AgentsView from "./views/AgentsView";
@@ -14,6 +15,7 @@ const DEMO_AUTH_DISABLED = (import.meta.env.VITE_DEMO_AUTH_DISABLED ?? "true") =
 const STREAM_TIMEOUT_MS = 6500;
 const ANALYSIS_TIMEOUT_MS = 9000;
 const FETCH_RETRIES = 0;
+const AUDIENCE_MODE_STORAGE_KEY = "ventureboard-audience-mode";
 
 function App() {
   const [activeView, setActiveView] = useState("home");
@@ -39,6 +41,18 @@ function App() {
   const [autonomyStatus, setAutonomyStatus] = useState(null);
   const [autonomyBusy, setAutonomyBusy] = useState(false);
   const [autonomyError, setAutonomyError] = useState("");
+  const [audienceMode, setAudienceMode] = useState(() => {
+    if (typeof window === "undefined") {
+      return DEFAULT_AUDIENCE_MODE;
+    }
+    return getAudienceModeConfig(window.localStorage.getItem(AUDIENCE_MODE_STORAGE_KEY)).id;
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(AUDIENCE_MODE_STORAGE_KEY, audienceMode);
+    }
+  }, [audienceMode]);
 
   useEffect(() => {
     if (DEMO_AUTH_DISABLED) {
@@ -358,7 +372,7 @@ function App() {
     setChatDraft("");
     setComposerOpen(false);
     setFocusedAgentNames([]);
-    await runAnalysis(buildAnalysisPayload(normalizedForm), { closeConsole: true });
+    await runAnalysis(buildAnalysisPayload(normalizedForm, formChatMessages, audienceMode), { closeConsole: true });
   }
 
   async function handleQuickChatSubmit(rawMessage) {
@@ -377,7 +391,7 @@ function App() {
     setForm(derivedForm);
     setFocusedAgentNames([]);
 
-    await runAnalysis(buildAnalysisPayload(derivedForm, nextMessages), {
+    await runAnalysis(buildAnalysisPayload(derivedForm, nextMessages, audienceMode), {
       focusAgentNames: [],
     });
   }
@@ -665,6 +679,8 @@ function App() {
           onApplySample={applySample}
           onOpenForm={openConsoleFromHome}
           onGoToDiscussion={() => setActiveView("simulation")}
+          audienceMode={audienceMode}
+          onAudienceModeChange={setAudienceMode}
         />
       ) : null}
 
@@ -692,6 +708,7 @@ function App() {
           memorySummary={result?.memory_summary}
           scenarioResults={result?.scenario_results ?? []}
           validation={result?.validation}
+          audienceMode={audienceMode}
           onToggleConsole={toggleConsole}
           onApplySample={applySample}
           onChatDraftChange={setChatDraft}
@@ -1387,7 +1404,7 @@ function createChatMessage(content, targetAgentNames = []) {
   };
 }
 
-function buildAnalysisPayload(form, chatMessages = []) {
+function buildAnalysisPayload(form, chatMessages = [], audienceMode = DEFAULT_AUDIENCE_MODE) {
   const normalizedForm = normalizeForm(form);
 
   return {
@@ -1401,6 +1418,7 @@ function buildAnalysisPayload(form, chatMessages = []) {
     current_constraints: splitList(normalizedForm.current_constraints),
     known_metrics: buildKnownMetrics(normalizedForm),
     scenario_variations: buildScenarioVariations(normalizedForm),
+    audience_role: audienceMode,
   };
 }
 

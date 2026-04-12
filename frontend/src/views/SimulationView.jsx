@@ -20,6 +20,7 @@ import {
   shouldShowAdvisorStanceBadge,
   toPlainText,
 } from "../plainLanguage";
+import { getAudienceModeConfig } from "../audienceMode";
 
 function getConversationMeta(agentMeta, name) {
   if (agentMeta[name]) {
@@ -511,6 +512,40 @@ function buildCustomerIntentExamples({ businessProblem, graph }) {
   ];
 }
 
+function buildAudienceSummary({
+  audienceMode,
+  loading,
+  baseSummary,
+  biggestRisk,
+  recommendedDirective,
+  decisionLabel,
+}) {
+  if (loading) {
+    if (audienceMode === "founder") {
+      return "We are turning the advisor debate into a plain-English founder call with the main risk and the next move.";
+    }
+    if (audienceMode === "operator") {
+      return "We are translating the debate into an execution-first memo with failure points, dependencies, and the next operating move.";
+    }
+    return "We are drafting an investor-ready memo with the current read, the downside concentration, and the next proof step.";
+  }
+
+  const summaryCore = trimToSentences(baseSummary, 2) || "The advisory team has finished its review.";
+  const cleanRisk = toPlainText(biggestRisk || "Key risk still being identified.");
+  const cleanNextMove = toPlainText(recommendedDirective || "No next step has been defined yet.");
+  const cleanDecision = toPlainText(decisionLabel || "Move forward with changes");
+
+  if (audienceMode === "founder") {
+    return `${cleanDecision}. ${summaryCore} Biggest watchout: ${cleanRisk} Next step: ${cleanNextMove}`;
+  }
+
+  if (audienceMode === "operator") {
+    return `${cleanDecision}. ${summaryCore} Primary failure surface: ${cleanRisk} Immediate operating move: ${cleanNextMove}`;
+  }
+
+  return `${cleanDecision}. ${summaryCore} Downside concentration: ${cleanRisk} Next diligence step: ${cleanNextMove}`;
+}
+
 function buildPrimaryDecisionView({
   result,
   leadTurn,
@@ -520,7 +555,10 @@ function buildPrimaryDecisionView({
   explainability,
   businessProblem,
   loading,
+  audienceMode,
 }) {
+  const audienceConfig = getAudienceModeConfig(audienceMode);
+  const dashboardConfig = audienceConfig.dashboard;
   const graph = buildAgentGraph(leadTurn);
   const snapshot = leadTurn?.score_snapshot ?? {};
   const demandValue = getIdeaValue(graph, (item) => /demand|audience|urgency/i.test(item.label), 56);
@@ -543,22 +581,26 @@ function buildPrimaryDecisionView({
   const conflictCount = result?.conflicts?.length ?? 0;
   const scenarioCount = result?.scenario_results?.length ?? 0;
 
-  const riskItems = [
-    { label: "Market risk", value: marketRisk },
-    { label: "Execution risk", value: executionRisk },
-    { label: "Financial risk", value: financialRisk },
-    { label: "Downside risk", value: downsideRisk },
-  ].map((item) => ({
-    ...item,
-    tone: toneClassForScore(item.value),
+  const riskValues = [marketRisk, executionRisk, financialRisk, downsideRisk];
+  const riskItems = riskValues.map((value, index) => ({
+    label: dashboardConfig.riskLabels[index] ?? `Risk ${index + 1}`,
+    value,
+    tone: toneClassForScore(value),
   }));
 
-  const metricItems = [
-    { label: "MARKET_CONFIDENCE", value: 100 - marketRisk, tone: toneClassForScore(marketRisk * 0.7) },
-    { label: "EXECUTION_BARRIER", value: executionRisk, tone: toneClassForScore(executionRisk) },
-    { label: "RISK_SURFACE", value: downsideRisk, tone: toneClassForScore(downsideRisk) },
-    { label: "BOARD_ALIGNMENT", value: clampValue(100 - conflictCount * 12), tone: toneClassForScore(conflictCount * 18) },
+  const metricValues = [
+    100 - marketRisk,
+    executionRisk,
+    downsideRisk,
+    clampValue(100 - conflictCount * 12),
   ];
+  const metricToneInputs = [marketRisk * 0.7, executionRisk, downsideRisk, conflictCount * 18];
+  const metricItems = metricValues.map((value, index) => ({
+    label: dashboardConfig.metricLabels[index] ?? `METRIC_${index + 1}`,
+    value,
+    tone: toneClassForScore(metricToneInputs[index]),
+  }));
+
   const signalCards = buildCustomerIntentExamples({ businessProblem, graph });
 
   const timelineItems =
@@ -591,16 +633,21 @@ function buildPrimaryDecisionView({
   }
 
   const decision = result?.final_output?.decision;
-  const title = loading ? "CEO memo in progress" : formatDecisionLabel(decision ?? leadTurn?.stance ?? "MODIFY");
-  const summary =
-    trimToSentences(
+  const decisionLabel = formatDecisionLabel(decision ?? leadTurn?.stance ?? "MODIFY");
+  const title = loading ? dashboardConfig.loadingLabel : `${dashboardConfig.titlePrefix}: ${decisionLabel}`;
+  const summary = buildAudienceSummary({
+    audienceMode,
+    loading,
+    baseSummary:
       explainability?.final_reasoning_summary ??
-        buildAdvisorParagraph(leadTurn) ??
-        result?.final_output?.key_reasons?.join(" ") ??
-        recommendedDirective ??
-        "The advisory team is reviewing the case and drafting a final board call.",
-      loading ? 2 : 3,
-    ) || "The advisory team is reviewing the case and drafting a final board call.";
+      buildAdvisorParagraph(leadTurn) ??
+      result?.final_output?.key_reasons?.join(" ") ??
+      recommendedDirective ??
+      "The advisory team is reviewing the case and drafting a final board call.",
+    biggestRisk: highestRisk,
+    recommendedDirective,
+    decisionLabel,
+  });
 
   return {
     title,
@@ -608,13 +655,23 @@ function buildPrimaryDecisionView({
     confidence,
     conflictCount,
     scenarioCount,
-    graph,
+    graph: {
+      ...graph,
+      subtitle:
+        audienceMode === "founder"
+          ? "A simple read on demand, pricing, friction, and competition."
+          : audienceMode === "operator"
+            ? "A rollout view of demand, operational drag, friction, and dependency pressure."
+            : "A diligence read on demand quality, pricing room, execution friction, and competitive pressure.",
+    },
     riskItems,
     metricItems,
     signalCards,
     timelineItems,
     biggestRisk: toPlainText(highestRisk),
     nextMove: toPlainText(recommendedDirective || "No action step yet."),
+    dashboardConfig,
+    audienceLabel: audienceConfig.label,
   };
 }
 
@@ -663,6 +720,7 @@ function SimulationView({
   recommendedDirective,
   actionPlan,
   explainability,
+  audienceMode,
   onToggleConsole,
   onApplySample,
   onChatDraftChange,
@@ -676,6 +734,8 @@ function SimulationView({
   onClearAgentConversation,
 }) {
   const conversationEndRef = useRef(null);
+  const audienceConfig = getAudienceModeConfig(audienceMode);
+  const dashboardConfig = audienceConfig.dashboard;
   const speakingMeta = getConversationMeta(agentMeta, speakingAgent);
   const activeConversationMeta =
     conversationAgentNames.length === 1 ? getConversationMeta(agentMeta, conversationAgentNames[0]) : null;
@@ -729,9 +789,11 @@ function SimulationView({
         explainability,
         businessProblem: latestUserMessage?.content ?? result?.company_name ?? "",
         loading,
+        audienceMode,
       }),
     [
       actionPlan,
+      audienceMode,
       explainability,
       highestRisk,
       leadDecisionTurn,
@@ -785,8 +847,11 @@ function SimulationView({
             <div className="discussion-utility-copy">
               <strong>Focused on the result</strong>
               <span>
-                The Discussion view now gives more room to the debate and final answer. Use the controls below to send a
-                new prompt or narrow the advisor replies.
+                {audienceMode === "founder"
+                  ? "Read the call in plain language first, then open the conversation only if you want the full debate."
+                  : audienceMode === "operator"
+                    ? "Use the dashboard as the primary operating readout, then open the conversation when you need the full execution debate."
+                    : "Start with the diligence dashboard, then open the conversation when you want the full board-level debate."}
               </span>
             </div>
             <div className="discussion-utility-actions">
@@ -1121,10 +1186,10 @@ function SimulationView({
                   rows="3"
                   placeholder={
                     focusedAgentNames.length === 1
-                      ? `Ask ${agentMeta[focusedAgentNames[0]]?.label ?? "this advisor"} something in plain language...`
+                      ? `Ask ${agentMeta[focusedAgentNames[0]]?.label ?? "this advisor"} something from the ${audienceConfig.label.toLowerCase()} view...`
                       : focusedAgentNames.length > 1
-                        ? `Ask ${chatTargetLabels.join(", ")} something in plain language...`
-                        : "Describe the company, the decision, and what could make it fail..."
+                        ? `Ask ${chatTargetLabels.join(", ")} something from the ${audienceConfig.label.toLowerCase()} view...`
+                        : dashboardConfig.placeholder
                   }
                   value={chatDraft}
                   onChange={(event) => onChatDraftChange(event.target.value)}
@@ -1143,11 +1208,15 @@ function SimulationView({
                       ? `Your next message will focus on ${agentMeta[focusedAgentNames[0]]?.label ?? "that advisor"}.`
                       : focusedAgentNames.length > 1
                         ? `Your next message will focus on ${chatTargetLabels.join(", ")}.`
-                        : "Tip: mention the customer, pricing, constraints, and what could break the plan."}
+                        : dashboardConfig.hint}
                   </span>
                   <div className="composer-action-group">
                     <span className="composer-status">
-                      {loading ? "CEO memo is being drafted..." : result ? "Primary decision dashboard is visible above" : "Ready for your question"}
+                      {loading
+                        ? `${dashboardConfig.loadingLabel}...`
+                        : result
+                          ? `${audienceConfig.label} dashboard is visible above`
+                          : "Ready for your question"}
                     </span>
                     <button type="submit" className="primary-action" disabled={loading || chatDraft.trim().length < 20}>
                       {loading ? "Reviewing..." : "Send"}
@@ -1176,12 +1245,13 @@ function SimulationView({
 
 function PrimaryDecisionDashboard({ loading, showConversation, onToggleConversation, view }) {
   const radarPoints = buildRadarPoints(view.graph.ideaItems);
+  const dashboardConfig = view.dashboardConfig;
 
   return (
     <section className="decision-dashboard-shell">
       <div className="decision-dashboard-head">
         <div className="decision-dashboard-intro">
-          <span className="decision-dashboard-kicker">{loading ? "CEO memo in progress" : "CEO decision memo"}</span>
+          <span className="decision-dashboard-kicker">{loading ? dashboardConfig.loadingLabel : dashboardConfig.memoLabel}</span>
           <h2>{view.title}</h2>
           <p>{view.summary}</p>
         </div>
@@ -1206,8 +1276,8 @@ function PrimaryDecisionDashboard({ loading, showConversation, onToggleConversat
           <article className="decision-panel decision-radar-panel">
             <div className="decision-panel-head">
               <div>
-                <span className="decision-panel-kicker">Idea profile</span>
-                <strong>{view.graph.title}</strong>
+                <span className="decision-panel-kicker">{dashboardConfig.profileKicker}</span>
+                <strong>{dashboardConfig.profileTitle}</strong>
                 <p>{view.graph.subtitle}</p>
               </div>
             </div>
@@ -1237,8 +1307,8 @@ function PrimaryDecisionDashboard({ loading, showConversation, onToggleConversat
           <article className="decision-panel">
             <div className="decision-panel-head">
               <div>
-                <span className="decision-panel-kicker">Risk heatmap</span>
-                <strong>What would break this call</strong>
+                <span className="decision-panel-kicker">{dashboardConfig.riskKicker}</span>
+                <strong>{dashboardConfig.riskTitle}</strong>
               </div>
             </div>
             <div className="decision-risk-list">
@@ -1258,8 +1328,8 @@ function PrimaryDecisionDashboard({ loading, showConversation, onToggleConversat
           <article className="decision-panel">
             <div className="decision-panel-head">
               <div>
-                <span className="decision-panel-kicker">Customer intent</span>
-                <strong>How buyers are likely to react</strong>
+                <span className="decision-panel-kicker">{dashboardConfig.signalKicker}</span>
+                <strong>{dashboardConfig.signalTitle}</strong>
               </div>
             </div>
             <div className="decision-signal-grid">
@@ -1278,8 +1348,8 @@ function PrimaryDecisionDashboard({ loading, showConversation, onToggleConversat
           <article className="decision-panel">
             <div className="decision-panel-head">
               <div>
-                <span className="decision-panel-kicker">Execution path</span>
-                <strong>What happens next if we proceed</strong>
+                <span className="decision-panel-kicker">{dashboardConfig.timelineKicker}</span>
+                <strong>{dashboardConfig.timelineTitle}</strong>
               </div>
             </div>
             <div className="decision-timeline">
@@ -1298,8 +1368,8 @@ function PrimaryDecisionDashboard({ loading, showConversation, onToggleConversat
           <article className="decision-panel">
             <div className="decision-panel-head">
               <div>
-                <span className="decision-panel-kicker">Decision metrics</span>
-                <strong>Board readout</strong>
+                <span className="decision-panel-kicker">{dashboardConfig.metricKicker}</span>
+                <strong>{dashboardConfig.metricTitle}</strong>
               </div>
             </div>
             <div className="decision-metric-list">
@@ -1311,7 +1381,7 @@ function PrimaryDecisionDashboard({ loading, showConversation, onToggleConversat
               ))}
             </div>
             <div className="decision-next-move">
-              <span className="decision-panel-kicker">Next move</span>
+              <span className="decision-panel-kicker">{dashboardConfig.nextMoveLabel}</span>
               <p>{view.nextMove}</p>
             </div>
           </article>
