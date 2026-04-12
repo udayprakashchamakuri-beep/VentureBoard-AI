@@ -1727,6 +1727,13 @@ a {
   font-size: 0.76rem;
 }
 
+.composer-reopen-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .composer-targets {
   display: grid;
   gap: 8px;

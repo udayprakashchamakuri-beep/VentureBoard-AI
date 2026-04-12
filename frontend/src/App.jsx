@@ -22,6 +22,7 @@ function App() {
   const [form, setForm] = useState(buildDefaultForm());
   const [chatDraft, setChatDraft] = useState("");
   const [composerOpen, setComposerOpen] = useState(true);
+  const [composerMode, setComposerMode] = useState("fresh");
   const [chatMessages, setChatMessages] = useState([]);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -371,28 +372,35 @@ function App() {
     setChatMessages(formChatMessages);
     setChatDraft("");
     setComposerOpen(false);
+    setComposerMode("fresh");
     setFocusedAgentNames([]);
     await runAnalysis(buildAnalysisPayload(normalizedForm, formChatMessages, audienceMode), { closeConsole: true });
   }
 
-  async function handleQuickChatSubmit(rawMessage) {
+  async function handleQuickChatSubmit(rawMessage, options = {}) {
+    const mode = options.mode ?? composerMode;
     const trimmedMessage = rawMessage.trim();
     if (trimmedMessage.length < 20) {
       setError("Please type at least one full sentence so the advisors have enough context to review your case.");
       return;
     }
 
-    const nextMessages = [createChatMessage(trimmedMessage)];
-    const derivedForm = deriveFormFromChat(buildDefaultForm(), nextMessages);
+    const nextMessage = createChatMessage(trimmedMessage, focusedAgentNames);
+    const nextMessages = mode === "continue" ? [...chatMessages, nextMessage] : [nextMessage];
+    const baseForm = mode === "continue" ? form : buildDefaultForm();
+    const derivedForm = deriveFormFromChat(baseForm, nextMessages);
 
     setChatMessages(nextMessages);
     setChatDraft("");
     setComposerOpen(false);
+    setComposerMode("fresh");
     setForm(derivedForm);
-    setFocusedAgentNames([]);
+    if (mode !== "continue") {
+      setFocusedAgentNames([]);
+    }
 
     await runAnalysis(buildAnalysisPayload(derivedForm, nextMessages, audienceMode), {
-      focusAgentNames: [],
+      focusAgentNames: mode === "continue" ? focusedAgentNames : [],
     });
   }
 
@@ -402,6 +410,7 @@ function App() {
     setForm(sampleForm);
     setChatDraft(sampleForm.business_problem);
     setComposerOpen(true);
+    setComposerMode("fresh");
     setChatMessages([createChatMessage(sampleForm.business_problem)]);
     setFocusedAgentNames([]);
     setError("");
@@ -419,6 +428,19 @@ function App() {
   function openConsoleFromHome() {
     setActiveView("simulation");
     setConsoleOpen(true);
+  }
+
+  function openFreshComposer() {
+    setComposerMode("fresh");
+    setChatDraft("");
+    setFocusedAgentNames([]);
+    setComposerOpen(true);
+  }
+
+  function openContinueComposer() {
+    setComposerMode("continue");
+    setChatDraft("");
+    setComposerOpen(true);
   }
 
   function openAgentProfile(agentName) {
@@ -693,6 +715,7 @@ function App() {
           chatMessages={chatMessages}
           chatDraft={chatDraft}
           composerOpen={composerOpen}
+          composerMode={composerMode}
           focusedAgentNames={focusedAgentNames}
           activeTypingAgent={activeTypingAgent}
           speakingAgent={speakingAgent}
@@ -713,7 +736,8 @@ function App() {
           onApplySample={applySample}
           onChatDraftChange={setChatDraft}
           onSubmitChat={handleQuickChatSubmit}
-          onShowComposer={() => setComposerOpen(true)}
+          onShowComposer={openFreshComposer}
+          onContinueComposer={openContinueComposer}
           onToggleFocusedAgent={toggleFocusedAgent}
           onSelectOnlyFocusedAgent={selectOnlyFocusedAgent}
           conversationAgentNames={isDirectAnswerMode ? [] : focusedAgentNames}

@@ -708,6 +708,7 @@ function SimulationView({
   chatMessages,
   chatDraft,
   composerOpen,
+  composerMode,
   focusedAgentNames,
   activeTypingAgent,
   speakingAgent,
@@ -726,6 +727,7 @@ function SimulationView({
   onChatDraftChange,
   onSubmitChat,
   onShowComposer,
+  onContinueComposer,
   onToggleFocusedAgent,
   onSelectOnlyFocusedAgent,
   conversationAgentNames,
@@ -804,6 +806,7 @@ function SimulationView({
     ],
   );
   const shouldShowPrimaryDashboard = !isDirectAnswerThread && (loading || hasAnyDiscussion || Boolean(result?.final_output));
+  const isContinueMode = composerMode === "continue";
 
   useEffect(() => {
     setShowConversation(false);
@@ -1154,7 +1157,7 @@ function SimulationView({
                 className="discussion-composer"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  onSubmitChat(chatDraft);
+                  onSubmitChat(chatDraft, { mode: composerMode });
                 }}
               >
                 <div className="composer-targets">
@@ -1185,7 +1188,9 @@ function SimulationView({
                   className="composer-textarea"
                   rows="3"
                   placeholder={
-                    focusedAgentNames.length === 1
+                    isContinueMode && latestUserMessage
+                      ? `Continue this ${audienceConfig.label.toLowerCase()} thread with a follow-up on the same business case...`
+                      : focusedAgentNames.length === 1
                       ? `Ask ${agentMeta[focusedAgentNames[0]]?.label ?? "this advisor"} something from the ${audienceConfig.label.toLowerCase()} view...`
                       : focusedAgentNames.length > 1
                         ? `Ask ${chatTargetLabels.join(", ")} something from the ${audienceConfig.label.toLowerCase()} view...`
@@ -1197,7 +1202,7 @@ function SimulationView({
                     if (event.key === "Enter" && !event.shiftKey) {
                       event.preventDefault();
                       if (!loading && chatDraft.trim().length >= 20) {
-                        onSubmitChat(chatDraft);
+                        onSubmitChat(chatDraft, { mode: composerMode });
                       }
                     }
                   }}
@@ -1208,12 +1213,16 @@ function SimulationView({
                       ? `Your next message will focus on ${agentMeta[focusedAgentNames[0]]?.label ?? "that advisor"}.`
                       : focusedAgentNames.length > 1
                         ? `Your next message will focus on ${chatTargetLabels.join(", ")}.`
+                        : isContinueMode
+                          ? "This will continue the same topic and send the full chat context back into the review."
                         : dashboardConfig.hint}
                   </span>
                   <div className="composer-action-group">
                     <span className="composer-status">
                       {loading
                         ? `${dashboardConfig.loadingLabel}...`
+                        : isContinueMode
+                          ? "Follow-up mode is on for this same case"
                         : result
                           ? `${audienceConfig.label} dashboard is visible above`
                           : "Ready for your question"}
@@ -1228,11 +1237,16 @@ function SimulationView({
               <div className="composer-reopen-bar">
                 <div className="composer-reopen-copy">
                   <strong>Result view expanded</strong>
-                  <span>Open the prompt box only when you want to ask the next question.</span>
+                  <span>Start a fresh case or continue this same topic with the current chat context.</span>
                 </div>
-                <button type="button" className="primary-action" onClick={onShowComposer} disabled={loading}>
-                  {loading ? "Review In Progress" : "Ask Another Question"}
-                </button>
+                <div className="composer-reopen-actions">
+                  <button type="button" className="secondary-action" onClick={onShowComposer} disabled={loading}>
+                    {loading ? "Review In Progress" : "Ask Another Question"}
+                  </button>
+                  <button type="button" className="primary-action" onClick={onContinueComposer} disabled={loading || !chatMessages.length}>
+                    {loading ? "Review In Progress" : "Continue Question"}
+                  </button>
+                </div>
               </div>
             )}
           </footer>
