@@ -425,87 +425,152 @@ function inferCustomerProfile(problem = "") {
   if (/hospital|clinic|insurance approval|ehr|patient/i.test(lower)) {
     return {
       customer: "Hospital ops lead",
-      offer: "this workflow tool",
-      urgentNeed: "clearing insurance approvals faster",
-      blocker: "integration and compliance effort",
+      skepticalQuote:
+        "Insurance approvals are painful, but I will not add another tool unless it fits our current workflow and clears compliance cleanly.",
+      cautiousQuote:
+        "I would test this in one department first if you can prove it cuts approval delays without creating rollout pain.",
+      readyQuote:
+        "If it integrates cleanly and the ROI is visible fast, I would support a paid rollout.",
     };
   }
-  if (/game center|gaming center|pc gaming|console gaming|esports/i.test(lower)) {
+  if (/game center|gaming center|pc gaming|console gaming|esports|arcade/i.test(lower)) {
     return {
       customer: "Student gamer",
-      offer: "this gaming center",
-      urgentNeed: "a nearby place worth returning to every week",
-      blocker: "price sensitivity and whether the setup feels premium enough",
+      skepticalQuote:
+        "I already have places to play or I can stay home, so I will not pay unless the setup, vibe, and tournaments feel clearly better.",
+      cautiousQuote:
+        "I would try a low-cost pass or a tournament night first, but only if the location and pricing feel student-friendly.",
+      readyQuote:
+        "If the systems run smoothly, the place is nearby, and the pricing feels fair, I would come back regularly.",
     };
   }
   if (/skincare|serum|beauty|cosmetic/i.test(lower)) {
     return {
       customer: "Repeat skincare buyer",
-      offer: "this skincare brand",
-      urgentNeed: "a product that clearly works for their skin",
-      blocker: "trust, ingredient proof, and pricing",
+      skepticalQuote:
+        "I see too many skincare brands making the same promises, so I need real trust signals before I spend on this.",
+      cautiousQuote:
+        "I would start with one hero product if the ingredients, reviews, and pricing all feel credible.",
+      readyQuote:
+        "If the product works for my skin and the brand feels trustworthy, I would reorder and recommend it.",
     };
   }
   if (/ev|charging|charger|electric vehicle/i.test(lower)) {
     return {
       customer: "EV driver",
-      offer: "this charging product",
-      urgentNeed: "a reliable charging flow with less booking friction",
-      blocker: "coverage gaps and unreliable availability",
+      skepticalQuote:
+        "I will not rely on another charging app unless it actually reduces failed bookings and availability surprises.",
+      cautiousQuote:
+        "I would try it on my usual route first if it makes finding and booking chargers easier than what I use now.",
+      readyQuote:
+        "If it saves me time and improves booking reliability, it becomes part of my normal charging routine.",
     };
   }
-  if (/tutoring|test prep|education|students/i.test(lower)) {
+  if (/tutoring|test prep|education|students|skills center|coaching/i.test(lower)) {
     return {
       customer: "Parent or student",
-      offer: "this tutoring offer",
-      urgentNeed: "a clear score improvement path",
-      blocker: "credibility, outcomes, and price",
+      skepticalQuote:
+        "I hear tuition promises all the time, so I need evidence that this actually improves scores before I commit.",
+      cautiousQuote:
+        "I would start with a short trial or one batch if the teaching quality and results look credible.",
+      readyQuote:
+        "If the faculty is strong and the outcomes feel real, I would pay for a full program.",
+    };
+  }
+  if (/cloud kitchen|kitchen|food|cafe|restaurant|meal/i.test(lower)) {
+    return {
+      customer: "Local food buyer",
+      skepticalQuote:
+        "I have too many food options already, so I will not reorder unless the taste, consistency, and delivery experience are clearly better.",
+      cautiousQuote:
+        "I would try one order first if the menu is focused, the reviews look strong, and the price feels fair.",
+      readyQuote:
+        "If the food is consistently good and delivery is reliable, I would become a repeat customer quickly.",
+    };
+  }
+  if (/home service|cleaning|repair|salon at home|beauty at home|plumbing|electrician/i.test(lower)) {
+    return {
+      customer: "Homeowner or family",
+      skepticalQuote:
+        "I will not book a new service brand unless I trust the people entering my home and the work quality feels dependable.",
+      cautiousQuote:
+        "I would test one service first if booking is simple, the pricing is transparent, and reviews feel trustworthy.",
+      readyQuote:
+        "If the service is on time, professional, and consistent, I would book again and refer it.",
+    };
+  }
+  if (/automation service|ai automation|b2b service|agency|workflow automation/i.test(lower)) {
+    return {
+      customer: "SME owner or ops manager",
+      skepticalQuote:
+        "I know my workflow is inefficient, but I will not pay for automation unless the problem, timeline, and payoff are all very clear.",
+      cautiousQuote:
+        "I would start with one narrow pilot if you can show me exactly what manual work disappears and what it saves me.",
+      readyQuote:
+        "If you solve one painful workflow without turning it into a messy project, I would pay and expand usage.",
+    };
+  }
+  if (/retail|store|shop|boutique/i.test(lower)) {
+    return {
+      customer: "Neighborhood shopper",
+      skepticalQuote:
+        "I will not switch from the stores I already know unless this place gives me something more specific or more convenient.",
+      cautiousQuote:
+        "I would visit once if the offer feels focused and the pricing makes sense for the area.",
+      readyQuote:
+        "If the store solves a clear need and the experience is good, I would keep coming back.",
     };
   }
   return {
     customer: "Target customer",
-    offer: "this offer",
-    urgentNeed: "a problem that feels painful enough to pay for",
-    blocker: "switching effort and proof of value",
+    skepticalQuote:
+      "I can see the problem, but I still do not trust this enough to change my current behavior or spending yet.",
+    cautiousQuote:
+      "I would test this carefully if the proof feels credible and the switching effort looks manageable.",
+    readyQuote:
+      "If the value is clear and the experience feels dependable, I would be open to buying.",
   };
 }
 
-function buildCustomerIntentExamples({ businessProblem, graph }) {
-  const profile = inferCustomerProfile(businessProblem);
+function buildCustomerIntentExamples({ businessProblem, graph, discoveryIdeas = [] }) {
+  const primaryIdeaTitle = discoveryIdeas?.[0]?.title ?? "";
+  const profile = inferCustomerProfile(primaryIdeaTitle ? `${primaryIdeaTitle} ${businessProblem}` : businessProblem);
   const demandValue = getIdeaValue(graph, (item) => /demand|audience|urgency/i.test(item.label), 56);
   const priceValue = getIdeaValue(graph, (item) => /price|budget|ticket|offer|revenue/i.test(item.label), 52);
   const frictionValue = getIdeaValue(graph, (item) => /friction|cycle|ops|execution/i.test(item.label), 48);
   const competitionValue = getIdeaValue(graph, (item) => /competition|noise|dependence/i.test(item.label), 50);
 
-  const lowConcern =
+  const lowTail =
     frictionValue >= 58 || competitionValue >= 58
-      ? `${profile.blocker} still feels too high for me.`
-      : `I still do not feel enough urgency around ${profile.urgentNeed}.`;
-  const mediumTrigger =
-    demandValue >= 58
-      ? `If you can prove the value quickly, I would consider a small pilot.`
-      : `I might test it, but I would need stronger proof before I commit.`;
-  const highTrigger =
+      ? " The switching effort and uncertainty still feel too high."
+      : demandValue <= 48
+        ? " I still do not feel enough urgency to act now."
+        : " I still need a stronger reason to change what I do today.";
+  const mediumTail =
+    demandValue >= 58 && frictionValue <= 54
+      ? " I would start with a small trial, pilot, or first purchase."
+      : " I would move carefully and look for stronger proof before I commit.";
+  const highTail =
     priceValue >= 54 && frictionValue <= 48
-      ? `If onboarding is simple, I would be ready to move soon.`
-      : `If the experience feels credible and the economics make sense, I would buy.`;
+      ? " If the experience feels smooth and the economics stay sensible, I would move quickly."
+      : " If the offer proves itself in real use, I would buy.";
 
   return [
     {
       speaker: `${profile.customer} - skeptical buyer`,
-      quote: `I can see why ${profile.urgentNeed} matters, but ${profile.offer} still feels risky for me because ${lowConcern}`,
+      quote: `${profile.skepticalQuote}${lowTail}`,
       status: "LOW INTENT",
       tone: "danger",
     },
     {
       speaker: `${profile.customer} - cautious buyer`,
-      quote: `I am interested in ${profile.offer}, but I would start carefully. ${mediumTrigger}`,
+      quote: `${profile.cautiousQuote}${mediumTail}`,
       status: "MEDIUM INTENT",
       tone: "warning",
     },
     {
       speaker: `${profile.customer} - ready buyer`,
-      quote: `${profile.offer} feels like it could solve a real problem for me. ${highTrigger}`,
+      quote: `${profile.readyQuote}${highTail}`,
       status: "HIGH INTENT",
       tone: "success",
     },
@@ -951,7 +1016,12 @@ function buildPrimaryDecisionView({
     tone: toneClassForScore(metricToneInputs[index]),
   }));
 
-  const signalCards = buildCustomerIntentExamples({ businessProblem, graph });
+  const discoveryIdeas = isDiscovery ? buildDiscoveryIdeas({ businessProblem, audienceMode, graph }) : [];
+  const signalCards = buildCustomerIntentExamples({
+    businessProblem,
+    graph,
+    discoveryIdeas,
+  });
 
   const timelineItems =
     actionPlan?.execution_plan?.slice(0, 4).map((step, index) => ({
@@ -992,7 +1062,6 @@ function buildPrimaryDecisionView({
 
   const decision = result?.final_output?.decision;
   const decisionLabel = formatDecisionLabel(decision ?? leadTurn?.stance ?? "MODIFY");
-  const discoveryIdeas = isDiscovery ? buildDiscoveryIdeas({ businessProblem, audienceMode, graph }) : [];
   const title = loading
     ? dashboardConfig.loadingLabel
     : isDiscovery
