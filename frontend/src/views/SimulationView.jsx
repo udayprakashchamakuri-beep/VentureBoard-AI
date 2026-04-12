@@ -1169,7 +1169,6 @@ function SimulationView({
   explainability,
   audienceMode,
   onToggleConsole,
-  onApplySample,
   onChatDraftChange,
   onSubmitChat,
   onShowComposer,
@@ -1294,21 +1293,18 @@ function SimulationView({
 
           <div className="discussion-utility-bar">
             <div className="discussion-utility-copy">
-              <strong>Focused on the result</strong>
+              <strong>Decision memo first</strong>
               <span>
                 {audienceMode === "founder"
-                  ? "Read the call in plain language first, then open the conversation only if you want the full debate."
+                  ? "Start with one plain-language board call, then open the conversation only if you want the full debate."
                   : audienceMode === "operator"
-                    ? "Use the dashboard as the primary operating readout, then open the conversation when you need the full execution debate."
-                    : "Start with the diligence dashboard, then open the conversation when you want the full board-level debate."}
+                    ? "Start with the operating readout, then open the conversation only when you need the full execution argument."
+                    : "Start with the diligence memo, then open the conversation only when you want the full board debate."}
               </span>
             </div>
             <div className="discussion-utility-actions">
-              <button type="button" className="secondary-action" onClick={onApplySample}>
-                Use Example
-              </button>
               <button type="button" className="primary-action" onClick={onToggleConsole}>
-                Open Detailed Form
+                Open Brief Form
               </button>
             </div>
           </div>
@@ -1317,8 +1313,8 @@ function SimulationView({
             {!hasAnyDiscussion && !loading && !chatMessages.length ? (
               <div className="stream-empty">
                 <span className="material-symbols-outlined">terminal</span>
-                <h2>Ready To Start</h2>
-                <p>Type your business question below or open the detailed form if you want to add numbers first.</p>
+                <h2>Awaiting Brief</h2>
+                <p>Brief the board below, or open the form if you want to give the team more numbers before the review starts.</p>
               </div>
             ) : null}
 

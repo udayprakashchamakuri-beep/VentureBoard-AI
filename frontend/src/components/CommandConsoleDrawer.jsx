@@ -57,13 +57,13 @@ function CommandConsoleDrawer({
 
         <form className="console-form" onSubmit={onSubmit}>
           <div className="form-section-heading">
-            <h3>Try a demo case</h3>
-            <p>Pick a ready-made business case if you want to test the analysis quickly.</p>
+            <h3>Start with a flagship case</h3>
+            <p>Load one well-structured board case if you want to see the product at full quality before briefing your own situation.</p>
           </div>
 
           <div className="console-grid two">
             <label>
-              Demo case
+              Flagship case
               <select value={selectedDemoCaseId} onChange={(event) => onSelectDemoCase(event.target.value)}>
                 {demoCases.map((item) => (
                   <option key={item.id} value={item.id}>
@@ -72,15 +72,15 @@ function CommandConsoleDrawer({
                 ))}
               </select>
               <span className="field-help">
-                {demoCases.find((item) => item.id === selectedDemoCaseId)?.summary ?? "Choose an example case to load."}
+                {demoCases.find((item) => item.id === selectedDemoCaseId)?.summary ?? "Choose a flagship case to load."}
               </span>
             </label>
             <label className="demo-case-action">
               Load selected case
               <button type="button" className="secondary-action wide-secondary" onClick={() => onApplySample(selectedDemoCaseId)}>
-                Use this demo case
+                Load flagship case
               </button>
-              <span className="field-help">This will fill the form with realistic demo data you can edit before running the analysis.</span>
+              <span className="field-help">This fills the brief with a fully worked case you can inspect, edit, and run immediately.</span>
             </label>
           </div>
 
@@ -316,7 +316,7 @@ function CommandConsoleDrawer({
 
           <div className="console-actions">
             <button type="button" className="secondary-action" onClick={() => onApplySample(selectedDemoCaseId)}>
-              Load demo case
+              Load flagship case
             </button>
             <button type="submit" className="primary-action" disabled={loading}>
               {loading ? "Reviewing your case..." : "Start analysis"}

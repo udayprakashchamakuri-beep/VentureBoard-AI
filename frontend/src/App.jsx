@@ -174,12 +174,12 @@ function App() {
   const speakingAgent = loading ? activeTypingAgent : lastTurn?.agent_name ?? "CEO Agent";
   const displayedRounds = result?.round_summaries?.length || 3;
   const currentRound = loading ? Math.min(3, Math.floor((typingIndex / 3) % 3) + 1) : lastTurn?.round ?? 0;
-  const scenarioTitle = result?.company_name || form.company_name || "Business decision review";
-  const highestRisk = result?.final_output?.risks?.[0] ?? "Waiting for the team to review the case.";
+  const scenarioTitle = result?.company_name || form.company_name || "Board decision review";
+  const highestRisk = result?.final_output?.risks?.[0] ?? "The board is still isolating the main failure mode.";
   const recommendedDirective =
     result?.final_output?.recommended_actions?.[0] ??
     result?.actions?.execution_plan?.[0]?.step ??
-    "Waiting for a recommendation.";
+    "The next move will appear once the review finishes.";
 
   const topConflictByRound = useMemo(() => {
     const map = new Map();
@@ -650,7 +650,7 @@ function App() {
     <div className={`obsidian-app app-view-${activeView}`}>
       <nav className="obsidian-nav global-nav">
         <div className="nav-left">
-          <span className="brand">BUSINESS AGENT</span>
+          <span className="brand">VENTUREBOARD AI</span>
           <div className="nav-links">
             {NAV_ITEMS.map((item) => (
               <button
@@ -733,7 +733,6 @@ function App() {
           validation={result?.validation}
           audienceMode={audienceMode}
           onToggleConsole={toggleConsole}
-          onApplySample={applySample}
           onChatDraftChange={setChatDraft}
           onSubmitChat={handleQuickChatSubmit}
           onShowComposer={openFreshComposer}
@@ -1410,10 +1409,28 @@ function createEmptyResult(companyName) {
     conversation: [],
     round_summaries: [],
     conflicts: [],
-    final_output: null,
-    actions: null,
+    final_output: {
+      decision: "MODIFY",
+      confidence: 0,
+      key_reasons: ["The board is collecting evidence and drafting the decision memo."],
+      risks: ["The main downside is still being pressure-tested."],
+      recommended_actions: ["Wait for the first memo pass before committing to a move."],
+    },
+    actions: {
+      execution_plan: [
+        {
+          step: "Pull demand, execution, and downside signals into one board memo.",
+          owner: "CEO Agent",
+          timeline: "Now",
+          success_metric: "The first decision memo is visible.",
+        },
+      ],
+    },
     scenario_results: [],
-    explainability: null,
+    explainability: {
+      final_reasoning_summary: "The advisory system is collecting signals and turning them into one board-grade recommendation.",
+      top_influencer: "CEO Agent",
+    },
     memory_summary: null,
     validation: null,
   };
@@ -1550,7 +1567,7 @@ function buildLocalAutonomyStatus({ scenarioTitle }) {
     scheduler_mode: "local fallback mode",
     background_running: false,
     poll_interval_seconds: 300,
-    next_run_hint: "Backend monitor is unreachable. Local fallback status is shown for the demo.",
+    next_run_hint: "Backend monitor is unreachable. A local fallback monitor view is being shown until live status returns.",
     watch_profiles: [
       {
         id: "local-watch",
@@ -1738,7 +1755,7 @@ function isBusinessDecisionPrompt(message, form = {}) {
 function mergeStreamEvent(current, eventPayload) {
   switch (eventPayload.type) {
     case "analysis_started":
-      return createEmptyResult(eventPayload.company_name || current.company_name || "Business decision review");
+      return createEmptyResult(eventPayload.company_name || current.company_name || "Board decision review");
     case "turn":
       return {
         ...current,
@@ -1776,10 +1793,10 @@ function buildNonBusinessPromptResult(message, selectedAgentNames = []) {
     "How risky is it to launch with only 8 months of cash left?",
   ];
   const redirectMessage =
-    "This demo is built for business decisions, not general biography or trivia questions. Ask about a business idea, pricing, market demand, launch risk, hiring, or growth strategy and the advisors will help.";
+    "This workspace is built for business decisions, not general biography or trivia questions. Ask about a business idea, pricing, market demand, launch risk, hiring, or growth strategy and the advisors will help.";
 
   return {
-    company_name: "Business decision review",
+    company_name: "Board decision review",
     agent_definitions: [],
     conversation: addressedAgents.map((agentName) => ({
       agent_name: agentName,
@@ -1804,7 +1821,7 @@ function buildNonBusinessPromptResult(message, selectedAgentNames = []) {
     round_summaries: [
       {
         round: 1,
-        synopsis: "The latest prompt looks outside the business-advice scope of this demo.",
+        synopsis: "The latest prompt sits outside the business-decision scope of this workspace.",
         consensus_points: ["Redirect to a business-focused question."],
         conflict_points: [],
         open_questions: samplePrompts,
@@ -1816,7 +1833,7 @@ function buildNonBusinessPromptResult(message, selectedAgentNames = []) {
       decision: "MODIFY",
       confidence: 94,
       key_reasons: [
-        "This demo works best when the prompt is about a business decision or startup plan.",
+        "This workspace works best when the prompt is about a business decision or startup plan.",
         `The last prompt looked like a general question: "${String(message).trim().slice(0, 120)}${String(message).trim().length > 120 ? "..." : ""}"`,
       ],
       risks: ["General-knowledge prompts produce weak advisor output because the app is tuned for business cases."],
@@ -1831,7 +1848,7 @@ function buildNonBusinessPromptResult(message, selectedAgentNames = []) {
       })),
       marketing_strategy: {
         audience: "Demo user",
-        positioning: "Business-advice demo",
+        positioning: "Business decision workspace",
         core_message: "Ask about a business idea, market, pricing, costs, risks, or launch timing.",
         channels: [],
         ad_angles: [],

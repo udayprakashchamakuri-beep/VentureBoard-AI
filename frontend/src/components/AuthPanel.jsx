@@ -46,7 +46,7 @@ function AuthPanel({ loading, authUser, authBusy, authMessage, onLogin, onRegist
       <div className="auth-card panel">
         <div className="auth-header">
           <span className="auth-kicker">Protected Workspace</span>
-          <h1>Secure sign-in for Business Agent</h1>
+          <h1>Secure sign-in for VentureBoard AI</h1>
           <p>{helperText}</p>
         </div>
 

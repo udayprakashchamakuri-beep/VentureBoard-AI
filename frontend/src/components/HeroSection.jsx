@@ -7,7 +7,7 @@ export default function HeroSection({ onGoToDiscussion, audienceMode, audienceCo
     <section className="relative isolate min-h-[62vh] w-full overflow-hidden rounded-[32px] border border-white/8 bg-[#050505] text-white shadow-[0_32px_90px_rgba(0,0,0,0.38)]">
       <div className="absolute left-[-8%] top-[-12%] h-[38vh] w-[38vh] rounded-full bg-purple-900/30 blur-[120px]" />
       <div className="absolute bottom-[-12%] right-[-8%] h-[40vh] w-[40vh] rounded-full bg-blue-900/30 blur-[120px]" />
-      <div className="pointer-events-none absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-15" />
+      <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:radial-gradient(rgba(255,255,255,0.06)_0.7px,transparent_0.7px)] [background-size:18px_18px]" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_65%_55%_at_50%_10%,#000_70%,transparent_100%)]" />
 
       <div className="relative z-10 grid min-h-[62vh] grid-cols-1 items-center gap-10 px-8 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:px-12">
@@ -66,7 +66,7 @@ export default function HeroSection({ onGoToDiscussion, audienceMode, audienceCo
               onClick={onGoToDiscussion}
               className="group inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-7 py-4 font-bold text-white shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all hover:bg-purple-500"
             >
-              Go To Discussion
+              Go to Discussion
               <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
             </motion.button>
           </div>
@@ -94,7 +94,7 @@ export default function HeroSection({ onGoToDiscussion, audienceMode, audienceCo
                 <div className="space-y-4">
                   <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-4">
                     <div className="mb-4 flex items-center justify-between">
-                      <span className="text-xs uppercase tracking-[0.22em] text-white/45">Live Portfolio Graph</span>
+                      <span className="text-xs uppercase tracking-[0.22em] text-white/45">Board Signal Feed</span>
                       <Activity className="h-4 w-4 text-emerald-300" />
                     </div>
                     <div className="flex h-32 items-end gap-2">
@@ -111,12 +111,12 @@ export default function HeroSection({ onGoToDiscussion, audienceMode, audienceCo
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-white/40">Decision velocity</p>
-                      <p className="mt-3 text-3xl font-bold text-white">4.8x</p>
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/40">Board conviction</p>
+                      <p className="mt-3 text-3xl font-bold text-white">81%</p>
                     </div>
                     <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-white/40">Risk surface</p>
-                      <p className="mt-3 text-3xl font-bold text-white">Low</p>
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/40">Failure exposure</p>
+                      <p className="mt-3 text-3xl font-bold text-white">Contained</p>
                     </div>
                   </div>
                 </div>
@@ -124,10 +124,10 @@ export default function HeroSection({ onGoToDiscussion, audienceMode, audienceCo
                   <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-4">
                     <div className="mb-3 flex items-center gap-2 text-sm font-medium text-white/80">
                       <Workflow className="h-4 w-4 text-purple-300" />
-                      Autonomous Pipeline
+                      Board Review Sequence
                     </div>
                     <div className="space-y-3">
-                      {["Market Scan", "Finance Review", "Launch Plan", "Risk Gate"].map((item, index) => (
+                      {["Demand Scan", "Red Team", "Decision Memo", "Board Gate"].map((item, index) => (
                         <div key={item} className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3 py-2">
                           <span className="text-sm text-white/72">{item}</span>
                           <span className={`h-2.5 w-2.5 rounded-full ${index < 3 ? "bg-emerald-400" : "bg-amber-300"}`} />
@@ -138,14 +138,14 @@ export default function HeroSection({ onGoToDiscussion, audienceMode, audienceCo
                   <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-4">
                     <div className="mb-3 flex items-center gap-2 text-sm font-medium text-white/80">
                       <ShieldCheck className="h-4 w-4 text-cyan-300" />
-                      Portfolio Guardrails
+                      Kill Criteria
                     </div>
                     <div className="space-y-3">
                       <div className="h-2 rounded-full bg-white/8">
                         <div className="h-2 w-[72%] rounded-full bg-gradient-to-r from-cyan-400 to-purple-400" />
                       </div>
                       <p className="text-xs leading-5 text-white/50">
-                        Allocation balance, downside exposure, and scenario confidence are being monitored continuously.
+                        Demand proof, downside concentration, and execution drag are being monitored continuously.
                       </p>
                     </div>
                   </div>
@@ -161,7 +161,7 @@ export default function HeroSection({ onGoToDiscussion, audienceMode, audienceCo
           >
             <div className="flex items-center gap-3">
               <div className="h-3 w-3 rounded-full bg-green-400" />
-              <span className="text-xs font-medium text-gray-200">Live AI Analysis Active</span>
+              <span className="text-xs font-medium text-gray-200">War Room Active</span>
             </div>
           </motion.div>
         </motion.div>

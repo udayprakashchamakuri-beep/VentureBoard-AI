@@ -15,13 +15,13 @@ function AutomationView({ scenarioTitle, autonomyStatus, autonomyBusy, autonomyE
   const orderedActions = useMemo(() => [...recentActions].slice(0, 12), [recentActions]);
   const orderedRuns = useMemo(() => [...recentRuns].slice(0, 8), [recentRuns]);
   const orderedTasks = useMemo(() => [...openTasks].slice(0, 8), [openTasks]);
-  const demoActions = useMemo(() => buildDemoActions(scenarioTitle), [scenarioTitle]);
-  const demoTasks = useMemo(() => buildDemoTasks(scenarioTitle), [scenarioTitle]);
+  const sampleActions = useMemo(() => buildDemoActions(scenarioTitle), [scenarioTitle]);
+  const sampleTasks = useMemo(() => buildDemoTasks(scenarioTitle), [scenarioTitle]);
 
-  const actionsToRender = orderedActions.length ? orderedActions : demoActions;
-  const tasksToRender = orderedTasks.length ? orderedTasks : demoTasks;
-  const usingDemoActions = !orderedActions.length;
-  const usingDemoTasks = !orderedTasks.length;
+  const actionsToRender = orderedActions.length ? orderedActions : sampleActions;
+  const tasksToRender = orderedTasks.length ? orderedTasks : sampleTasks;
+  const usingSampleActions = !orderedActions.length;
+  const usingSampleTasks = !orderedTasks.length;
 
   return (
     <div className="command-canvas">
@@ -137,7 +137,7 @@ function AutomationView({ scenarioTitle, autonomyStatus, autonomyBusy, autonomyE
           </div>
 
           <div className="automation-action-log">
-            {usingDemoActions ? <p className="autonomy-empty">Showing demo examples until live actions arrive.</p> : null}
+            {usingSampleActions ? <p className="autonomy-empty">Showing sample automation patterns until live actions arrive.</p> : null}
             {actionsToRender.length ? (
               actionsToRender.map((action) => (
                 <article key={action.id} className={`autonomy-action-item tone-${action.status}`}>
@@ -164,7 +164,7 @@ function AutomationView({ scenarioTitle, autonomyStatus, autonomyBusy, autonomyE
           </div>
 
           <div className="automation-task-list">
-            {usingDemoTasks ? <p className="autonomy-empty">Showing demo examples until live tasks arrive.</p> : null}
+            {usingSampleTasks ? <p className="autonomy-empty">Showing sample follow-ups until live tasks arrive.</p> : null}
             {tasksToRender.length ? (
               tasksToRender.map((task) => (
                 <article key={task.id} className="automation-task-item">

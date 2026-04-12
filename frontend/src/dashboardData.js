@@ -101,31 +101,32 @@ export const AGENT_META = {
 
 export const DEMO_CASES = [
   {
-    id: "healthcare-saas",
-    label: "AI software for hospitals",
-    summary: "A startup deciding whether to expand into healthcare with limited cash and heavier compliance needs.",
+    id: "hyderabad-creator-arena",
+    label: "Hyderabad gaming and creator arena",
+    summary: "A high-stakes launch case: can a late-night gaming arena and creator studio near Gachibowli become a real business before rent, fit-out, and repeat-demand risk kill it?",
     form: {
-      company_name: "HelixOps AI",
-      industry: "Business software",
-      region: "North America",
-      company_stage: "Seed",
+      company_name: "NightShift Arena",
+      industry: "Entertainment and creator economy",
+      region: "India",
+      company_stage: "Idea",
       business_problem:
-        "We are a young software company thinking about selling our AI product to mid-sized hospitals. Our product helps hospitals handle insurance approval work faster, but this new market would require more integrations, a longer sales process, stronger compliance controls, and better customer support. We have about 11 months of cash left, our profit margin is around 68%, we expect it will take 15 months to earn back sales and marketing costs, and we are considering charging about $28,000 per customer each year. The team needs to decide whether to launch now, move forward with changes, or wait.",
+        "We want to open a late-night gaming arena and creator studio near Gachibowli in Hyderabad. The business would make money from hourly PC and console gaming, memberships, small esports tournaments, a snack counter, and rentable streaming booths for creators. The area has strong student and young-professional traffic, but the fit-out cost is heavy, rent is expensive, power backup matters, and repeat demand is still unproven. We have about 10 months of cash to work with, expect gross margin around 58% once the venue is stable, and think it may take 9 months to win back customer acquisition and launch spend. The team needs to decide whether to launch now, move forward with changes, or wait.",
       objectives:
-        "Grow revenue, enter a new market carefully, protect cash, avoid compliance mistakes",
+        "Reach break-even quickly, build strong repeat traffic, create a standout local destination, and avoid a heavy fixed-cost mistake",
       current_constraints:
-        "Small team, limited runway, long sales cycle, more customer support required",
-      extra_context: "",
-      runway_months: "11",
-      gross_margin: "68",
-      cac_payback_months: "15",
-      price_point: "28000",
-      variation_name: "Healthcare downside case",
-      variation_budget_change_pct: "-20",
+        "High rent, expensive fit-out, uncertain weekday demand, price-sensitive audience, and a small starting team",
+      extra_context:
+        "The strongest early demand is likely to come from college students, esports communities, and young software employees who want a premium social gaming venue, not just another cafe.",
+      runway_months: "10",
+      gross_margin: "58",
+      cac_payback_months: "9",
+      price_point: "349",
+      variation_name: "Weak weekday traffic case",
+      variation_budget_change_pct: "-18",
       variation_market_condition: "bearish",
       variation_competition_level: "high",
-      variation_pricing_change_pct: "-10",
-      variation_notes: "Assume buyers slow down and compliance work takes longer than expected.",
+      variation_pricing_change_pct: "-8",
+      variation_notes: "Assume weekday demand is weaker than planned, students resist premium pricing, and the venue fills mainly on weekends.",
     },
   },
   {
