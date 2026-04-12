@@ -486,6 +486,19 @@ function drawOfficeScene(ctx, elapsedMs, activeBeat) {
   drawTileFloor(ctx, leftWidth, 0, CANVAS_WIDTH - leftWidth, pantryHeight);
   drawBlueFloor(ctx, leftWidth, pantryHeight, CANVAS_WIDTH - leftWidth, CANVAS_HEIGHT - pantryHeight);
 
+  fillRectPx(ctx, 0, 0, CANVAS_WIDTH, 16, "#3d495f");
+  fillRectPx(ctx, 0, CANVAS_HEIGHT - 16, CANVAS_WIDTH, 16, "#121620");
+  fillRectPx(ctx, 0, 16, 20, CANVAS_HEIGHT - 32, "#151925");
+  fillRectPx(ctx, CANVAS_WIDTH - 20, 16, 20, CANVAS_HEIGHT - 32, "#151925");
+
+  fillRectPx(ctx, 48, 160, 352, 12, "rgba(255,255,255,0.08)");
+  fillRectPx(ctx, 48, 160, 10, 284, "#8b6756");
+  fillRectPx(ctx, 390, 160, 10, 284, "#8b6756");
+  fillRectPx(ctx, 48, 432, 352, 10, "rgba(31,23,29,0.22)");
+  fillRectPx(ctx, 414, 160, 10, 120, "#8b6756");
+  fillRectPx(ctx, 414, 308, 10, 136, "#8b6756");
+  fillRectPx(ctx, 48, 146, 376, 10, "#c9b9aa");
+
   fillRectPx(ctx, leftWidth - 10, 0, 10, CANVAS_HEIGHT, PIXEL_PALETTE.panel);
   fillRectPx(ctx, leftWidth, pantryHeight - 10, CANVAS_WIDTH - leftWidth, 10, PIXEL_PALETTE.panel);
   drawDoor(ctx, leftWidth - 22, 126, true);
@@ -503,6 +516,8 @@ function drawOfficeScene(ctx, elapsedMs, activeBeat) {
   fillRectPx(ctx, 72, 112, 28, 22, "#d9b77b");
   fillRectPx(ctx, 104, 126, 28, 22, "#d9b77b");
   fillRectPx(ctx, 136, 140, 28, 22, "#d9b77b");
+  drawShelf(ctx, 46, 106, 86, 44);
+  drawShelf(ctx, 430, 106, 96, 44);
 
   drawDesk(ctx, 88, 198);
   drawDesk(ctx, 234, 198);
@@ -517,6 +532,10 @@ function drawOfficeScene(ctx, elapsedMs, activeBeat) {
   drawPlant(ctx, 38, 454);
   drawPlant(ctx, 490, 452);
   drawPlant(ctx, 450, 316);
+  drawSideTable(ctx, 172, 296);
+  drawSideTable(ctx, 320, 296);
+  drawWindow(ctx, 120, 28, 94, 50);
+  drawWindow(ctx, 346, 28, 94, 50);
 
   drawShelf(ctx, 638, 42, 124, 54);
   drawShelf(ctx, 790, 42, 114, 54);

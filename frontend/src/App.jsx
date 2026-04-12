@@ -418,12 +418,17 @@ function App() {
     setSelectedDemoCaseId(sampleId);
     setForm(sampleForm);
     setChatDraft(sampleForm.business_problem);
+    setConsoleOpen(false);
     setComposerOpen(true);
     setComposerMode("fresh");
     setChatMessages([createChatMessage(sampleForm.business_problem)]);
     setFocusedAgentNames([]);
     setError("");
     setActiveView("simulation");
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   }
 
   function updateFormField(key, value) {
