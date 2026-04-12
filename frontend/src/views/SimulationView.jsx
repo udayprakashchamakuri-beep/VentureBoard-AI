@@ -579,24 +579,24 @@ function buildAudienceTimelineItems({
         {
           window: windows[0],
           title: loading
-            ? "Shortlist the few Hyderabad ideas worth testing first."
-            : "Shortlist the top 3 Hyderabad business ideas with repeat demand and manageable setup complexity.",
-          note: "Founder lens | Pick one idea to test first instead of trying to build everything at once.",
+            ? "Narrow the search to one idea worth testing first."
+            : "Pick the top 3 business ideas that feel easiest to start, easiest to explain, and most likely to get repeat demand.",
+          note: "Founder lens | Ignore ideas that sound impressive but would drain cash or attention too early.",
         },
         {
           window: windows[1],
-          title: "Talk to real buyers, tenants, students, or families and find out which problem feels painful enough to pay for.",
-          note: "Founder lens | Aim for 8-10 conversations and look for one pattern that repeats without you leading the witness.",
+          title: "Talk to real customers and find out which problem hurts enough that they would pay to solve it soon.",
+          note: "Founder lens | Keep this simple: who wants it, why now, and what price does not scare them away.",
         },
         {
           window: windows[2],
-          title: "Run a tiny proof test for the strongest idea using a landing page, waitlist, or pilot offer before renting space or hiring.",
-          note: "Founder lens | Spend the least amount possible to learn whether people will actually move.",
+          title: "Run a tiny proof test with the strongest idea before renting space, buying inventory, or hiring anyone.",
+          note: "Founder lens | A waitlist, preorder, trial, or pilot is enough if it shows real movement.",
         },
         {
           window: windows[3],
-          title: "Choose one business to pursue only after demand, pricing, and execution look real on a small scale.",
-          note: "Founder lens | Use simple stop / go rules around interest, margin, and effort before committing.",
+          title: "Commit to one idea only after you see demand, workable pricing, and a setup you can actually manage.",
+          note: "Founder lens | Use plain stop-or-go rules around interest, margin, and effort before going all in.",
         },
       ];
     }
@@ -605,24 +605,26 @@ function buildAudienceTimelineItems({
       {
         window: windows[0],
         title: loading
-          ? "Reduce the case to one clear test."
-          : "Pick one customer, one problem, and one offer to test first.",
-        note: "Founder lens | Make the first move small enough to learn fast without burning too much runway.",
+          ? "Reduce the case to one simple test."
+          : "Choose one customer, one painful problem, and one offer to test first.",
+        note: "Founder lens | Start with the smallest version that can still teach you something real.",
       },
       {
         window: windows[1],
-        title: "Talk to buyers and check whether the pain is urgent enough for them to pay or pilot.",
-        note: "Founder lens | You want clear pull, not polite interest.",
+        title: "Talk to buyers and learn whether the problem is urgent enough for them to pay, trial, or pilot.",
+        note: "Founder lens | You are looking for clear pull, not compliments or curiosity.",
       },
       {
         window: windows[2],
-        title: "Launch a narrow first version instead of a broad rollout.",
-        note: "Founder lens | Keep the offer simple and learn what breaks before scaling it.",
+        title: "Launch a narrow first version with a small group instead of trying to serve everyone at once.",
+        note: "Founder lens | Keep the offer easy to deliver and easy to explain.",
       },
       {
         window: windows[3],
-        title: "Track margin, sales cycle, and the red flags that would tell you to pause or narrow further.",
-        note: `Founder lens | ${toPlainText(recommendedDirective || "Do not scale until the economics and delivery both look healthy.")}`,
+        title: "Track margin, response rate, and the signs that tell you to keep going, change direction, or stop.",
+        note: `Founder lens | ${toPlainText(
+          recommendedDirective || "Do not scale until people want it and you can deliver it without chaos.",
+        )}`,
       },
     ];
   }
@@ -633,24 +635,24 @@ function buildAudienceTimelineItems({
         {
           window: windows[0],
           title: loading
-            ? "Mapping candidate operating models."
-            : "Map the top business options by operating burden, staffing intensity, and setup dependencies before choosing one.",
-          note: "Operator lens | Do not pick the most exciting idea before understanding the day-one operating load.",
+            ? "Mapping the candidate operating models."
+            : "Map the candidate businesses by workflow complexity, staffing burden, asset intensity, and dependency depth before choosing one.",
+          note: "Operator lens | Select for controllable throughput, not narrative appeal.",
         },
         {
           window: windows[1],
-          title: "Pressure-test the workflow, site, supply, staffing, and support requirements for the top two options.",
-          note: "Operator lens | Identify which model creates the fewest brittle handoffs and the cleanest service loop.",
+          title: "Pressure-test the service loop, staffing model, support obligations, and failure points for the top two options.",
+          note: "Operator lens | The goal is to expose brittle handoffs, SLA risk, and exception load early.",
         },
         {
           window: windows[2],
-          title: "Pilot the option with the lowest execution drag in one location, one workflow, and one staffing model.",
-          note: "Operator lens | Keep the scope narrow enough that throughput and failure points are easy to observe.",
+          title: "Pilot the option with the lowest execution drag in one site, one workflow, and one staffing pattern.",
+          note: "Operator lens | Narrow scope lets you observe throughput, rework, escalation, and quality drift clearly.",
         },
         {
           window: windows[3],
-          title: "Instrument service quality, unit economics, staffing load, and escalation triggers before formal rollout.",
-          note: "Operator lens | Only move forward once the process is stable under real operating conditions.",
+          title: "Instrument quality, unit economics, staffing load, queue pressure, and escalation triggers before formal rollout.",
+          note: "Operator lens | Only scale once the operating system is stable under live conditions.",
         },
       ];
     }
@@ -660,23 +662,25 @@ function buildAudienceTimelineItems({
         window: windows[0],
         title: loading
           ? "Freezing the first execution scope."
-          : "Freeze the first execution scope, owner map, and launch thresholds.",
-        note: "Operator lens | Lock the first workflow and who owns each handoff before any wider rollout starts.",
+          : "Freeze the first execution scope, owner map, service thresholds, and exception policy.",
+        note: "Operator lens | Lock the workflow and handoff owners before widening the blast radius.",
       },
       {
         window: windows[1],
-        title: "Map dependencies, delivery bottlenecks, staffing pressure, and support burden for the first phase.",
-        note: "Operator lens | Surface the points where the plan becomes fragile before it hits customers.",
+        title: "Map dependencies, bottlenecks, staffing pressure, support burden, and queue risk for the first phase.",
+        note: "Operator lens | This is where you expose operational fragility before customers do.",
       },
       {
         window: windows[2],
-        title: "Pilot one workflow or geography and measure where throughput, quality, or service breaks.",
-        note: "Operator lens | Narrow scope is a feature here because it exposes the real failure surface faster.",
+        title: "Pilot one workflow or geography and measure where throughput, quality, rework, or service breaks.",
+        note: "Operator lens | Keep the rollout constrained enough to isolate the real failure surface.",
       },
       {
         window: windows[3],
-        title: "Review the operating data and decide whether the sequence, staffing, or tooling needs to change before scaling.",
-        note: `Operator lens | ${toPlainText(recommendedDirective || "Hold scale until the workflow is stable and the risk surface is controlled.")}`,
+        title: "Review operating telemetry and decide whether sequencing, staffing, tooling, or controls must change before scaling.",
+        note: `Operator lens | ${toPlainText(
+          recommendedDirective || "Hold scale until throughput is stable, failure modes are visible, and controls are holding.",
+        )}`,
       },
     ];
   }
@@ -687,23 +691,23 @@ function buildAudienceTimelineItems({
         window: windows[0],
         title: loading
           ? "Ranking the opportunity set."
-          : "Rank the local business options by market pull, payback shape, and downside concentration.",
-        note: "Investor lens | You are underwriting which idea deserves attention, not approving a full launch yet.",
+          : "Rank the business options by market pull, payback shape, downside concentration, and defensibility.",
+        note: "Investor lens | You are underwriting which opportunity deserves deeper attention, not approving a full launch yet.",
       },
       {
         window: windows[1],
-        title: "Gather customer, pricing, and competitor proof on the two strongest opportunities.",
-        note: "Investor lens | Look for evidence that the demand is real and not just theoretically attractive.",
+        title: "Gather customer, pricing, and competitor proof on the two strongest candidates.",
+        note: "Investor lens | Demand quality matters more than a broad but weak narrative.",
       },
       {
         window: windows[2],
-        title: "Model a small pilot for the lead option and pressure-test GTM, cost, and execution assumptions.",
-        note: "Investor lens | The goal is sharper conviction, not optimistic storytelling.",
+        title: "Model a small pilot for the lead option and pressure-test GTM efficiency, cost structure, and execution assumptions.",
+        note: "Investor lens | The goal is sharper conviction and cleaner downside framing.",
       },
       {
         window: windows[3],
-        title: "Decide whether one business has earned deeper diligence or whether the opportunity set still lacks proof.",
-        note: "Investor lens | Move only when the upside is clearer than the downside concentration.",
+        title: "Decide whether one business has earned deeper diligence or whether the opportunity set still lacks enough proof.",
+        note: "Investor lens | Move only when prospective upside is clearer than the downside concentration.",
       },
     ];
   }
@@ -713,23 +717,25 @@ function buildAudienceTimelineItems({
       window: windows[0],
       title: loading
         ? "Isolating the core investment question."
-        : "Isolate the underwriting case: customer urgency, pricing power, and what would break conviction.",
-      note: "Investor lens | Define the exact proof needed before more capital or confidence is committed.",
+        : "Isolate the underwriting case: customer urgency, pricing power, retention shape, and what would break conviction.",
+      note: "Investor lens | Define the proof gates before more capital, time, or conviction is committed.",
     },
     {
       window: windows[1],
-      title: "Collect customer proof, reference signals, and objections that could change the return profile.",
-      note: "Investor lens | Separate real pull from a story that still needs validation.",
+      title: "Collect customer proof, reference signals, objections, and competitor evidence that could change the return profile.",
+      note: "Investor lens | Separate real pull from a good story that still needs validation.",
     },
     {
       window: windows[2],
-      title: "Pressure-test GTM efficiency, implementation burden, and the path to acceptable payback.",
-      note: "Investor lens | This is where good narratives usually fail if the economics are weak.",
+      title: "Pressure-test GTM efficiency, implementation burden, margin durability, and the path to acceptable payback.",
+      note: "Investor lens | This is where strong narratives usually fail if the economics are soft.",
     },
     {
       window: windows[3],
-      title: "Reassess conviction using downside concentration, alignment, and the strength of the new proof.",
-      note: `Investor lens | ${toPlainText(recommendedDirective || "Keep the next step tied to proof, not optimism.")}`,
+      title: "Reassess conviction using downside concentration, alignment, and the strength of the new diligence evidence.",
+      note: `Investor lens | ${toPlainText(
+        recommendedDirective || "Keep the next step tied to proof quality, not optimism.",
+      )}`,
     },
   ];
 }
