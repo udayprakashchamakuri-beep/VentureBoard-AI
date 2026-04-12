@@ -75,9 +75,9 @@ const PIXEL_PALETTE = {
 };
 
 const OFFICE_LAYOUT = {
-  leftWidth: 620,
-  pantryHeight: 198,
-  nookHeight: 362,
+  leftWidth: 560,
+  pantryHeight: 196,
+  nookHeight: 364,
 };
 
 const OFFICE_BEATS = [
@@ -98,16 +98,16 @@ const CONFERENCE_BEATS = [
 ];
 
 const OFFICE_AGENTS = {
-  "Market Research Agent": { zone: "work", path: [[118, 240], [118, 250], [118, 240]], facing: "south" },
-  "Sales Strategy Agent": { zone: "work", path: [[252, 240], [252, 250], [252, 240]], facing: "south" },
-  "Startup Builder Agent": { zone: "work", path: [[182, 315], [220, 315], [220, 348], [182, 348]], facing: "east" },
-  "Hiring Agent": { zone: "work", path: [[118, 386], [118, 396], [118, 386]], facing: "south" },
-  "Marketing Agent": { zone: "work", path: [[248, 388], [282, 388], [282, 420], [248, 420]], facing: "east" },
-  "Finance Agent": { zone: "pantry", path: [[740, 116], [770, 116], [770, 148], [740, 148]], facing: "east" },
-  "Pricing Agent": { zone: "pantry", path: [[840, 108], [840, 138], [810, 138], [810, 108]], facing: "south" },
-  "Risk Agent": { zone: "pantry", path: [[786, 160], [826, 160], [826, 178], [786, 178]], facing: "west" },
-  "CEO Agent": { zone: "nook", path: [[760, 360], [760, 390], [726, 390], [726, 360]], facing: "south" },
-  "Supply Chain Agent": { zone: "nook", path: [[852, 360], [852, 390], [820, 390], [820, 360]], facing: "south" },
+  "Market Research Agent": { zone: "work", path: [[126, 266], [126, 276], [126, 266]], facing: "south" },
+  "Sales Strategy Agent": { zone: "work", path: [[278, 266], [278, 276], [278, 266]], facing: "south" },
+  "Startup Builder Agent": { zone: "work", path: [[192, 324], [228, 324], [228, 360], [192, 360]], facing: "east" },
+  "Hiring Agent": { zone: "work", path: [[126, 398], [126, 410], [126, 398]], facing: "south" },
+  "Marketing Agent": { zone: "work", path: [[278, 398], [312, 398], [312, 430], [278, 430]], facing: "east" },
+  "Finance Agent": { zone: "pantry", path: [[718, 116], [756, 116], [756, 150], [718, 150]], facing: "east" },
+  "Pricing Agent": { zone: "pantry", path: [[832, 118], [832, 146], [802, 146], [802, 118]], facing: "south" },
+  "Risk Agent": { zone: "pantry", path: [[780, 166], [820, 166], [820, 182], [780, 182]], facing: "west" },
+  "CEO Agent": { zone: "nook", path: [[736, 378], [736, 404], [702, 404], [702, 378]], facing: "south" },
+  "Supply Chain Agent": { zone: "nook", path: [[834, 378], [834, 404], [800, 404], [800, 378]], facing: "south" },
 };
 
 const CONFERENCE_SEATS = {
@@ -488,51 +488,60 @@ function drawOfficeScene(ctx, elapsedMs, activeBeat) {
 
   fillRectPx(ctx, leftWidth - 10, 0, 10, CANVAS_HEIGHT, PIXEL_PALETTE.panel);
   fillRectPx(ctx, leftWidth, pantryHeight - 10, CANVAS_WIDTH - leftWidth, 10, PIXEL_PALETTE.panel);
-  drawDoor(ctx, leftWidth - 22, 138, true);
-  drawDoor(ctx, leftWidth - 22, 352, true);
-  drawDoor(ctx, CANVAS_WIDTH - 32, 300, true);
+  drawDoor(ctx, leftWidth - 22, 126, true);
+  drawDoor(ctx, leftWidth - 22, 340, true);
+  drawDoor(ctx, CANVAS_WIDTH - 34, 304, true);
 
-  drawPixelBorder(ctx, 26, 20, 162, 82, "#eef7ff", "#5f7d8b");
-  fillRectPx(ctx, 48, 42, 116, 4, "#8dcde1");
-  fillRectPx(ctx, 48, 56, 92, 4, "#ddb07b");
-  fillRectPx(ctx, 48, 70, 108, 4, "#9cbfd0");
-  drawShelf(ctx, 170, 48, 122, 54);
-  drawShelf(ctx, 312, 48, 132, 54);
-  drawWindow(ctx, 302, 122, 102, 58);
-  drawDesk(ctx, 82, 200);
-  drawDesk(ctx, 230, 200);
-  drawDesk(ctx, 82, 344);
-  drawDesk(ctx, 230, 344);
-  drawDeskChair(ctx, 116, 252, "#b78b5a");
-  drawDeskChair(ctx, 264, 252, "#b78b5a");
-  drawDeskChair(ctx, 116, 396, "#b78b5a");
-  drawDeskChair(ctx, 264, 396, "#b78b5a");
-  drawPlant(ctx, 42, 472);
-  drawPlant(ctx, 468, 472);
-  fillRectPx(ctx, 58, 118, 26, 22, "#d9b77b");
-  fillRectPx(ctx, 88, 128, 26, 24, "#d9b77b");
-  fillRectPx(ctx, 118, 138, 26, 24, "#d9b77b");
+  drawPixelBorder(ctx, 34, 24, 172, 76, "#eef7ff", "#5f7d8b");
+  fillRectPx(ctx, 54, 42, 126, 4, "#8dcde1");
+  fillRectPx(ctx, 54, 56, 92, 4, "#ddb07b");
+  fillRectPx(ctx, 54, 70, 114, 4, "#9cbfd0");
+  drawShelf(ctx, 166, 44, 124, 56);
+  drawShelf(ctx, 324, 44, 132, 56);
+  drawShelf(ctx, 430, 44, 102, 56);
+  drawWindow(ctx, 304, 120, 108, 58);
+  fillRectPx(ctx, 72, 112, 28, 22, "#d9b77b");
+  fillRectPx(ctx, 104, 126, 28, 22, "#d9b77b");
+  fillRectPx(ctx, 136, 140, 28, 22, "#d9b77b");
 
-  drawShelf(ctx, 676, 50, 126, 54);
-  drawShelf(ctx, 818, 50, 112, 54);
-  drawVending(ctx, 836, 84);
-  drawWaterCooler(ctx, 902, 88);
-  drawDesk(ctx, 698, 138, false);
-  drawCabinet(ctx, 780, 36);
-  drawCabinet(ctx, 842, 34);
-  drawCoffeeMachine(ctx, 874, 128);
-  fillRectPx(ctx, 894, 16, 4, 4, "#23212a");
-  fillRectPx(ctx, 886, 8, 20, 4, PIXEL_PALETTE.outline);
-  fillRectPx(ctx, 892, 10, 2, 10, "#ffffff");
+  drawDesk(ctx, 88, 198);
+  drawDesk(ctx, 234, 198);
+  drawDesk(ctx, 88, 344);
+  drawDesk(ctx, 234, 344);
+  drawDeskChair(ctx, 124, 250, "#b78b5a");
+  drawDeskChair(ctx, 270, 250, "#b78b5a");
+  drawDeskChair(ctx, 124, 396, "#b78b5a");
+  drawDeskChair(ctx, 270, 396, "#b78b5a");
+  drawShelf(ctx, 96, 446, 118, 50);
+  drawShelf(ctx, 244, 446, 118, 50);
+  drawPlant(ctx, 38, 454);
+  drawPlant(ctx, 490, 452);
+  drawPlant(ctx, 450, 316);
 
-  drawFrame(ctx, 736, 242, false);
-  drawShelf(ctx, 674, 254, 112, 54);
-  drawShelf(ctx, 828, 254, 112, 54);
-  drawBoardroomTable(ctx, 726, 320, 136, 72);
-  drawBoardChair(ctx, 706, 356, "east", "#c95d8c");
-  drawBoardChair(ctx, 882, 356, "west", "#6b8dff");
-  drawPlant(ctx, 654, 430, "large");
-  drawPlant(ctx, 900, 428, "large");
+  drawShelf(ctx, 638, 42, 124, 54);
+  drawShelf(ctx, 790, 42, 114, 54);
+  drawVending(ctx, 816, 80);
+  drawWaterCooler(ctx, 892, 82);
+  drawCabinet(ctx, 716, 34);
+  drawCabinet(ctx, 774, 34);
+  drawDesk(ctx, 646, 126, false);
+  drawCoffeeMachine(ctx, 858, 126);
+  fillRectPx(ctx, 752, 16, 4, 4, "#23212a");
+  fillRectPx(ctx, 744, 8, 20, 4, PIXEL_PALETTE.outline);
+  fillRectPx(ctx, 750, 10, 2, 10, "#ffffff");
+  drawPlant(ctx, 920, 126);
+
+  drawFrame(ctx, 676, 236, false);
+  drawShelf(ctx, 634, 246, 112, 52);
+  drawShelf(ctx, 810, 246, 112, 52);
+  drawWindow(ctx, 760, 246, 96, 54);
+  drawBoardroomTable(ctx, 700, 324, 148, 76);
+  drawBoardChair(ctx, 680, 360, "east", "#c95d8c");
+  drawBoardChair(ctx, 870, 360, "west", "#6b8dff");
+  drawSideTable(ctx, 632, 338);
+  drawSideTable(ctx, 864, 338);
+  drawPlant(ctx, 620, 420, "large");
+  drawPlant(ctx, 904, 418, "large");
 
   AGENT_ORDER.forEach((agentName, index) => {
     const assignment = OFFICE_AGENTS[agentName];
@@ -659,42 +668,18 @@ export default function PixelReviewSequence({
   return (
     <section className="pixel-review-screen" aria-label="Full-screen advisor review animation">
       <div className="pixel-review-shell">
-        <div className="pixel-review-hud">
-          <div className="pixel-review-kicker">
-            <span>{audienceConfig.label} mode</span>
-            <span className="pixel-review-divider" />
-            <span>{phaseMeta.label}</span>
-          </div>
-          <div className="pixel-review-header">
-            <div>
-              <h1>{scenarioTitle}</h1>
-              <p>{phaseMeta.summary}</p>
+        <div className="pixel-review-canvas-shell">
+          <div className="pixel-review-overlay">
+            <div className="pixel-review-kicker">
+              <span>{audienceConfig.label} mode</span>
+              <span className="pixel-review-divider" />
+              <span>{phaseMeta.label}</span>
             </div>
             <div className="pixel-review-timer">
               <strong>{formatSeconds(remainingMs)}</strong>
               <span>until memo</span>
             </div>
           </div>
-          <div className="pixel-review-status">
-            <div className="pixel-review-progress">
-              <div className="pixel-review-progress-fill" style={{ width: `${progress}%` }} />
-            </div>
-            <p>{promptExcerpt}</p>
-          </div>
-          <div className="pixel-review-roster">
-            {AGENT_ORDER.map((name) => (
-              <span
-                key={name}
-                className={activeBeat.agent === name ? "pixel-roster-chip active" : "pixel-roster-chip"}
-                style={{ "--chip-accent": agentMeta[name]?.accent ?? "#9ac9ff" }}
-              >
-                {agentMeta[name]?.label ?? name}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="pixel-review-canvas-shell">
           <canvas
             ref={canvasRef}
             className="pixel-review-canvas"
@@ -702,6 +687,15 @@ export default function PixelReviewSequence({
             height={CANVAS_HEIGHT}
             aria-label="Pixel office and conference review"
           />
+          <div className="pixel-review-status">
+            <div className="pixel-review-status-copy">
+              <strong>{scenarioTitle}</strong>
+              <p>{promptExcerpt}</p>
+            </div>
+            <div className="pixel-review-progress">
+              <div className="pixel-review-progress-fill" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
         </div>
       </div>
     </section>

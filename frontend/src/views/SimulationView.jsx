@@ -1260,7 +1260,7 @@ function SimulationView({
   }, [latestUserMessage?.id]);
 
   useEffect(() => {
-    if (!conversationEndRef.current) {
+    if (!showConversation || !conversationEndRef.current) {
       return;
     }
 
@@ -1268,7 +1268,18 @@ function SimulationView({
       behavior: loading ? "smooth" : "auto",
       block: "end",
     });
-  }, [chatMessages.length, visibleTurnCount, loading, conversationAgentNames]);
+  }, [chatMessages.length, visibleTurnCount, loading, conversationAgentNames, showConversation]);
+
+  useEffect(() => {
+    if (!latestUserMessage?.id || showConversation) {
+      return;
+    }
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }, [latestUserMessage?.id, showConversation]);
 
   if (loading) {
     return (
