@@ -16,6 +16,7 @@ const STREAM_TIMEOUT_MS = 6500;
 const ANALYSIS_TIMEOUT_MS = 9000;
 const FETCH_RETRIES = 0;
 const AUDIENCE_MODE_STORAGE_KEY = "ventureboard-audience-mode";
+const IMMERSIVE_REVIEW_MIN_MS = 24000;
 
 function App() {
   const [activeView, setActiveView] = useState("home");
@@ -26,6 +27,7 @@ function App() {
   const [chatMessages, setChatMessages] = useState([]);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadingStartedAt, setLoadingStartedAt] = useState(null);
   const [error, setError] = useState("");
   const [typingIndex, setTypingIndex] = useState(0);
   const [consoleOpen, setConsoleOpen] = useState(false);
@@ -250,10 +252,12 @@ function App() {
 
   async function runAnalysis(payload, options = {}) {
     const { closeConsole = false, focusAgentNames = [] } = options;
+    const reviewStartedAt = Date.now();
     if (closeConsole) {
       setConsoleOpen(false);
     }
     setLoading(true);
+    setLoadingStartedAt(reviewStartedAt);
     setError("");
     setActiveView("simulation");
     setFocusedAgentNames(focusAgentNames);
@@ -279,7 +283,12 @@ function App() {
         setError("");
       }
     } finally {
+      const remainingSequenceMs = Math.max(0, IMMERSIVE_REVIEW_MIN_MS - (Date.now() - reviewStartedAt));
+      if (remainingSequenceMs > 0) {
+        await wait(remainingSequenceMs);
+      }
       setLoading(false);
+      setLoadingStartedAt(null);
     }
   }
 
@@ -646,8 +655,11 @@ function App() {
     );
   }
 
+  const showImmersiveReview = activeView === "simulation" && loading;
+
   return (
-    <div className={`obsidian-app app-view-${activeView}`}>
+    <div className={`obsidian-app app-view-${activeView} ${showImmersiveReview ? "loading-sequence-active" : ""}`}>
+      {!showImmersiveReview ? (
       <nav className="obsidian-nav global-nav">
         <div className="nav-left">
           <span className="brand">VENTUREBOARD AI</span>
@@ -697,6 +709,7 @@ function App() {
           <div className="avatar-badge">BA</div>
         </div>
       </nav>
+      ) : null}
 
       {activeView === "home" ? (
         <HomeView
@@ -711,6 +724,7 @@ function App() {
           agentMeta={AGENT_META}
           result={result}
           loading={loading}
+          loadingStartedAt={loadingStartedAt}
           error={error}
           chatMessages={chatMessages}
           chatDraft={chatDraft}
@@ -837,6 +851,7 @@ function App() {
         </div>
       ) : null}
 
+      {!showImmersiveReview ? (
       <CommandConsoleDrawer
         consoleOpen={consoleOpen}
         form={form}
@@ -850,8 +865,9 @@ function App() {
         onSelectDemoCase={setSelectedDemoCaseId}
         onFieldChange={updateFormField}
       />
+      ) : null}
 
-      {utilityPanel ? (
+      {!showImmersiveReview && utilityPanel ? (
         <UtilityPanel
           mode={utilityPanel}
           activeView={activeView}

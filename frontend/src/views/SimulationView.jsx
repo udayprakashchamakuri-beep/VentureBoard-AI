@@ -21,6 +21,7 @@ import {
   toPlainText,
 } from "../plainLanguage";
 import { getAudienceModeConfig } from "../audienceMode";
+import PixelReviewSequence from "../components/PixelReviewSequence";
 
 function getConversationMeta(agentMeta, name) {
   if (agentMeta[name]) {
@@ -1150,6 +1151,7 @@ function SimulationView({
   agentMeta,
   result,
   loading,
+  loadingStartedAt,
   error,
   chatMessages,
   chatDraft,
@@ -1267,6 +1269,20 @@ function SimulationView({
       block: "end",
     });
   }, [chatMessages.length, visibleTurnCount, loading, conversationAgentNames]);
+
+  if (loading) {
+    return (
+      <main className="obsidian-main immersive-review-mode">
+        <PixelReviewSequence
+          agentMeta={agentMeta}
+          loadingStartedAt={loadingStartedAt}
+          latestPrompt={latestUserMessage?.content ?? ""}
+          scenarioTitle={scenarioTitle}
+          audienceMode={audienceMode}
+        />
+      </main>
+    );
+  }
 
   return (
     <>
