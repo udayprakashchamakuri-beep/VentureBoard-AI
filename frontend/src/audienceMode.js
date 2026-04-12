@@ -42,7 +42,7 @@ export const AUDIENCE_MODES = {
       riskKicker: "Risk heatmap",
       riskTitle: "What could break this",
       riskLabels: ["Market risk", "Build risk", "Cash risk", "Overall risk"],
-      metricLabels: ["CUSTOMER_PULL", "EXECUTION_DRAG", "RISK_LEVEL", "TEAM_ALIGNMENT"],
+      metricLabels: ["Customer demand", "Execution effort", "Risk level", "Team agreement"],
       placeholder:
         "Describe the company, the decision, and what could make it fail...",
       hint: "Tip: mention the customer, pricing, constraints, and what could break the plan.",
@@ -89,7 +89,7 @@ export const AUDIENCE_MODES = {
       riskKicker: "Risk heatmap",
       riskTitle: "Where downside is concentrated",
       riskLabels: ["Market risk", "Execution risk", "Financial risk", "Downside risk"],
-      metricLabels: ["MARKET_CONFIDENCE", "EXECUTION_BARRIER", "RISK_SURFACE", "BOARD_ALIGNMENT"],
+      metricLabels: ["Market confidence", "Execution risk", "Downside risk", "Board agreement"],
       placeholder:
         "Describe the company, your thesis, and what could make the investment fail...",
       hint: "Tip: mention market quality, GTM motion, payback, pricing power, execution risk, and what proof you still need.",
