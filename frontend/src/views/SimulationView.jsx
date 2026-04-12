@@ -546,6 +546,194 @@ function buildAudienceSummary({
   return `${cleanDecision}. ${summaryCore} Downside concentration: ${cleanRisk} Next diligence step: ${cleanNextMove}`;
 }
 
+function isOpportunityDiscoveryPrompt(text = "") {
+  const lowered = toPlainText(text).toLowerCase();
+  if (!lowered) {
+    return false;
+  }
+
+  return [
+    /\bbest\s+(business|startup|idea|venture)\b/,
+    /\bwhat\s+(business|startup|idea|venture)\s+should\s+i\s+(start|build|open)\b/,
+    /\bwhich\s+(business|startup|idea|venture)\s+should\s+i\s+(start|build|open)\b/,
+    /\bbusiness\s+ideas\b/,
+    /\bi\s+want\s+to\s+start\s+a\s+business\s+in\b/,
+  ].some((pattern) => pattern.test(lowered));
+}
+
+function buildAudienceTimelineItems({
+  audienceMode,
+  loading,
+  businessProblem,
+  recommendedDirective,
+  timelineItems,
+}) {
+  const isDiscovery = isOpportunityDiscoveryPrompt(businessProblem);
+  const fallbackWindows = ["Week 1", "Weeks 1-2", "Weeks 3-6", "Weeks 4-8"];
+  const sourceWindows = timelineItems.length ? timelineItems.map((item) => item.window) : fallbackWindows;
+  const windows = fallbackWindows.map((fallback, index) => sourceWindows[index] ?? fallback);
+
+  if (audienceMode === "founder") {
+    if (isDiscovery) {
+      return [
+        {
+          window: windows[0],
+          title: loading
+            ? "Shortlist the few Hyderabad ideas worth testing first."
+            : "Shortlist the top 3 Hyderabad business ideas with repeat demand and manageable setup complexity.",
+          note: "Founder lens | Pick one idea to test first instead of trying to build everything at once.",
+        },
+        {
+          window: windows[1],
+          title: "Talk to real buyers, tenants, students, or families and find out which problem feels painful enough to pay for.",
+          note: "Founder lens | Aim for 8-10 conversations and look for one pattern that repeats without you leading the witness.",
+        },
+        {
+          window: windows[2],
+          title: "Run a tiny proof test for the strongest idea using a landing page, waitlist, or pilot offer before renting space or hiring.",
+          note: "Founder lens | Spend the least amount possible to learn whether people will actually move.",
+        },
+        {
+          window: windows[3],
+          title: "Choose one business to pursue only after demand, pricing, and execution look real on a small scale.",
+          note: "Founder lens | Use simple stop / go rules around interest, margin, and effort before committing.",
+        },
+      ];
+    }
+
+    return [
+      {
+        window: windows[0],
+        title: loading
+          ? "Reduce the case to one clear test."
+          : "Pick one customer, one problem, and one offer to test first.",
+        note: "Founder lens | Make the first move small enough to learn fast without burning too much runway.",
+      },
+      {
+        window: windows[1],
+        title: "Talk to buyers and check whether the pain is urgent enough for them to pay or pilot.",
+        note: "Founder lens | You want clear pull, not polite interest.",
+      },
+      {
+        window: windows[2],
+        title: "Launch a narrow first version instead of a broad rollout.",
+        note: "Founder lens | Keep the offer simple and learn what breaks before scaling it.",
+      },
+      {
+        window: windows[3],
+        title: "Track margin, sales cycle, and the red flags that would tell you to pause or narrow further.",
+        note: `Founder lens | ${toPlainText(recommendedDirective || "Do not scale until the economics and delivery both look healthy.")}`,
+      },
+    ];
+  }
+
+  if (audienceMode === "operator") {
+    if (isDiscovery) {
+      return [
+        {
+          window: windows[0],
+          title: loading
+            ? "Mapping candidate operating models."
+            : "Map the top business options by operating burden, staffing intensity, and setup dependencies before choosing one.",
+          note: "Operator lens | Do not pick the most exciting idea before understanding the day-one operating load.",
+        },
+        {
+          window: windows[1],
+          title: "Pressure-test the workflow, site, supply, staffing, and support requirements for the top two options.",
+          note: "Operator lens | Identify which model creates the fewest brittle handoffs and the cleanest service loop.",
+        },
+        {
+          window: windows[2],
+          title: "Pilot the option with the lowest execution drag in one location, one workflow, and one staffing model.",
+          note: "Operator lens | Keep the scope narrow enough that throughput and failure points are easy to observe.",
+        },
+        {
+          window: windows[3],
+          title: "Instrument service quality, unit economics, staffing load, and escalation triggers before formal rollout.",
+          note: "Operator lens | Only move forward once the process is stable under real operating conditions.",
+        },
+      ];
+    }
+
+    return [
+      {
+        window: windows[0],
+        title: loading
+          ? "Freezing the first execution scope."
+          : "Freeze the first execution scope, owner map, and launch thresholds.",
+        note: "Operator lens | Lock the first workflow and who owns each handoff before any wider rollout starts.",
+      },
+      {
+        window: windows[1],
+        title: "Map dependencies, delivery bottlenecks, staffing pressure, and support burden for the first phase.",
+        note: "Operator lens | Surface the points where the plan becomes fragile before it hits customers.",
+      },
+      {
+        window: windows[2],
+        title: "Pilot one workflow or geography and measure where throughput, quality, or service breaks.",
+        note: "Operator lens | Narrow scope is a feature here because it exposes the real failure surface faster.",
+      },
+      {
+        window: windows[3],
+        title: "Review the operating data and decide whether the sequence, staffing, or tooling needs to change before scaling.",
+        note: `Operator lens | ${toPlainText(recommendedDirective || "Hold scale until the workflow is stable and the risk surface is controlled.")}`,
+      },
+    ];
+  }
+
+  if (isDiscovery) {
+    return [
+      {
+        window: windows[0],
+        title: loading
+          ? "Ranking the opportunity set."
+          : "Rank the local business options by market pull, payback shape, and downside concentration.",
+        note: "Investor lens | You are underwriting which idea deserves attention, not approving a full launch yet.",
+      },
+      {
+        window: windows[1],
+        title: "Gather customer, pricing, and competitor proof on the two strongest opportunities.",
+        note: "Investor lens | Look for evidence that the demand is real and not just theoretically attractive.",
+      },
+      {
+        window: windows[2],
+        title: "Model a small pilot for the lead option and pressure-test GTM, cost, and execution assumptions.",
+        note: "Investor lens | The goal is sharper conviction, not optimistic storytelling.",
+      },
+      {
+        window: windows[3],
+        title: "Decide whether one business has earned deeper diligence or whether the opportunity set still lacks proof.",
+        note: "Investor lens | Move only when the upside is clearer than the downside concentration.",
+      },
+    ];
+  }
+
+  return [
+    {
+      window: windows[0],
+      title: loading
+        ? "Isolating the core investment question."
+        : "Isolate the underwriting case: customer urgency, pricing power, and what would break conviction.",
+      note: "Investor lens | Define the exact proof needed before more capital or confidence is committed.",
+    },
+    {
+      window: windows[1],
+      title: "Collect customer proof, reference signals, and objections that could change the return profile.",
+      note: "Investor lens | Separate real pull from a story that still needs validation.",
+    },
+    {
+      window: windows[2],
+      title: "Pressure-test GTM efficiency, implementation burden, and the path to acceptable payback.",
+      note: "Investor lens | This is where good narratives usually fail if the economics are weak.",
+    },
+    {
+      window: windows[3],
+      title: "Reassess conviction using downside concentration, alignment, and the strength of the new proof.",
+      note: `Investor lens | ${toPlainText(recommendedDirective || "Keep the next step tied to proof, not optimism.")}`,
+    },
+  ];
+}
+
 function buildPrimaryDecisionView({
   result,
   leadTurn,
@@ -632,6 +820,14 @@ function buildPrimaryDecisionView({
     );
   }
 
+  const audienceTimelineItems = buildAudienceTimelineItems({
+    audienceMode,
+    loading,
+    businessProblem,
+    recommendedDirective,
+    timelineItems,
+  });
+
   const decision = result?.final_output?.decision;
   const decisionLabel = formatDecisionLabel(decision ?? leadTurn?.stance ?? "MODIFY");
   const title = loading ? dashboardConfig.loadingLabel : `${dashboardConfig.titlePrefix}: ${decisionLabel}`;
@@ -667,7 +863,7 @@ function buildPrimaryDecisionView({
     riskItems,
     metricItems,
     signalCards,
-    timelineItems,
+    timelineItems: audienceTimelineItems,
     biggestRisk: toPlainText(highestRisk),
     nextMove: toPlainText(recommendedDirective || "No action step yet."),
     dashboardConfig,
