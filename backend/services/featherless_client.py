@@ -91,6 +91,7 @@ class FeatherlessClient:
             prompt=(
                 "Answer this user question about VentureBoard AI.\n"
                 "Make the answer specific to the product. Mention that it can review startup ideas, local businesses, investment questions, pricing, launch timing, market demand, hiring, and execution risk.\n"
+                "If the user asks what they can do with the product, explain the kinds of business questions they can ask and what the output will look like.\n"
                 "If the user asks about accuracy or reliability, say it is a decision-support tool that combines multi-agent reasoning with research when available and should not replace final legal, medical, or financial advice.\n\n"
                 f"Question: {prompt}"
             ),

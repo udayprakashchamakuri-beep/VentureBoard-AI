@@ -26,11 +26,14 @@ function CommandConsoleDrawer({
   selectedDemoCaseId,
   loading,
   error,
+  attachments,
   onClose,
   onSubmit,
   onApplySample,
   onSelectDemoCase,
   onFieldChange,
+  onAttachFiles,
+  onRemoveAttachment,
 }) {
   useEffect(() => {
     if (loading && consoleOpen) {
@@ -181,6 +184,51 @@ function CommandConsoleDrawer({
             />
             <span className="field-help">Optional. Add any plain-language notes that would help the team understand the situation.</span>
           </label>
+
+          <div className="form-section-heading">
+            <h3>2.5 Attach supporting material</h3>
+            <p>Add images, PDFs, or text notes related to the business. The review will use extracted text and attachment metadata as extra context.</p>
+          </div>
+
+          <div className="console-grid two attachment-section-grid">
+            <div className="attachment-upload-card">
+              <span>Supporting files</span>
+              <label className="attachment-button wide-secondary">
+                Add image / PDF
+                <input
+                  type="file"
+                  accept="image/*,.pdf,.txt,.csv,.json"
+                  multiple
+                  onChange={(event) => {
+                    onAttachFiles(event.target.files);
+                    event.target.value = "";
+                  }}
+                />
+              </label>
+              <span className="field-help">
+                PDFs and text files can be summarized into the prompt. Images are attached as reference metadata for the agents.
+              </span>
+            </div>
+            <div className="attachment-panel">
+              {attachments?.length ? (
+                <div className="attachment-chip-row">
+                  {attachments.map((attachment) => (
+                    <div key={attachment.id} className="attachment-chip">
+                      <div>
+                        <strong>{attachment.name}</strong>
+                        <span>{attachment.summary}</span>
+                      </div>
+                      <button type="button" onClick={() => onRemoveAttachment(attachment.id)} aria-label={`Remove ${attachment.name}`}>
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="field-help">No files attached yet.</p>
+              )}
+            </div>
+          </div>
 
           <div className="form-section-heading">
             <h3>3. Numbers you already know</h3>

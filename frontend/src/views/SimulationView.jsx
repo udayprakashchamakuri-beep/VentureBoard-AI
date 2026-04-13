@@ -1151,6 +1151,7 @@ function SimulationView({
   error,
   chatMessages,
   chatDraft,
+  attachments,
   composerOpen,
   composerMode,
   focusedAgentNames,
@@ -1168,6 +1169,8 @@ function SimulationView({
   audienceMode,
   onToggleConsole,
   onChatDraftChange,
+  onAttachFiles,
+  onRemoveAttachment,
   onSubmitChat,
   onShowComposer,
   onContinueComposer,
@@ -1648,6 +1651,42 @@ function SimulationView({
                       </button>
                     ))}
                   </div>
+                </div>
+                <div className="composer-attachments">
+                  <div className="composer-attachments-top">
+                    <span className="composer-target-label">Attachments</span>
+                    <label className="attachment-button">
+                      Add image / PDF
+                      <input
+                        type="file"
+                        accept="image/*,.pdf,.txt,.csv,.json"
+                        multiple
+                        onChange={(event) => {
+                          onAttachFiles(event.target.files);
+                          event.target.value = "";
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {attachments?.length ? (
+                    <div className="attachment-chip-row">
+                      {attachments.map((attachment) => (
+                        <div key={attachment.id} className="attachment-chip">
+                          <div>
+                            <strong>{attachment.name}</strong>
+                            <span>{attachment.summary}</span>
+                          </div>
+                          <button type="button" onClick={() => onRemoveAttachment(attachment.id)} aria-label={`Remove ${attachment.name}`}>
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="attachment-help">
+                      Add an image, PDF, or note file if you want the review to use extra business context. PDFs and text files can be summarized; images are passed as reference metadata for now.
+                    </p>
+                  )}
                 </div>
                 <textarea
                   className="composer-textarea"

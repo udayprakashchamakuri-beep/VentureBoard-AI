@@ -22,6 +22,7 @@ function App() {
   const [activeView, setActiveView] = useState("home");
   const [form, setForm] = useState(buildDefaultForm());
   const [chatDraft, setChatDraft] = useState("");
+  const [attachments, setAttachments] = useState([]);
   const [composerOpen, setComposerOpen] = useState(true);
   const [composerMode, setComposerMode] = useState("fresh");
   const [chatMessages, setChatMessages] = useState([]);
@@ -253,22 +254,26 @@ function App() {
   async function runAnalysis(payload, options = {}) {
     const { closeConsole = false, focusAgentNames = [] } = options;
     const reviewStartedAt = Date.now();
-    const websiteQuestion = looksLikeWebsiteQuestion(payload.business_problem);
+    const promptCategory = getPromptCategory(payload.business_problem, payload);
     if (closeConsole) {
       setConsoleOpen(false);
     }
-    setLoading(true);
-    setLoadingStartedAt(reviewStartedAt);
     setError("");
     setActiveView("simulation");
     setFocusedAgentNames(focusAgentNames);
     setSelectedAgentName(focusAgentNames[0] || "");
 
+    if (promptCategory !== "business") {
+      setLoading(false);
+      setLoadingStartedAt(null);
+      setResult(buildNonBusinessPromptResult(payload.business_problem, payload.selected_agent_names ?? []));
+      return;
+    }
+
+    setLoading(true);
+    setLoadingStartedAt(reviewStartedAt);
+
     try {
-      if (websiteQuestion) {
-        setResult(buildNonBusinessPromptResult(payload.business_problem, payload.selected_agent_names ?? []));
-        return;
-      }
       setResult(createEmptyResult(payload.company_name));
       try {
         await runStreamingAnalysis(payload);
@@ -377,8 +382,8 @@ function App() {
       : [];
 
     const problemText = composeBusinessProblem(normalizedForm).trim();
-    if (problemText.length < 20) {
-      setError("Please describe the business decision in a little more detail before starting the review.");
+    if (problemText.length < 20 && !attachments.length) {
+      setError("Please describe the business decision in a little more detail before starting the review, or attach supporting material.");
       return;
     }
 
@@ -388,14 +393,14 @@ function App() {
     setComposerOpen(false);
     setComposerMode("fresh");
     setFocusedAgentNames([]);
-    await runAnalysis(buildAnalysisPayload(normalizedForm, formChatMessages, audienceMode), { closeConsole: true });
+    await runAnalysis(buildAnalysisPayload(normalizedForm, formChatMessages, audienceMode, attachments), { closeConsole: true });
   }
 
   async function handleQuickChatSubmit(rawMessage, options = {}) {
     const mode = options.mode ?? composerMode;
     const trimmedMessage = rawMessage.trim();
-    if (trimmedMessage.length < 20) {
-      setError("Please type at least one full sentence so the advisors have enough context to review your case.");
+    if (trimmedMessage.length < 20 && !attachments.length) {
+      setError("Please type at least one full sentence, or attach supporting material so the advisors have enough context to review your case.");
       return;
     }
 
@@ -413,7 +418,7 @@ function App() {
       setFocusedAgentNames([]);
     }
 
-    await runAnalysis(buildAnalysisPayload(derivedForm, nextMessages, audienceMode), {
+    await runAnalysis(buildAnalysisPayload(derivedForm, nextMessages, audienceMode, attachments), {
       focusAgentNames: mode === "continue" ? focusedAgentNames : [],
     });
   }
@@ -427,6 +432,7 @@ function App() {
     setComposerOpen(true);
     setComposerMode("fresh");
     setChatMessages([createChatMessage(sampleForm.business_problem)]);
+    setAttachments([]);
     setFocusedAgentNames([]);
     setError("");
     setActiveView("simulation");
@@ -452,6 +458,7 @@ function App() {
   function openFreshComposer() {
     setComposerMode("fresh");
     setChatDraft("");
+    setAttachments([]);
     setFocusedAgentNames([]);
     setComposerOpen(true);
   }
@@ -460,6 +467,20 @@ function App() {
     setComposerMode("continue");
     setChatDraft("");
     setComposerOpen(true);
+  }
+
+  async function handleAttachFiles(fileList) {
+    const files = Array.from(fileList || []).slice(0, 4);
+    if (!files.length) {
+      return;
+    }
+
+    const nextAttachments = await Promise.all(files.map((file) => summarizeAttachment(file)));
+    setAttachments((current) => [...current, ...nextAttachments].slice(-6));
+  }
+
+  function removeAttachment(attachmentId) {
+    setAttachments((current) => current.filter((attachment) => attachment.id !== attachmentId));
   }
 
   function openAgentProfile(agentName) {
@@ -738,6 +759,7 @@ function App() {
           error={error}
           chatMessages={chatMessages}
           chatDraft={chatDraft}
+          attachments={attachments}
           composerOpen={composerOpen}
           composerMode={composerMode}
           focusedAgentNames={focusedAgentNames}
@@ -758,6 +780,8 @@ function App() {
           audienceMode={audienceMode}
           onToggleConsole={toggleConsole}
           onChatDraftChange={setChatDraft}
+          onAttachFiles={handleAttachFiles}
+          onRemoveAttachment={removeAttachment}
           onSubmitChat={handleQuickChatSubmit}
           onShowComposer={openFreshComposer}
           onContinueComposer={openContinueComposer}
@@ -869,11 +893,14 @@ function App() {
         selectedDemoCaseId={selectedDemoCaseId}
         loading={loading}
         error={error}
+        attachments={attachments}
         onClose={() => setConsoleOpen(false)}
         onSubmit={handleSubmit}
         onApplySample={applySample}
         onSelectDemoCase={setSelectedDemoCaseId}
         onFieldChange={updateFormField}
+        onAttachFiles={handleAttachFiles}
+        onRemoveAttachment={removeAttachment}
       />
       ) : null}
 
@@ -1384,7 +1411,141 @@ function splitList(value) {
     .filter(Boolean);
 }
 
-function composeBusinessProblem(form, chatMessages = []) {
+function formatAttachmentSize(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return "";
+  }
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  if (bytes >= 1024) {
+    return `${Math.round(bytes / 1024)} KB`;
+  }
+  return `${bytes} B`;
+}
+
+function sanitizeExtractedText(text, maxLength = 420) {
+  return String(text || "")
+    .replace(/[^\x20-\x7E\n]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Unable to read file as text."));
+    reader.readAsText(file);
+  });
+}
+
+function readFileAsArrayBuffer(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error || new Error("Unable to read file."));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function getImageDimensions(file) {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      resolve({ width: image.width, height: image.height });
+      URL.revokeObjectURL(objectUrl);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Unable to inspect image."));
+    };
+    image.src = objectUrl;
+  });
+}
+
+function extractPdfInsight(arrayBuffer) {
+  const text = new TextDecoder("latin1").decode(new Uint8Array(arrayBuffer));
+  const pageCount = Math.max(1, (text.match(/\/Type\s*\/Page\b/g) || []).length);
+  const snippets = Array.from(text.matchAll(/\(([^)]{20,220})\)/g))
+    .map((match) => sanitizeExtractedText(match[1], 180))
+    .filter((snippet) => snippet.length >= 24)
+    .slice(0, 3);
+
+  return {
+    pageCount,
+    excerpt: snippets.join(" ").trim(),
+  };
+}
+
+async function summarizeAttachment(file) {
+  const summary = {
+    id: `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    name: file.name,
+    type: file.type || "application/octet-stream",
+    size: file.size,
+    sizeLabel: formatAttachmentSize(file.size),
+    summary: "",
+    excerpt: "",
+  };
+
+  try {
+    if (file.type.startsWith("image/")) {
+      const dimensions = await getImageDimensions(file);
+      return {
+        ...summary,
+        kind: "image",
+        summary: `Image attachment (${dimensions.width}×${dimensions.height}) added for business context.`,
+      };
+    }
+
+    if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+      const buffer = await readFileAsArrayBuffer(file);
+      const pdfInsight = extractPdfInsight(buffer);
+      return {
+        ...summary,
+        kind: "pdf",
+        summary: `PDF attachment with about ${pdfInsight.pageCount} pages added for business context.`,
+        excerpt: pdfInsight.excerpt,
+      };
+    }
+
+    const text = sanitizeExtractedText(await readFileAsText(file));
+    return {
+      ...summary,
+      kind: "document",
+      summary: "Document attachment added for business context.",
+      excerpt: text,
+    };
+  } catch (_error) {
+    return {
+      ...summary,
+      kind: file.type.startsWith("image/") ? "image" : "document",
+      summary: "Attachment added for business context.",
+      excerpt: "",
+    };
+  }
+}
+
+function buildAttachmentContext(attachments = []) {
+  const validAttachments = attachments.filter(Boolean);
+  if (!validAttachments.length) {
+    return "";
+  }
+
+  const lines = validAttachments.map((attachment) => {
+    const meta = [attachment.kind?.toUpperCase(), attachment.sizeLabel].filter(Boolean).join(", ");
+    const base = `${attachment.name}${meta ? ` (${meta})` : ""}: ${attachment.summary || "Attachment provided for analysis."}`;
+    return attachment.excerpt ? `${base} Extracted content: ${attachment.excerpt}` : base;
+  });
+
+  return `Attached materials:\n- ${lines.join("\n- ")}`;
+}
+
+function composeBusinessProblem(form, chatMessages = [], attachments = []) {
+  const attachmentContext = buildAttachmentContext(attachments);
   if (chatMessages.length) {
     const transcript = chatMessages
       .map((message, index) => {
@@ -1398,17 +1559,22 @@ function composeBusinessProblem(form, chatMessages = []) {
     if (form.extra_context.trim()) {
       sections.push(`Additional background: ${form.extra_context.trim()}`);
     }
+    if (attachmentContext) {
+      sections.push(attachmentContext);
+    }
     return sections.join("\n\n");
   }
 
   const mainProblem = form.business_problem.trim();
   const extraContext = form.extra_context.trim();
 
-  if (!extraContext) {
+  if (!extraContext && !attachmentContext) {
     return mainProblem;
   }
 
-  return `${mainProblem}\n\nAdditional background: ${extraContext}`;
+  return [mainProblem, extraContext ? `Additional background: ${extraContext}` : "", attachmentContext]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 function buildScenarioVariations(form) {
@@ -1471,7 +1637,7 @@ function createChatMessage(content, targetAgentNames = []) {
   };
 }
 
-function buildAnalysisPayload(form, chatMessages = [], audienceMode = DEFAULT_AUDIENCE_MODE) {
+function buildAnalysisPayload(form, chatMessages = [], audienceMode = DEFAULT_AUDIENCE_MODE, attachments = []) {
   const normalizedForm = normalizeForm(form);
 
   return {
@@ -1480,7 +1646,7 @@ function buildAnalysisPayload(form, chatMessages = [], audienceMode = DEFAULT_AU
     region: normalizedForm.region,
     company_stage: normalizedForm.company_stage,
     selected_agent_names: chatMessages[chatMessages.length - 1]?.targetAgentNames ?? [],
-    business_problem: composeBusinessProblem(normalizedForm, chatMessages),
+    business_problem: composeBusinessProblem(normalizedForm, chatMessages, attachments),
     objectives: splitList(normalizedForm.objectives),
     current_constraints: splitList(normalizedForm.current_constraints),
     known_metrics: buildKnownMetrics(normalizedForm),
@@ -1785,6 +1951,10 @@ function looksLikeWebsiteQuestion(message) {
 
   return [
     "what can you do",
+    "what can i do with you",
+    "what can you do for me",
+    "what can i do with this",
+    "what can this do for me",
     "how can you help",
     "how does this work",
     "what does this website do",
@@ -1801,6 +1971,20 @@ function looksLikeWebsiteQuestion(message) {
     "how should i use this",
     "what can i ask",
   ].some((signal) => text.includes(signal));
+}
+
+function getPromptCategory(message, form = {}) {
+  const text = extractPrimaryPromptText(message).toLowerCase();
+  if (!text) {
+    return "general";
+  }
+  if (looksLikeWebsiteQuestion(text)) {
+    return "website";
+  }
+  if (isBusinessDecisionPrompt(text, form)) {
+    return "business";
+  }
+  return "general";
 }
 
 function buildWebsiteHelpAnswer(message) {
@@ -2231,17 +2415,17 @@ function estimateFallbackSummary(payload) {
       decision: "MODIFY",
       confidence: 76,
       topInfluencer: "Finance Agent",
-      mainReason: `${company} looks like a serious company to study, but the answer depends more on valuation, earnings quality, and your holding period than on hype.`,
-      supportReason: `The key question is not whether ${company} is real, but whether you are buying it at a sensible price for the growth and risk you are taking.`,
+      mainReason: `${company} may be a good company, but that does not automatically make it a good investment at today's price.`,
+      supportReason: `The real question is whether the current price leaves enough upside after you account for slower growth, weaker margins, or a bad entry point.`,
       risks: [
-        `${company} can still disappoint if client spending slows, margins tighten, or deal momentum weakens.`,
-        "A good company can still be a weak investment if you buy it after too much optimism is already priced in.",
-        "Concentration risk matters if this becomes a large share of your capital.",
+        `${company} can still disappoint if customer demand slows or profits come under pressure.`,
+        "A strong company can still be a poor investment if you buy it after too much optimism is already priced in.",
+        "It becomes riskier if too much of your money depends on this one stock.",
       ],
       nextSteps: [
-        `Compare ${company}'s current valuation with its own recent history and with close peers before committing.`,
-        `Check the latest revenue growth, large-deal momentum, margin trend, and management guidance for ${company}.`,
-        "Decide your position size, time horizon, and downside limit before you invest any money.",
+        `Compare ${company}'s current price with its own recent history and with close peers before you buy.`,
+        `Check whether ${company}'s latest revenue growth, profit trend, and management guidance still support the story.`,
+        "Decide how much you are willing to invest and what loss would make you exit.",
       ],
       conflicts: [
         "Quality and stability may be attractive, but the return can still be mediocre if the entry valuation is too rich.",
@@ -2253,7 +2437,7 @@ function estimateFallbackSummary(payload) {
         "How much of your portfolio should depend on one company call?",
       ],
       explainability:
-        "This backup investment readout leans on the company cue in your prompt and shifts the memo toward valuation, earnings quality, and downside control instead of startup launch advice.",
+        "This backup investment readout shifts the memo toward entry price, profit quality, and downside control instead of startup launch advice.",
       estimatedMetrics: {
         expected_roi_pct: 11,
         estimated_payback_months: 24,
@@ -2421,16 +2605,16 @@ function buildFallbackAgentLine(agentName, payload, summary) {
   if (context.kind === "public-equity") {
     const company = context.company || "the company";
     const companyTemplates = {
-      "CEO Agent": `I would not treat ${company} like a yes-or-no business launch. The real question is whether the current price gives you enough upside for the risk and time horizon.`,
-      "Startup Builder Agent": `${company} is already a mature company, so the edge is not building fast. The edge is entering only when the market is mispricing the business.`,
-      "Market Research Agent": `Study what is happening to tech spending, deal wins, and outsourcing demand around ${company} before building conviction.`,
-      "Finance Agent": `I care most about valuation, free cash generation, margin trend, and whether ${company} can still grow enough to justify the price you are paying.`,
-      "Marketing Agent": `The story around ${company} may sound strong, but investor narratives matter less than whether the numbers keep proving the case.`,
-      "Pricing Agent": `For a listed company, pricing translates into valuation discipline. Even a strong company becomes a weak buy if the entry price is stretched.`,
-      "Supply Chain Agent": `${company}'s delivery quality, client concentration, and execution consistency matter because they shape how durable earnings really are.`,
-      "Hiring Agent": `Leadership quality, attrition, and bench strength matter because talent execution is part of what protects ${company}'s margins.`,
-      "Risk Agent": `The main risk is not that ${company} is fake. The main risk is slower growth, multiple compression, or concentration hurting returns after you buy.`,
-      "Sales Strategy Agent": `Watch for large deal momentum and client spending appetite. Those signals will tell you more about ${company}'s near-term strength than broad market talk.`,
+      "CEO Agent": `I would not treat ${company} like a simple yes-or-no stock tip. The real question is whether the current price gives you enough reward for the risk.`,
+      "Startup Builder Agent": `${company} is already a mature business, so the edge is not speed. The edge is buying only when the market price is sensible.`,
+      "Market Research Agent": `Look at customer demand, deal wins, and industry spending around ${company} before building conviction.`,
+      "Finance Agent": `I care most about price, profit quality, cash generation, and whether ${company} can still grow enough to justify today's valuation.`,
+      "Marketing Agent": `The story around ${company} may sound good, but the real test is whether the numbers keep proving the story.`,
+      "Pricing Agent": `For a listed company, price means valuation. Even a strong company becomes a weak buy if you pay too much.`,
+      "Supply Chain Agent": `${company}'s delivery quality, client mix, and execution consistency matter because they affect how dependable earnings really are.`,
+      "Hiring Agent": `Leadership quality, attrition, and bench strength matter because talent execution helps protect ${company}'s margins.`,
+      "Risk Agent": `The main risk is slower growth, weaker margins, or a lower market valuation after you buy.`,
+      "Sales Strategy Agent": `Watch large deals and customer spending appetite. Those signals say more about near-term strength than broad market buzz.`,
     };
     return companyTemplates[agentName] || companyTemplates["CEO Agent"];
   }

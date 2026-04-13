@@ -3039,6 +3039,95 @@ a {
   gap: 8px;
 }
 
+.composer-attachments {
+  display: grid;
+  gap: 8px;
+}
+
+.composer-attachments-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.attachment-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(21, 27, 45, 0.84);
+  padding: 8px 12px;
+  color: rgba(220, 225, 251, 0.78);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.attachment-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.attachment-help {
+  margin: 0;
+  color: rgba(220, 225, 251, 0.64);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.attachment-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.attachment-chip {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 220px;
+  max-width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(12, 19, 36, 0.82);
+  padding: 10px 12px;
+}
+
+.attachment-chip div {
+  display: grid;
+  gap: 4px;
+}
+
+.attachment-chip strong {
+  color: #dde3eb;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.attachment-chip span {
+  color: rgba(220, 225, 251, 0.64);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.attachment-chip button {
+  border: 0;
+  background: transparent;
+  color: rgba(255, 225, 109, 0.88);
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
 .composer-target-label {
   font-family: "Space Grotesk", sans-serif;
   font-size: 0.58rem;
@@ -3532,6 +3621,16 @@ a {
   gap: 8px;
   color: rgba(220, 225, 251, 0.76);
   font-size: 0.82rem;
+}
+
+.attachment-upload-card,
+.attachment-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(7, 13, 31, 0.42);
+  padding: 14px;
 }
 
 .console-form input,

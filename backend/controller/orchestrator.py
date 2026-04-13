@@ -410,6 +410,8 @@ class EnterpriseOrchestrator:
             return False
         product_signals = [
             "what can you do",
+            "what can you do for me",
+            "what can i do with you",
             "how can you help",
             "what does this website do",
             "what does this site do",
