@@ -1935,7 +1935,7 @@ function extractPrimaryPromptText(message) {
   }
 
   const transcriptMatches = Array.from(
-    rawText.matchAll(/Message\s+\d+(?:\s+to\s+[^:]+)?:\s*(.*?)(?=\nMessage\s+\d+(?:\s+to\s+[^:]+)?:|\n\nAdditional background:|$)/gis),
+    rawText.matchAll(/Message\s+\d+(?:\s+to\s+[^:]+)?:\s*(.*?)(?=\nMessage\s+\d+(?:\s+to\s+[^:]+)?:|\n\nAdditional background:|\n\nAttached materials:|$)/gis),
   )
     .map((match) => match[1]?.replace(/\s+/g, " ").trim())
     .filter(Boolean);
@@ -2057,7 +2057,7 @@ function buildWebsiteHelpAnswer(message) {
   if (/(image|pdf|attach|attachment|upload|file)/.test(prompt)) {
     return [
       "You can add supporting files to give the agents more context. PDFs and text-like files can be summarized into the case, and images are attached as reference material for the review flow.",
-      "That works best when the file actually supports the business decision, like a pitch deck, pricing sheet, brochure, store photo, market note, or business plan.",
+      "That works best when the file actually supports a business decision, like a pitch deck, pricing sheet, brochure, store photo, market note, or business plan. If you only say something like 'analyze this image' without connecting it to a business question, VentureBoard should answer directly instead of launching the full advisory review.",
     ].join(" ");
   }
 
