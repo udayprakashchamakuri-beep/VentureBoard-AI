@@ -1940,12 +1940,26 @@ function extractPrimaryPromptText(message) {
     .map((match) => match[1]?.replace(/\s+/g, " ").trim())
     .filter(Boolean);
 
-  return transcriptMatches.at(-1) || rawText;
+  if (transcriptMatches.length) {
+    return transcriptMatches.at(-1) || rawText;
+  }
+
+  return rawText
+    .split(/\n\s*\n(?:Additional background:|Attached materials:)/i)[0]
+    .trim();
 }
 
 function looksLikeWebsiteQuestion(message) {
   const text = extractPrimaryPromptText(message).toLowerCase();
   if (!text) {
+    return false;
+  }
+
+  const attachmentCapabilityQuestion = /(analyze|review|check|look at|read).*(image|pdf|attachment|file|document)/.test(text);
+  const explicitBusinessAttachment = attachmentCapabilityQuestion &&
+    /\b(business|startup|shop|store|company|pricing|market|customer|launch|investment|sales|profit|risk)\b/.test(text);
+
+  if (explicitBusinessAttachment) {
     return false;
   }
 
@@ -1970,6 +1984,28 @@ function looksLikeWebsiteQuestion(message) {
     "what business questions",
     "how should i use this",
     "what can i ask",
+    "founder mode",
+    "investor mode",
+    "operator mode",
+    "difference between founder and investor",
+    "difference between investor and founder",
+    "difference between founder and operator",
+    "difference between operator and founder",
+    "difference between investor and operator",
+    "difference between operator and investor",
+    "choose your seat",
+    "brief form",
+    "detailed form",
+    "detail form",
+    "attachment",
+    "attachments",
+    "upload image",
+    "upload pdf",
+    "analyze the image",
+    "analyze image",
+    "analyze the pdf",
+    "analyze pdf",
+    "analyze the attachment",
   ].some((signal) => text.includes(signal));
 }
 
