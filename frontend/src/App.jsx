@@ -2004,9 +2004,37 @@ function buildWebsiteHelpAnswer(message) {
     ].join(" ");
   }
 
+  if (/(founder|investor|operator|mode|choose your seat|audience)/.test(prompt)) {
+    return [
+      "VentureBoard changes the response style based on who you are. Founder mode uses simpler language and clearer next steps, investor mode uses medium-depth diligence language, and operator mode uses denser execution language with more operational detail.",
+      "The underlying review stays the same, but the memo, scorecard labels, action plan, and wording are adjusted so the output is easier for that audience to use.",
+    ].join(" ");
+  }
+
+  if (/(brief form|detailed form|detail form|open brief|open detailed form)/.test(prompt)) {
+    return [
+      "The brief form is the structured input path. It is useful when you already know key details like the business idea, location, target customer, pricing, budget, or runway and want the agents to review a clearer case.",
+      "If you only have a rough idea, you can skip the form and type directly into the discussion box instead.",
+    ].join(" ");
+  }
+
+  if (/(image|pdf|attach|attachment|upload|file)/.test(prompt)) {
+    return [
+      "You can add supporting files to give the agents more context. PDFs and text-like files can be summarized into the case, and images are attached as reference material for the review flow.",
+      "That works best when the file actually supports the business decision, like a pitch deck, pricing sheet, brochure, store photo, market note, or business plan.",
+    ].join(" ");
+  }
+
+  if (/(what can i ask|what kind of questions|what questions can i ask|what can you do|what can i do with you|how can you help|how does this work|what does this website do|what does this site do|what is ventureboard)/.test(prompt)) {
+    return [
+      "You can use VentureBoard to pressure-test a business move before you commit. It is good for startup ideas, local businesses, pricing, launch timing, customer demand, competition, hiring, execution risk, and investment questions.",
+      "The output usually comes back as one decision memo with risks, customer reaction, a next-step plan, and an optional conversation view that shows how the agents reasoned through the case.",
+    ].join(" ");
+  }
+
   return [
-    "VentureBoard helps you pressure-test a business move before you commit. You can ask about starting a business, opening a local shop, pricing, launch timing, hiring, market demand, or whether a company or investment idea looks strong enough to pursue.",
-    "It will turn that into a CEO-style memo, risk view, customer reaction, action plan, and conversation between the specialist agents. It works best when you include the business idea, location, audience, price, budget, runway, or company name you want reviewed.",
+    "VentureBoard is a business decision workspace. You can use it to test a business idea, compare options, review a company or investment, or understand risks before you spend more time or money.",
+    "It works best when you include concrete details like the idea, location, target customer, price, budget, runway, or company name, because that gives the agents enough context to produce a more useful memo and action plan.",
   ].join(" ");
 }
 

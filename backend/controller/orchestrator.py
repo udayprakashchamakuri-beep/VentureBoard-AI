@@ -436,6 +436,21 @@ class EnterpriseOrchestrator:
                 "It is strongest when you give a concrete business idea, company, location, pricing, budget, or runway, and it should be used as decision support rather than blind automation. "
                 "You should still verify high-stakes financial, legal, medical, or investment decisions before acting."
             )
+        if any(keyword in text for keyword in ["founder", "investor", "operator", "mode", "audience"]):
+            return (
+                "VentureBoard changes the response style based on who you are. Founder mode uses simpler language and clearer next steps, investor mode uses medium-depth diligence language, and operator mode uses denser execution language with more operational detail. "
+                "The core review stays the same, but the memo, labels, and action plan are adjusted so the output is easier for that audience to use."
+            )
+        if any(keyword in text for keyword in ["brief form", "detailed form", "detail form", "open brief"]):
+            return (
+                "The brief form is the structured input path. Use it when you already know details like the business idea, location, target customer, pricing, budget, or runway and want a clearer review. "
+                "If your idea is still rough, you can type directly into the discussion box instead."
+            )
+        if any(keyword in text for keyword in ["image", "pdf", "attach", "attachment", "upload", "file"]):
+            return (
+                "You can attach supporting files to give the agents more context. PDFs and text-like files can be summarized into the case, and images can be attached as reference material for the review flow. "
+                "This is most useful for pitch decks, pricing sheets, brochures, store photos, business plans, or market notes."
+            )
         if any(keyword in text for keyword in ["performance", "fast", "speed", "slow"]):
             return (
                 "VentureBoard can take a little time when the question needs research because it tries to pull live demand, pricing, competitor, and risk signals before the memo is shown. "
