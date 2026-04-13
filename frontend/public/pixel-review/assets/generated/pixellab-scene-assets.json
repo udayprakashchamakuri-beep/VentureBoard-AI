@@ -1,0 +1,222 @@
+[
+    {
+        "width":  96,
+        "height":  96,
+        "id":  "ceo",
+        "type":  "office",
+        "background_job_id":  "8025c1d7-883e-4ff1-836e-a6179e269497",
+        "object_id":  "415f0eba-2fa1-475d-80ac-55ae1c64241b",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\office\\ceo.png",
+        "prompt":  "top-down pixel art occupied office workstation pod with a seated startup CEO actively typing at a computer, modern desk, glowing monitor, red office chair, brown swept hair, teal blazer over white shirt, coffee mug, sticky note, clean enterprise office style, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/415f0eba-2fa1-475d-80ac-55ae1c64241b/rotations/unknown.png"
+    },
+    {
+        "width":  96,
+        "height":  96,
+        "id":  "sales",
+        "type":  "office",
+        "background_job_id":  "1ae9c8a3-50eb-4c49-a669-691135b49800",
+        "object_id":  "73277885-29b8-4863-8b6f-d6bbe26a107b",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\office\\sales.png",
+        "prompt":  "top-down pixel art occupied office workstation pod with a seated enterprise sales lead reviewing pipeline on a computer, navy vest over white shirt, warm brown hair, focused startup office style, coffee mug and notes, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/73277885-29b8-4863-8b6f-d6bbe26a107b/rotations/unknown.png"
+    },
+    {
+        "width":  96,
+        "height":  96,
+        "id":  "marketing",
+        "type":  "office",
+        "background_job_id":  "906dc0e2-d895-4a16-9ca0-daa925400fd6",
+        "object_id":  "13291cc6-0e51-4c47-8669-ec747f50352b",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\office\\marketing.png",
+        "prompt":  "top-down pixel art occupied office workstation pod with a seated marketing strategist analyzing campaign dashboards on a computer, orange jacket, dark textured hair, energetic startup office style, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/13291cc6-0e51-4c47-8669-ec747f50352b/rotations/unknown.png"
+    },
+    {
+        "width":  96,
+        "height":  96,
+        "id":  "product",
+        "type":  "office",
+        "background_job_id":  "5beee5f3-3673-4af9-9320-61ad36b169d5",
+        "object_id":  "1326603f-88d3-4005-92a9-0327cf730435",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\office\\product.png",
+        "prompt":  "top-down pixel art occupied office workstation pod with a seated product manager mapping feature priorities on a computer, coral blouse, dark bob hair, modern startup office style, papers and sticky notes, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/1326603f-88d3-4005-92a9-0327cf730435/rotations/unknown.png"
+    },
+    {
+        "width":  96,
+        "height":  96,
+        "id":  "finance",
+        "type":  "office",
+        "background_job_id":  "99783075-63d8-4c5d-87be-f6f246858f24",
+        "object_id":  "e941e811-03db-4790-ad37-71bddee5959a",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\office\\finance.png",
+        "prompt":  "top-down pixel art occupied office workstation pod with a seated finance lead reviewing spreadsheet metrics on a computer, silver hair, light formal coat, polished startup office style, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/e941e811-03db-4790-ad37-71bddee5959a/rotations/unknown.png"
+    },
+    {
+        "width":  96,
+        "height":  96,
+        "id":  "ops",
+        "type":  "office",
+        "background_job_id":  "30cd0400-96e8-4f12-aea0-084c8351671b",
+        "object_id":  "0ff23dbf-ef55-4c12-93be-f732a2812438",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\office\\ops.png",
+        "prompt":  "top-down pixel art occupied office workstation pod with a seated operations lead managing process dashboards on a computer, pale blue shirt, brown spiky hair, efficient startup office style, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/0ff23dbf-ef55-4c12-93be-f732a2812438/rotations/unknown.png"
+    },
+    {
+        "width":  96,
+        "height":  96,
+        "id":  "research",
+        "type":  "office",
+        "background_job_id":  "14ee30d3-0a7e-42b7-b516-c2e4b5312687",
+        "object_id":  "92b17450-d529-4023-987a-07238ab79037",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\office\\research.png",
+        "prompt":  "top-down pixel art occupied office workstation pod with a seated market researcher scanning reports at a computer, green jacket, dark hair in a bun, thoughtful startup office style, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/92b17450-d529-4023-987a-07238ab79037/rotations/unknown.png"
+    },
+    {
+        "width":  96,
+        "height":  96,
+        "id":  "legal",
+        "type":  "office",
+        "background_job_id":  "eb796b0f-0658-4dd3-b183-4a15a57ca624",
+        "object_id":  "32efe53a-85f0-4efe-9734-5389e9a265de",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\office\\legal.png",
+        "prompt":  "top-down pixel art occupied office workstation pod with a seated legal lead reviewing compliance notes on a computer, blue coat, cropped gray hair, enterprise startup office style, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/32efe53a-85f0-4efe-9734-5389e9a265de/rotations/unknown.png"
+    },
+    {
+        "width":  96,
+        "height":  96,
+        "id":  "customer",
+        "type":  "office",
+        "background_job_id":  "72951a74-8bbd-4bc5-be28-e251e13b22e1",
+        "object_id":  "d8ae4b23-a7a3-4568-97d7-00c1a9e3e3f1",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\office\\customer.png",
+        "prompt":  "top-down pixel art occupied office workstation pod with a seated customer lead reviewing call notes on a computer, rose dress, long warm brown hair, friendly startup office style, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/d8ae4b23-a7a3-4568-97d7-00c1a9e3e3f1/rotations/unknown.png"
+    },
+    {
+        "width":  96,
+        "height":  96,
+        "id":  "investor",
+        "type":  "office",
+        "background_job_id":  "13b21cd2-e122-459e-8aa8-34324228fca1",
+        "object_id":  "ff572266-7a4a-4d34-af64-1d9bbb6af53d",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\office\\investor.png",
+        "prompt":  "top-down pixel art occupied office workstation pod with a seated investor analyst reviewing downside models on a computer, white shirt, dark hair, clean formal style, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/ff572266-7a4a-4d34-af64-1d9bbb6af53d/rotations/unknown.png"
+    },
+    {
+        "width":  96,
+        "height":  72,
+        "id":  "ceo",
+        "type":  "conference",
+        "background_job_id":  "2044e4af-2cb6-4d9e-b4f6-e8eca24d73da",
+        "object_id":  "ded7760b-32da-4e7a-a16b-c6f1445ea15f",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\conference\\ceo.png",
+        "prompt":  "low top-down pixel art boardroom head chair occupied by a seated startup CEO in teal blazer and white shirt, brown swept hair, viewed from the head of the table and facing south toward the boardroom table, enterprise meeting style, readable 3/4 angle, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/ded7760b-32da-4e7a-a16b-c6f1445ea15f/rotations/unknown.png"
+    },
+    {
+        "width":  72,
+        "height":  96,
+        "id":  "sales",
+        "type":  "conference",
+        "background_job_id":  "8858856a-1f91-4ed1-b012-a2354c92bfa6",
+        "object_id":  "fd0a62b2-3470-419e-9f5a-7b8b4b13ee74",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\conference\\sales.png",
+        "prompt":  "low top-down pixel art conference side chair occupied by a seated enterprise sales lead in navy vest over white shirt, warm brown hair, viewed from the west aisle with a clear 3/4 side profile, facing right and inward toward the boardroom table, enterprise meeting style, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/fd0a62b2-3470-419e-9f5a-7b8b4b13ee74/rotations/unknown.png"
+    },
+    {
+        "width":  72,
+        "height":  96,
+        "id":  "marketing",
+        "type":  "conference",
+        "background_job_id":  "1eef9090-f6b8-434d-8c29-75375f13b554",
+        "object_id":  "f18894b9-ce3e-4cc4-9fcb-b079d79a3b58",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\conference\\marketing.png",
+        "prompt":  "low top-down pixel art conference side chair occupied by a seated marketing strategist in orange jacket with dark textured hair, viewed from the west aisle with a clear 3/4 side profile, facing right and inward toward the boardroom table, enterprise meeting style, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/f18894b9-ce3e-4cc4-9fcb-b079d79a3b58/rotations/unknown.png"
+    },
+    {
+        "width":  72,
+        "height":  96,
+        "id":  "product",
+        "type":  "conference",
+        "background_job_id":  "e9d00bfb-a84a-40d8-a180-5355643c1a24",
+        "object_id":  "9331cd44-61c9-4f50-bfda-c1229d980fa8",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\conference\\product.png",
+        "prompt":  "low top-down pixel art conference side chair occupied by a seated product manager in coral blouse with dark bob hair, viewed from the west aisle with a clear 3/4 side profile, facing right and inward toward the boardroom table, enterprise meeting style, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/9331cd44-61c9-4f50-bfda-c1229d980fa8/rotations/unknown.png"
+    },
+    {
+        "width":  72,
+        "height":  96,
+        "id":  "finance",
+        "type":  "conference",
+        "background_job_id":  "fd74e645-f052-42db-8842-83d3cd8f5ed3",
+        "object_id":  "3788fe5f-573a-4edc-aacb-2270cf6ab997",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\conference\\finance.png",
+        "prompt":  "low top-down pixel art conference side chair occupied by a seated finance lead with silver hair and a light formal coat, viewed from the west aisle with a clear 3/4 side profile, facing right and inward toward the boardroom table, enterprise meeting style, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/3788fe5f-573a-4edc-aacb-2270cf6ab997/rotations/unknown.png"
+    },
+    {
+        "width":  72,
+        "height":  96,
+        "id":  "ops",
+        "type":  "conference",
+        "background_job_id":  "e196a36c-eacd-4f08-8b19-3357c35c46b9",
+        "object_id":  "039bb92e-a718-4ab2-9691-4ee49649650f",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\conference\\ops.png",
+        "prompt":  "low top-down pixel art conference side chair occupied by a seated operations lead in a pale blue shirt with brown spiky hair, viewed from the east aisle with a clear 3/4 side profile, facing left and inward toward the boardroom table, enterprise meeting style, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/039bb92e-a718-4ab2-9691-4ee49649650f/rotations/unknown.png"
+    },
+    {
+        "width":  72,
+        "height":  96,
+        "id":  "research",
+        "type":  "conference",
+        "background_job_id":  "bff4c858-53f9-424f-a5cf-1fd4bdd34734",
+        "object_id":  "e0808404-f1b8-4249-9bda-a7ac89097e23",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\conference\\research.png",
+        "prompt":  "low top-down pixel art conference side chair occupied by a seated market researcher in a green jacket with dark bun hair, viewed from the east aisle with a clear 3/4 side profile, facing left and inward toward the boardroom table, enterprise meeting style, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/e0808404-f1b8-4249-9bda-a7ac89097e23/rotations/unknown.png"
+    },
+    {
+        "width":  72,
+        "height":  96,
+        "id":  "legal",
+        "type":  "conference",
+        "background_job_id":  "5731bc8d-4bf3-4d93-b94c-bfd95a98df68",
+        "object_id":  "34cfd37c-2cc7-409c-9341-0adc68b105e7",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\conference\\legal.png",
+        "prompt":  "low top-down pixel art conference side chair occupied by a seated legal lead in a blue coat with cropped gray hair, viewed from the east aisle with a clear 3/4 side profile, facing left and inward toward the boardroom table, enterprise meeting style, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/34cfd37c-2cc7-409c-9341-0adc68b105e7/rotations/unknown.png"
+    },
+    {
+        "width":  72,
+        "height":  96,
+        "id":  "customer",
+        "type":  "conference",
+        "background_job_id":  "160a9dbb-0b70-4cf4-8d2a-a6801ca9b67c",
+        "object_id":  "ddd62b3c-d0eb-46e5-ab1a-30d1b67639f6",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\conference\\customer.png",
+        "prompt":  "low top-down pixel art conference side chair occupied by a seated customer lead in a rose dress with long warm brown hair, viewed from the east aisle with a clear 3/4 side profile, facing left and inward toward the boardroom table, enterprise meeting style, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/ddd62b3c-d0eb-46e5-ab1a-30d1b67639f6/rotations/unknown.png"
+    },
+    {
+        "width":  96,
+        "height":  72,
+        "id":  "investor",
+        "type":  "conference",
+        "background_job_id":  "ed4b1bb3-4b62-43d9-a140-b42632d08d7c",
+        "object_id":  "8e211f33-93a7-4efd-814d-ca9db5021d95",
+        "path":  "C:\\Users\\udayp\\Downloads\\picoclaw-main\\picoclaw-main\\workspace\\war-room-demo\\assets\\generated\\conference\\investor.png",
+        "prompt":  "low top-down pixel art boardroom head chair occupied by a seated investor analyst in a white shirt with dark hair, viewed from the foot of the table and facing north toward the boardroom table, enterprise meeting style, readable 3/4 angle, transparent background",
+        "storage_url":  "https://backblaze.pixellab.ai/file/pixellab-characters/objects/59cbaa02-68de-47a7-97e7-fb555c17127f/8e211f33-93a7-4efd-814d-ca9db5021d95/rotations/unknown.png"
+    }
+]

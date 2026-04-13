@@ -4,41 +4,85 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VentureBoard AI Pixel Review</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=15" />
   </head>
   <body data-phase="research">
-    <div class="runtime-shell">
-      <header class="runtime-topbar">
-        <div class="runtime-copy">
-          <p id="audience-label" class="runtime-kicker">Founder mode</p>
+    <div class="shell">
+      <header class="topbar">
+        <div class="hero-copy">
+          <p id="audience-label" class="eyebrow">Founder mode</p>
           <h1 id="scenario-title">Business case review</h1>
-          <p id="prompt-copy" class="runtime-prompt">The advisory team is reviewing the case.</p>
+          <p id="prompt-copy" class="tagline">
+            The advisory team is reviewing the case and will surface a memo after the pixel
+            review sequence completes.
+          </p>
         </div>
-        <div class="runtime-meta">
-          <span id="phase-pill" class="runtime-pill">Researching</span>
-          <div class="runtime-countdown">
-            <strong id="countdown">00:10</strong>
-            <span>until memo</span>
+        <div class="hud-strip">
+          <div class="hud-card">
+            <span class="hud-label">Phase</span>
+            <strong id="phase-label">Research</strong>
           </div>
+          <div class="hud-card">
+            <span class="hud-label">Countdown</span>
+            <strong id="countdown">00:15</strong>
+          </div>
+          <button id="replay-button" class="pixel-button" type="button">Replay</button>
         </div>
       </header>
 
-      <section class="runtime-scene">
-        <div class="runtime-scene-head">
-          <span id="phase-label">Office research</span>
-          <span id="mini-phase">Pixel review sequence</span>
-        </div>
-        <div class="canvas-shell">
-          <canvas id="war-room-canvas" width="672" height="480" aria-label="Pixel review scene"></canvas>
-        </div>
-      </section>
+      <main class="layout">
+        <section class="scene-panel">
+          <div class="scene-header">
+            <span>Top-Down Office Grid</span>
+            <span id="mini-phase">Research Loop</span>
+            <span>10 Agents</span>
+          </div>
+          <div class="canvas-shell">
+            <canvas id="war-room-canvas" width="672" height="480" aria-label="Air War Room scene"></canvas>
+          </div>
+        </section>
 
-      <button id="replay-button" class="runtime-hidden-control" type="button" aria-hidden="true" tabindex="-1">Replay</button>
-      <ul id="agent-roster" class="runtime-hidden"></ul>
-      <div id="transcript" class="runtime-hidden"></div>
-      <div id="verdict-box" class="runtime-hidden"></div>
+        <aside class="hud-panel">
+          <section class="pixel-box">
+            <p class="eyebrow">Scenario</p>
+            <h2 id="scenario-panel-title">Founder idea review</h2>
+            <p id="scenario-panel-copy" class="body-copy">
+              This scene simulates a founder briefing where product, finance, marketing,
+              operations, and investor-lens agents gather evidence before debating the path
+              forward.
+            </p>
+          </section>
+
+          <section class="pixel-box">
+            <div class="section-head">
+              <p class="eyebrow">Agent HUD</p>
+              <span id="phase-pill" class="phase-pill">Researching</span>
+            </div>
+            <ul id="agent-roster" class="agent-roster"></ul>
+          </section>
+
+          <section class="pixel-box">
+            <p class="eyebrow">Debate Stream</p>
+            <div id="transcript" class="transcript">
+              <p class="placeholder-copy">
+                Research traffic is live. Watch the bubbles in the room for evidence calls and
+                short agent updates.
+              </p>
+            </div>
+          </section>
+
+          <section class="pixel-box">
+            <p class="eyebrow">CEO Verdict</p>
+            <div id="verdict-box" class="verdict-box">
+              <p class="placeholder-copy">
+                Final recommendation will populate when the conference cycle completes.
+              </p>
+            </div>
+          </section>
+        </aside>
+      </main>
     </div>
 
-    <script src="./app.js"></script>
+    <script src="./app.js?v=15"></script>
   </body>
 </html>

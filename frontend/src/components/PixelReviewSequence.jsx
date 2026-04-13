@@ -24,6 +24,7 @@ export default function PixelReviewSequence({
       scenario: scenarioTitle || "Business case review",
       prompt: promptExcerpt,
       startedAt: String(loadingStartedAt || Date.now()),
+      runtime: "15",
     });
     return `${import.meta.env.BASE_URL}pixel-review/index.html?${params.toString()}`;
   }, [audienceConfig.label, loadingStartedAt, promptExcerpt, scenarioTitle]);

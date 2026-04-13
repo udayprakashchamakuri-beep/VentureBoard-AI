@@ -3,18 +3,15 @@ const COLS = 28;
 const ROWS = 20;
 
 const RESEARCH_DURATION_MS = 10_000;
-const DEBATE_STEP_MS = 850;
-const MOVE_SPEED_TILES = 4.5;
+const CONFERENCE_DURATION_MS = 12_000;
+const DEBATE_STEP_MS = 1_050;
+const MOVE_SPEED_TILES = 6.2;
 const FIXED_FRAME_MS = 1000 / 60;
 
 const query = new URLSearchParams(window.location.search);
+
 const canvas = document.getElementById("war-room-canvas");
-const displayCtx = canvas.getContext("2d");
-displayCtx.imageSmoothingEnabled = false;
-const sceneCanvas = document.createElement("canvas");
-sceneCanvas.width = COLS * TILE;
-sceneCanvas.height = ROWS * TILE;
-const ctx = sceneCanvas.getContext("2d");
+const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
 
 const phaseLabel = document.getElementById("phase-label");
@@ -25,9 +22,48 @@ const replayButton = document.getElementById("replay-button");
 const audienceLabel = document.getElementById("audience-label");
 const scenarioTitle = document.getElementById("scenario-title");
 const promptCopy = document.getElementById("prompt-copy");
+const scenarioPanelTitle = document.getElementById("scenario-panel-title");
+const scenarioPanelCopy = document.getElementById("scenario-panel-copy");
 const roster = document.getElementById("agent-roster");
 const transcript = document.getElementById("transcript");
 const verdictBox = document.getElementById("verdict-box");
+
+function formatAudienceLabel(value) {
+  const clean = String(value || "").trim();
+  return clean ? `${clean} mode` : "Founder mode";
+}
+
+function formatScenarioTitle(value) {
+  const clean = String(value || "").trim();
+  return clean || "Business case review";
+}
+
+function formatPromptCopy(value) {
+  const clean = String(value || "").replace(/\s+/g, " ").trim();
+  if (!clean) {
+    return "The advisory team is reviewing the case and will surface a memo after the pixel review sequence completes.";
+  }
+  return clean.length > 180 ? `${clean.slice(0, 177)}...` : clean;
+}
+
+function buildScenarioCopy(audience, scenario) {
+  const label = String(audience || "Founder").trim() || "Founder";
+  const subject = String(scenario || "Business case review").trim() || "business case review";
+  return `This ${label.toLowerCase()} briefing is pressure-testing "${subject}" while the team researches evidence in the office and then debates the call in the conference room.`;
+}
+
+const audienceModeLabel = formatAudienceLabel(query.get("audience"));
+const scenarioHeading = formatScenarioTitle(query.get("scenario"));
+const promptHeading = formatPromptCopy(query.get("prompt"));
+
+document.title = `${scenarioHeading} | VentureBoard AI Pixel Review`;
+if (audienceLabel) audienceLabel.textContent = audienceModeLabel;
+if (scenarioTitle) scenarioTitle.textContent = scenarioHeading;
+if (promptCopy) promptCopy.textContent = promptHeading;
+if (scenarioPanelTitle) scenarioPanelTitle.textContent = scenarioHeading;
+if (scenarioPanelCopy) {
+  scenarioPanelCopy.textContent = buildScenarioCopy(query.get("audience"), scenarioHeading);
+}
 
 const palette = {
   bg: "#13161f",
@@ -79,33 +115,44 @@ const palette = {
 };
 
 const desks = [
-  { x: 2, y: 2, w: 3, h: 2, seat: { x: 3, y: 4 } },
-  { x: 8, y: 2, w: 3, h: 2, seat: { x: 9, y: 4 } },
-  { x: 2, y: 6, w: 3, h: 2, seat: { x: 3, y: 8 } },
-  { x: 8, y: 6, w: 3, h: 2, seat: { x: 9, y: 8 } },
-  { x: 5, y: 10, w: 3, h: 2, seat: { x: 6, y: 12 } },
-  { x: 17, y: 2, w: 3, h: 2, seat: { x: 18, y: 4 } },
-  { x: 23, y: 2, w: 3, h: 2, seat: { x: 24, y: 4 } },
-  { x: 17, y: 6, w: 3, h: 2, seat: { x: 18, y: 8 } },
-  { x: 23, y: 6, w: 3, h: 2, seat: { x: 24, y: 8 } },
-  { x: 20, y: 10, w: 3, h: 2, seat: { x: 21, y: 12 } },
+  { x: 2, y: 2, w: 4, h: 4, mirror: false, officeFacing: "west", seat: { x: 4.4, y: 4.7 } },
+  { x: 7, y: 2, w: 4, h: 4, mirror: false, officeFacing: "west", seat: { x: 9.4, y: 4.7 } },
+  { x: 12, y: 2, w: 4, h: 4, mirror: false, officeFacing: "west", seat: { x: 14.4, y: 4.7 } },
+  { x: 18, y: 2, w: 4, h: 4, mirror: true, officeFacing: "east", seat: { x: 19.6, y: 4.7 } },
+  { x: 23, y: 2, w: 4, h: 4, mirror: true, officeFacing: "east", seat: { x: 24.6, y: 4.7 } },
+  { x: 2, y: 10, w: 4, h: 4, mirror: false, officeFacing: "west", seat: { x: 4.4, y: 12.7 } },
+  { x: 7, y: 10, w: 4, h: 4, mirror: false, officeFacing: "west", seat: { x: 9.4, y: 12.7 } },
+  { x: 12, y: 10, w: 4, h: 4, mirror: false, officeFacing: "west", seat: { x: 14.4, y: 12.7 } },
+  { x: 18, y: 10, w: 4, h: 4, mirror: true, officeFacing: "east", seat: { x: 19.6, y: 12.7 } },
+  { x: 23, y: 10, w: 4, h: 4, mirror: true, officeFacing: "east", seat: { x: 24.6, y: 12.7 } },
 ];
 
-const table = { x: 10, y: 12, w: 8, h: 6 };
-const officeCamera = { x: 1 * TILE, y: 1 * TILE, width: 26 * TILE, height: 13 * TILE };
-const conferenceCamera = { x: 3 * TILE, y: 6 * TILE, width: 22 * TILE, height: 13.5 * TILE };
+const table = { x: 8, y: 4, w: 12, h: 11 };
 
 const conferenceSeats = [
-  { x: 13, y: 11, facing: "south" },
-  { x: 9, y: 13, facing: "east" },
-  { x: 18, y: 13, facing: "west" },
-  { x: 9, y: 14, facing: "east" },
-  { x: 18, y: 14, facing: "west" },
-  { x: 9, y: 15, facing: "east" },
-  { x: 18, y: 15, facing: "west" },
-  { x: 9, y: 16, facing: "east" },
-  { x: 18, y: 16, facing: "west" },
-  { x: 13, y: 18, facing: "north" },
+  { x: 13, y: 2, facing: "south" },
+  { x: 7, y: 6, facing: "east" },
+  { x: 7, y: 8, facing: "east" },
+  { x: 7, y: 10, facing: "east" },
+  { x: 7, y: 12, facing: "east" },
+  { x: 20, y: 6, facing: "west" },
+  { x: 20, y: 8, facing: "west" },
+  { x: 20, y: 10, facing: "west" },
+  { x: 20, y: 12, facing: "west" },
+  { x: 13, y: 15, facing: "north" },
+];
+
+const conferenceEntries = [
+  { x: 3, y: 17 },
+  { x: 5, y: 17 },
+  { x: 7, y: 17 },
+  { x: 9, y: 17 },
+  { x: 11, y: 17 },
+  { x: 15, y: 17 },
+  { x: 17, y: 17 },
+  { x: 19, y: 17 },
+  { x: 21, y: 17 },
+  { x: 23, y: 17 },
 ];
 
 const agentSpecs = [
@@ -283,10 +330,138 @@ const agentSpecs = [
 const finalVerdict =
   "Launch a 90-day founder-led pilot in one B2B operations vertical, sell a painful workflow outcome, and delay broad platform expansion until usage proves a repeatable wedge. The AI story should feel like operational clarity, not magic.";
 
+const researchChatPairs = [
+  { members: ["sales", "marketing"], lines: ["ICP CHECK", "CHANNEL FIT"] },
+  { members: ["ops", "research"], lines: ["FLOW BLOCK", "OPS LOAD"] },
+  { members: ["ceo", "sales"], lines: ["WEDGE FIRST", "BUYER PAIN"] },
+  { members: ["legal", "customer"], lines: ["TRUST GATE", "USER LANGUAGE"] },
+];
+const flippedConferenceAgents = new Set(["ops", "legal", "customer"]);
+
+const PIXELLAB_SPRITE_SIZE = 74;
+const OFFICE_OCCUPANT_SCALE = 2;
+const CONFERENCE_OCCUPANT_SCALE = 1.85;
+const WORKSTATION_PROP_SIZE = 100;
+const UTILITY_PROP_SIZE = 84;
+const PLANT_PROP_SIZE = 52;
+const PARTITION_PROP_WIDTH = 72;
+const PARTITION_PROP_HEIGHT = 48;
+const CONFERENCE_TABLE_PROP_SIZE = 256;
+const OFFICE_SPRITE_HEIGHT = 82;
+const CONFERENCE_SPRITE_HEIGHT = 78;
+
+const SPRITE_CROPS = {
+  south: { sx: 22, sy: 10, sw: 24, sh: 50 },
+  north: { sx: 22, sy: 10, sw: 24, sh: 50 },
+  east: { sx: 25, sy: 12, sw: 18, sh: 50 },
+  west: { sx: 24, sy: 12, sw: 18, sh: 50 },
+};
+
+const pixellabSpriteManifest = {
+  ceo: {
+    south: "./assets/agents/ceo/south.png",
+    east: "./assets/agents/ceo/east.png",
+    north: "./assets/agents/ceo/north.png",
+    west: "./assets/agents/ceo/west.png",
+  },
+  sales: {
+    south: "./assets/agents/sales/south.png",
+    east: "./assets/agents/sales/east.png",
+    north: "./assets/agents/sales/north.png",
+    west: "./assets/agents/sales/west.png",
+  },
+  marketing: {
+    south: "./assets/agents/marketing/south.png",
+    east: "./assets/agents/marketing/east.png",
+    north: "./assets/agents/marketing/north.png",
+    west: "./assets/agents/marketing/west.png",
+  },
+  product: {
+    south: "./assets/agents/product/south.png",
+    east: "./assets/agents/product/east.png",
+    north: "./assets/agents/product/north.png",
+    west: "./assets/agents/product/west.png",
+  },
+  finance: {
+    south: "./assets/agents/finance/south.png",
+    east: "./assets/agents/finance/east.png",
+    north: "./assets/agents/finance/north.png",
+    west: "./assets/agents/finance/west.png",
+  },
+  ops: {
+    south: "./assets/agents/operations/south.png",
+    east: "./assets/agents/operations/east.png",
+    north: "./assets/agents/operations/north.png",
+    west: "./assets/agents/operations/west.png",
+  },
+  research: {
+    south: "./assets/agents/research/south.png",
+    east: "./assets/agents/research/east.png",
+    north: "./assets/agents/research/north.png",
+    west: "./assets/agents/research/west.png",
+  },
+  legal: {
+    south: "./assets/agents/legal/south.png",
+    east: "./assets/agents/legal/east.png",
+    north: "./assets/agents/legal/north.png",
+    west: "./assets/agents/legal/west.png",
+  },
+  customer: {
+    south: "./assets/agents/customer/south.png",
+    east: "./assets/agents/customer/east.png",
+    north: "./assets/agents/customer/north.png",
+    west: "./assets/agents/customer/west.png",
+  },
+  investor: {
+    south: "./assets/agents/investor/south.png",
+    east: "./assets/agents/investor/east.png",
+    north: "./assets/agents/investor/north.png",
+    west: "./assets/agents/investor/west.png",
+  },
+};
+
+const propManifest = {
+  workstation: "./assets/props/workstation.png",
+  partition: "./assets/props/partition.png",
+  utility: "./assets/props/utility.png",
+  plant: "./assets/props/plant.png",
+  conferenceTable: "./assets/props/conference-table.png",
+};
+
+const generatedOfficeManifest = {
+  ceo: "./assets/generated/office/ceo.png",
+  sales: "./assets/generated/office/sales.png",
+  marketing: "./assets/generated/office/marketing.png",
+  product: "./assets/generated/office/product.png",
+  finance: "./assets/generated/office/finance.png",
+  ops: "./assets/generated/office/ops.png",
+  research: "./assets/generated/office/research.png",
+  legal: "./assets/generated/office/legal.png",
+  customer: "./assets/generated/office/customer.png",
+  investor: "./assets/generated/office/investor.png",
+};
+
+const generatedConferenceManifest = {
+  ceo: "./assets/generated/conference/ceo.png",
+  sales: "./assets/generated/conference/sales.png",
+  marketing: "./assets/generated/conference/marketing.png",
+  product: "./assets/generated/conference/product.png",
+  finance: "./assets/generated/conference/finance.png",
+  ops: "./assets/generated/conference/ops.png",
+  research: "./assets/generated/conference/research.png",
+  legal: "./assets/generated/conference/legal.png",
+  customer: "./assets/generated/conference/customer.png",
+  investor: "./assets/generated/conference/investor.png",
+};
+
 const rosterRefs = new Map();
 const transcriptItems = [];
 const agents = [];
 const wallBlocks = new Set();
+const pixellabSprites = new Map();
+const propSprites = new Map();
+const officePodSprites = new Map();
+const conferenceSeatSprites = new Map();
 
 let phase = "research";
 let phaseStartedAt = 0;
@@ -294,18 +469,122 @@ let currentSpeakerIndex = -1;
 let nextDebateAt = 0;
 let lastResearchShuffleAt = 0;
 let timelineNow = 0;
+let conferenceStartedAt = 0;
+let researchCycle = 0;
+let activeResearchPairIndex = 0;
+let activeResponderIndex = -1;
 
-if (audienceLabel) {
-  audienceLabel.textContent = `${query.get("audience") || "Founder"} mode`;
+function preloadPixellabSprites() {
+  Object.entries(pixellabSpriteManifest).forEach(([agentId, directions]) => {
+    const spriteSet = {};
+    Object.entries(directions).forEach(([direction, url]) => {
+      const image = new Image();
+      image.decoding = "async";
+      image.src = url;
+      spriteSet[direction] = image;
+    });
+    pixellabSprites.set(agentId, spriteSet);
+  });
 }
 
-if (scenarioTitle) {
-  scenarioTitle.textContent = query.get("scenario") || "Business case review";
+function preloadPropSprites() {
+  Object.entries(propManifest).forEach(([name, url]) => {
+    const image = new Image();
+    image.decoding = "async";
+    image.src = url;
+    propSprites.set(name, image);
+  });
 }
 
-if (promptCopy) {
-  promptCopy.textContent =
-    query.get("prompt") || "The advisory team is reviewing the case.";
+function preloadSpriteMap(manifest, targetMap) {
+  Object.entries(manifest).forEach(([name, url]) => {
+    const image = new Image();
+    image.decoding = "async";
+    image.src = url;
+    targetMap.set(name, image);
+  });
+}
+
+function getPixellabSprite(agentId, direction) {
+  const spriteSet = pixellabSprites.get(agentId);
+  const image = spriteSet?.[direction];
+  return image && image.complete && image.naturalWidth > 0 ? image : null;
+}
+
+function getPropSprite(name) {
+  const image = propSprites.get(name);
+  return image && image.complete && image.naturalWidth > 0 ? image : null;
+}
+
+function getLoadedMapSprite(targetMap, name) {
+  const image = targetMap.get(name);
+  return image && image.complete && image.naturalWidth > 0 ? image : null;
+}
+
+function getOfficePodSprite(agentId) {
+  return getLoadedMapSprite(officePodSprites, agentId);
+}
+
+function getConferenceSeatSprite(agentId) {
+  return getLoadedMapSprite(conferenceSeatSprites, agentId);
+}
+
+function getSpriteCrop(direction) {
+  return SPRITE_CROPS[direction] ?? SPRITE_CROPS.south;
+}
+
+function drawPixellabCharacter(agent, direction, dx, dy, targetHeight, widthBoost = 1.25) {
+  const sprite = getPixellabSprite(agent.id, direction);
+  if (!sprite) return null;
+
+  const crop = getSpriteCrop(direction);
+  const targetWidth = Math.round((crop.sw * targetHeight) / crop.sh * widthBoost);
+  ctx.drawImage(sprite, crop.sx, crop.sy, crop.sw, crop.sh, dx, dy, targetWidth, targetHeight);
+  return { width: targetWidth, height: targetHeight };
+}
+
+function drawClippedPixellabCharacter(
+  agent,
+  direction,
+  dx,
+  dy,
+  targetHeight,
+  visibleHeight,
+  widthBoost = 1.25,
+) {
+  const sprite = getPixellabSprite(agent.id, direction);
+  if (!sprite) return null;
+
+  const crop = getSpriteCrop(direction);
+  const targetWidth = Math.round((crop.sw * targetHeight) / crop.sh * widthBoost);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(dx, dy, targetWidth, visibleHeight);
+  ctx.clip();
+  ctx.drawImage(sprite, crop.sx, crop.sy, crop.sw, crop.sh, dx, dy, targetWidth, targetHeight);
+  ctx.restore();
+  return { width: targetWidth, height: targetHeight };
+}
+
+function drawScaledClippedSeatedAgent(agent, facing, dx, dy, scale, clipHeight = 18) {
+  agent.currentFacing = facing;
+  ctx.save();
+  ctx.translate(Math.round(dx), Math.round(dy));
+  ctx.scale(scale, scale);
+  ctx.beginPath();
+  ctx.rect(0, 0, 16, clipHeight);
+  ctx.clip();
+  drawSeatedAgent(agent, 0, 0);
+  ctx.restore();
+}
+
+function drawScaledSeatedAgent(agent, facing, dx, dy, scale) {
+  agent.currentFacing = facing;
+  ctx.save();
+  ctx.translate(Math.round(dx), Math.round(dy));
+  ctx.scale(scale, scale);
+  drawSeatedAgent(agent, 0, 0);
+  ctx.restore();
 }
 
 function key(x, y) {
@@ -332,7 +611,10 @@ function createRoster() {
     const item = document.createElement("li");
     item.className = "roster-item";
     item.innerHTML = `
-      <span class="roster-dot" style="--dot-color:${spec.color}"></span>
+      <div class="roster-avatar-shell">
+        <img class="roster-avatar" src="${pixellabSpriteManifest[spec.id].south}" alt="${spec.name} sprite" />
+        <span class="roster-dot" style="--dot-color:${spec.color}"></span>
+      </div>
       <div>
         <div class="roster-head">
           <strong>${spec.name}</strong>
@@ -393,7 +675,7 @@ function setFinalVerdict() {
   `;
 }
 
-function buildWorld() {
+function buildWorld(scene = "office") {
   wallBlocks.clear();
 
   for (let x = 0; x < COLS; x += 1) {
@@ -406,26 +688,27 @@ function buildWorld() {
     wallBlocks.add(key(COLS - 1, y));
   }
 
-  for (let x = table.x; x < table.x + table.w; x += 1) {
-    for (let y = table.y; y < table.y + table.h; y += 1) {
-      wallBlocks.add(key(x, y));
-    }
-  }
-
-  for (const desk of desks) {
-    for (let x = desk.x; x < desk.x + desk.w; x += 1) {
-      for (let y = desk.y; y < desk.y + desk.h; y += 1) {
+  if (scene === "conference") {
+    for (let x = table.x + 1; x < table.x + table.w - 1; x += 1) {
+      for (let y = table.y + 1; y < table.y + table.h - 1; y += 1) {
         wallBlocks.add(key(x, y));
       }
     }
-  }
 
-  for (let x = 11; x <= 16; x += 1) {
-    wallBlocks.add(key(x, 2));
-  }
+    const decorBlocks = [
+      { x: 2, y: 4, w: 2, h: 2 },
+      { x: 24, y: 4, w: 2, h: 2 },
+      { x: 2, y: 14, w: 2, h: 2 },
+      { x: 24, y: 14, w: 2, h: 2 },
+    ];
 
-  for (let x = 11; x <= 16; x += 1) {
-    wallBlocks.add(key(x, 3));
+    decorBlocks.forEach((block) => {
+      for (let x = block.x; x < block.x + block.w; x += 1) {
+        for (let y = block.y; y < block.y + block.h; y += 1) {
+          wallBlocks.add(key(x, y));
+        }
+      }
+    });
   }
 }
 
@@ -441,16 +724,19 @@ function createAgents() {
       desk: desks[index],
       seat,
       position: { x: start.x, y: start.y },
-      tile: { x: start.x, y: start.y },
+      tile: { x: Math.round(start.x), y: Math.round(start.y) },
+      currentFacing: desks[index].officeFacing,
       path: [],
       pathIndex: 0,
       hasDeparted: false,
       hasArrived: false,
       isSpeaking: false,
+      isResponding: false,
       bubble: spec.research[0].toUpperCase(),
       status: spec.research[0],
       nextResearchIndex: 0,
       bounceSeed: index * 0.7 + 1,
+      activity: "typing",
     });
   });
 }
@@ -460,12 +746,18 @@ function resetSceneState(now = performance.now()) {
   transcriptItems.length = 0;
   renderTranscript();
   setInitialVerdict();
-  setPhase("research", "Office research", "Researching");
+  setPhase("research", "Research", "Researching");
   phaseStartedAt = now;
+  conferenceStartedAt = 0;
   currentSpeakerIndex = -1;
   nextDebateAt = 0;
   lastResearchShuffleAt = now;
-  countdown.textContent = "00:10";
+  researchCycle = 0;
+  activeResearchPairIndex = 0;
+  activeResponderIndex = -1;
+  countdown.textContent = "00:15";
+  buildWorld("office");
+  applyResearchBeat();
   syncRoster();
 }
 
@@ -474,14 +766,58 @@ function syncRoster() {
     const ref = rosterRefs.get(agent.id);
     if (!ref) continue;
     ref.status.textContent = agent.status;
-    ref.item.style.opacity = agent.isSpeaking ? "1" : "0.86";
-    ref.item.style.borderColor = agent.isSpeaking ? "#265868" : "";
+    ref.item.style.opacity = agent.isSpeaking || agent.isResponding ? "1" : "0.86";
+    ref.item.style.borderColor = agent.isSpeaking ? "#265868" : agent.isResponding ? "#7c6730" : "";
   }
 }
 
 function formatCountdown(ms) {
   const seconds = Math.max(0, Math.ceil(ms / 1000));
   return `00:${seconds.toString().padStart(2, "0")}`;
+}
+
+function getAgentById(id) {
+  return agents.find((agent) => agent.id === id);
+}
+
+function getResearchPair() {
+  return researchChatPairs[activeResearchPairIndex % researchChatPairs.length];
+}
+
+function applyResearchBeat() {
+  const pair = getResearchPair();
+  const pairedIds = new Set(pair.members);
+
+  agents.forEach((agent) => {
+    agent.isSpeaking = false;
+    agent.isResponding = false;
+    agent.activity = pairedIds.has(agent.id) ? "talking" : "typing";
+    agent.bubble = "";
+  });
+
+  pair.members.forEach((id, index) => {
+    const agent = getAgentById(id);
+    if (agent) {
+      agent.bubble = pair.lines[index];
+      agent.status = `${agent.status} / Pair review`;
+    }
+  });
+
+  for (let offset = 0, placed = 0; offset < agents.length && placed < 2; offset += 1) {
+    const index = (researchCycle * 3 + offset * 2) % agents.length;
+    const agent = agents[index];
+    if (!agent || pairedIds.has(agent.id) || agent.bubble) continue;
+    agent.bubble = agent.status.toUpperCase();
+    placed += 1;
+  }
+}
+
+function getDebateResponderIndex(speakerIndex) {
+  if (speakerIndex === 0) return 9;
+  if (speakerIndex === 9) return 0;
+  if (speakerIndex >= 1 && speakerIndex <= 4) return speakerIndex + 4;
+  if (speakerIndex >= 5 && speakerIndex <= 8) return speakerIndex - 4;
+  return 0;
 }
 
 function neighbors(node) {
@@ -530,45 +866,56 @@ function buildPath(start, goal) {
 }
 
 function startTransition(now) {
-  setPhase("transition", "Conference handoff", "Taking seats");
+  setPhase("transition", "Conference Arrival", "Entering");
   phaseStartedAt = now;
-  countdown.textContent = "LIVE";
+  conferenceStartedAt = now;
+  buildWorld("conference");
 
-  for (const agent of agents) {
+  for (const [index, agent] of agents.entries()) {
+    const entry = conferenceEntries[index];
+    agent.position = { x: entry.x, y: entry.y };
+    agent.tile = { x: entry.x, y: entry.y };
     agent.status = "Walking to conference";
     agent.bubble = "";
     agent.isSpeaking = false;
+    agent.isResponding = false;
     agent.hasDeparted = false;
     agent.hasArrived = false;
     agent.path = [];
     agent.pathIndex = 0;
+    agent.currentFacing = "north";
+    agent.activity = "moving";
   }
 
   syncRoster();
 }
 
 function startDebate(now) {
-  setPhase("debate", "Conference debate", "Debating");
+  setPhase("debate", "Debate", "Debating");
   phaseStartedAt = now;
   currentSpeakerIndex = -1;
-  nextDebateAt = now + 800;
+  nextDebateAt = now + 500;
+  activeResponderIndex = -1;
 
   for (const agent of agents) {
     agent.status = "Listening";
     agent.bubble = "";
     agent.isSpeaking = false;
+    agent.isResponding = false;
   }
 
   syncRoster();
 }
 
 function startDelivery(now) {
-  setPhase("delivery", "Decision ready", "Memo ready");
+  setPhase("delivery", "Verdict", "Decision Ready");
   phaseStartedAt = now;
   setFinalVerdict();
+  activeResponderIndex = -1;
 
   for (const agent of agents) {
     agent.isSpeaking = false;
+    agent.isResponding = false;
     agent.bubble = "";
     agent.status = "Debate complete";
   }
@@ -583,6 +930,7 @@ function startDelivery(now) {
 function advanceDebate(now) {
   for (const agent of agents) {
     agent.isSpeaking = false;
+    agent.isResponding = false;
     agent.bubble = "";
     agent.status = "Listening";
   }
@@ -598,6 +946,12 @@ function advanceDebate(now) {
   speaker.isSpeaking = true;
   speaker.bubble = speaker.callout.toUpperCase();
   speaker.status = "Presenting debate point";
+  activeResponderIndex = getDebateResponderIndex(currentSpeakerIndex);
+  if (agents[activeResponderIndex] && activeResponderIndex !== currentSpeakerIndex) {
+    agents[activeResponderIndex].isResponding = true;
+    agents[activeResponderIndex].status = "Preparing counterpoint";
+    agents[activeResponderIndex].bubble = "...";
+  }
   pushTranscript(speaker.role, speaker.debate);
   syncRoster();
   nextDebateAt = now + DEBATE_STEP_MS;
@@ -609,19 +963,15 @@ function updateResearch(now) {
 
   if (now - lastResearchShuffleAt > 1_900) {
     lastResearchShuffleAt = now;
+    researchCycle += 1;
+    activeResearchPairIndex = researchCycle % researchChatPairs.length;
 
     for (const agent of agents) {
       agent.nextResearchIndex = (agent.nextResearchIndex + 1) % agent.research.length;
       agent.status = agent.research[agent.nextResearchIndex];
-      agent.bubble = "";
-      agent.isSpeaking = false;
     }
 
-    const bubbleTargets = [...agents.keys()].sort(() => Math.random() - 0.5).slice(0, 4);
-    for (const index of bubbleTargets) {
-      agents[index].bubble = agents[index].status.toUpperCase();
-    }
-
+    applyResearchBeat();
     syncRoster();
   }
 
@@ -631,10 +981,12 @@ function updateResearch(now) {
 }
 
 function updateTransition(now, dt) {
+  const remaining = CONFERENCE_DURATION_MS - (now - conferenceStartedAt);
+  countdown.textContent = formatCountdown(remaining);
   let arrivedCount = 0;
 
   agents.forEach((agent, index) => {
-    if (!agent.hasDeparted && now - phaseStartedAt >= index * 140) {
+    if (!agent.hasDeparted && now - phaseStartedAt >= index * 90) {
       agent.path = buildPath(agent.tile, agent.seat);
       agent.pathIndex = 1;
       agent.hasDeparted = true;
@@ -667,6 +1019,12 @@ function updateMovement(agent, dt) {
   const distance = Math.hypot(dx, dy);
   const step = MOVE_SPEED_TILES * dt;
 
+  if (Math.abs(dx) > Math.abs(dy)) {
+    agent.currentFacing = dx >= 0 ? "east" : "west";
+  } else if (Math.abs(dy) > 0.001) {
+    agent.currentFacing = dy >= 0 ? "south" : "north";
+  }
+
   if (distance <= step) {
     agent.position.x = next.x;
     agent.position.y = next.y;
@@ -688,8 +1046,24 @@ function update(now, dt) {
     updateResearch(now);
   } else if (phase === "transition") {
     updateTransition(now, dt);
-  } else if (phase === "debate" && now >= nextDebateAt) {
-    advanceDebate(now);
+  } else if (phase === "debate") {
+    const remaining = CONFERENCE_DURATION_MS - (now - conferenceStartedAt);
+    countdown.textContent = formatCountdown(remaining);
+    if (now >= nextDebateAt) {
+      advanceDebate(now);
+    }
+  } else if (phase === "delivery") {
+    const remaining = CONFERENCE_DURATION_MS - (now - conferenceStartedAt);
+    countdown.textContent = formatCountdown(remaining);
+  }
+
+  if (
+    conferenceStartedAt &&
+    phase !== "research" &&
+    phase !== "delivery" &&
+    CONFERENCE_DURATION_MS - (now - conferenceStartedAt) <= 0
+  ) {
+    startDelivery(now);
   }
 }
 
@@ -715,7 +1089,9 @@ function drawStoneTile(x, y) {
   const base = (x + y) % 2 === 0 ? palette.tileA : palette.tileB;
   fillTile(x, y, base);
   shadeTile(x, y, palette.tileLight, palette.tileLight, palette.tileDark, palette.tileDark);
+  fillRectPx(x * TILE + 4, y * TILE + 4, 5, 1, "rgba(255,255,255,0.28)");
   fillRectPx(x * TILE + 8, y * TILE + 9, 8, 2, "rgba(97, 108, 135, 0.28)");
+  fillRectPx(x * TILE + 18, y * TILE + 16, 3, 1, "rgba(77, 87, 109, 0.24)");
 }
 
 function drawWoodTile(x, y, isBoardroom = false) {
@@ -728,8 +1104,10 @@ function drawWoodTile(x, y, isBoardroom = false) {
       : palette.officeWoodB;
   const grain = isBoardroom ? palette.boardWoodLine : palette.officeWoodLine;
   fillTile(x, y, base);
+  fillRectPx(x * TILE, y * TILE, TILE, 1, "rgba(255, 245, 230, 0.14)");
   fillRectPx(x * TILE + 5, y * TILE, 2, TILE, grain);
   fillRectPx(x * TILE + 15, y * TILE, 1, TILE, grain);
+  fillRectPx(x * TILE + 10, y * TILE + 7, 1, 10, "rgba(255,255,255,0.05)");
   fillRectPx(x * TILE, y * TILE + TILE - 2, TILE, 2, "rgba(27, 23, 29, 0.20)");
 }
 
@@ -778,13 +1156,29 @@ function drawOfficeFloors() {
 function drawWindow(x, y, w = 2) {
   const px = x * TILE;
   const py = y * TILE;
+  fillRectPx(px + 2, py + 2, w * TILE - 4, TILE - 4, "#334354");
   fillRectPx(px + 3, py + 3, w * TILE - 6, TILE - 6, "#7db7ff");
   fillRectPx(px + 5, py + 5, w * TILE - 10, TILE - 10, palette.monitor);
+  fillRectPx(px + 6, py + 6, w * TILE - 12, 2, "rgba(255,255,255,0.30)");
   fillRectPx(px + 3, py + 10, w * TILE - 6, 2, "#d0f3ff");
   fillRectPx(px + (w * TILE) / 2 - 1, py + 3, 2, TILE - 6, palette.trimDark);
+  fillRectPx(px + 4, py + TILE - 3, w * TILE - 8, 2, "rgba(52, 32, 27, 0.28)");
 }
 
 function drawPlanter(x, y, size = 1) {
+  const plant = getPropSprite("plant");
+  if (plant) {
+    const renderedSize = Math.round(PLANT_PROP_SIZE * size);
+    ctx.drawImage(
+      plant,
+      x * TILE - Math.round(renderedSize * 0.2),
+      y * TILE - Math.round(renderedSize * 0.42),
+      renderedSize,
+      renderedSize,
+    );
+    return;
+  }
+
   const px = x * TILE;
   const py = y * TILE;
   fillRectPx(px + 4, py + TILE - 8, size * TILE - 8, 6, palette.planter);
@@ -792,6 +1186,8 @@ function drawPlanter(x, y, size = 1) {
   fillRectPx(px + 8, py + 8, size * TILE - 16, 10, palette.plantLeaf);
   fillRectPx(px + 4, py + 12, size * TILE - 8, 8, palette.plantLeafDark);
   fillRectPx(px + 10, py + 4, 4, 8, palette.plantLeaf);
+  fillRectPx(px + 14, py + 6, 3, 8, "#79c78a");
+  fillRectPx(px + 18, py + 11, 3, 6, "#6fb97d");
 }
 
 function drawFrame(x, y, w, h, colors) {
@@ -844,10 +1240,17 @@ function drawOfficePartition(x, y, w, h) {
   const py = y * TILE;
   fillRectPx(px, py, w * TILE, h * TILE, "#7e89a1");
   fillRectPx(px, py, w * TILE, 3, "#cbd3e3");
+  fillRectPx(px, py + 5, w * TILE, 2, "rgba(255,255,255,0.18)");
   fillRectPx(px, py + h * TILE - 3, w * TILE, 3, "#596476");
 }
 
 function drawPrinterStation(x, y) {
+  const utility = getPropSprite("utility");
+  if (utility) {
+    ctx.drawImage(utility, x * TILE - 10, y * TILE - 12, UTILITY_PROP_SIZE, UTILITY_PROP_SIZE);
+    return;
+  }
+
   const px = x * TILE;
   const py = y * TILE;
   fillRectPx(px + 2, py + 4, TILE + 20, TILE - 8, "#a9b0c1");
@@ -893,7 +1296,62 @@ function drawResearchPads() {
   pads.forEach((pad) => {
     fillRectPx(pad.x * TILE, pad.y * TILE, pad.w * TILE, pad.h * TILE, "rgba(255,255,255,0.02)");
     fillRectPx(pad.x * TILE, pad.y * TILE, pad.w * TILE, 3, "rgba(255,255,255,0.10)");
+    fillRectPx(pad.x * TILE, pad.y * TILE, 3, pad.h * TILE, "rgba(255,255,255,0.06)");
+    fillRectPx((pad.x + pad.w) * TILE - 3, pad.y * TILE, 3, pad.h * TILE, "rgba(48, 60, 78, 0.14)");
+    fillRectPx(pad.x * TILE + 8, pad.y * TILE + 8, pad.w * TILE - 16, 2, "rgba(255,255,255,0.05)");
     fillRectPx(pad.x * TILE, (pad.y + pad.h) * TILE - 3, pad.w * TILE, 3, "rgba(32,24,25,0.18)");
+  });
+}
+
+function drawGlassBooth(x, y) {
+  const partition = getPropSprite("partition");
+  if (partition) {
+    ctx.drawImage(
+      partition,
+      x * TILE - 10,
+      y * TILE - 4,
+      PARTITION_PROP_WIDTH,
+      PARTITION_PROP_HEIGHT,
+    );
+    return;
+  }
+
+  drawOfficePartition(x, y, 2, 2);
+}
+
+function drawWorkspaceDivider(x, y, flip = false) {
+  const partition = getPropSprite("partition");
+  if (partition) {
+    const drawWidth = 40;
+    const drawHeight = 30;
+    const px = Math.round(x * TILE - 20);
+    const py = Math.round(y * TILE - 10);
+    ctx.save();
+    if (flip) {
+      ctx.scale(-1, 1);
+      ctx.drawImage(partition, -(px + drawWidth), py, drawWidth, drawHeight);
+    } else {
+      ctx.drawImage(partition, px, py, drawWidth, drawHeight);
+    }
+    ctx.restore();
+    return;
+  }
+
+  drawOfficePartition(x, y, 1, 1);
+}
+
+function getDeskDividerPlacement(desk) {
+  return {
+    x: desk.mirror ? desk.x + 0.6 : desk.x + desk.w - 0.6,
+    y: desk.y + 1.95,
+    flip: desk.mirror,
+  };
+}
+
+function drawPerDeskPartitions() {
+  desks.forEach((desk) => {
+    const placement = getDeskDividerPlacement(desk);
+    drawWorkspaceDivider(placement.x, placement.y, placement.flip);
   });
 }
 
@@ -903,15 +1361,63 @@ function drawDeskPod(desk) {
   const width = desk.w * TILE + 12;
   const height = desk.h * TILE + TILE + 10;
 
+  fillRectPx(px + 4, py + height - 4, width - 8, 4, "rgba(29, 36, 46, 0.25)");
   fillRectPx(px, py, width, height, "rgba(93, 109, 136, 0.18)");
   fillRectPx(px, py, width, 4, "#c7d4e6");
   fillRectPx(px, py, 4, height - 12, "#94a1b9");
   fillRectPx(px + width - 4, py, 4, height - 12, "#94a1b9");
   fillRectPx(px + 4, py + 6, width - 8, 6, "rgba(255,255,255,0.18)");
   fillRectPx(px + 10, py + 16, width - 20, 2, "#6f7b90");
+  fillRectPx(px + 8, py + height - 14, width - 16, 3, "rgba(47, 58, 74, 0.24)");
+  fillRectPx(px + width / 2 - 12, py + height - 8, 24, 4, "#516075");
 }
 
 function drawDesk(desk, agent) {
+  const officePod = getOfficePodSprite(agent.id);
+  if (officePod) {
+    const size = 96;
+    const px = desk.x * TILE;
+    const py = desk.y * TILE;
+    fillRectPx(px + 8, py + size - 5, size - 16, 4, "rgba(14,18,27,0.18)");
+    ctx.save();
+    if (desk.mirror) {
+      ctx.scale(-1, 1);
+      ctx.drawImage(officePod, -(px + size), py, size, size);
+    } else {
+      ctx.drawImage(officePod, px, py, size, size);
+    }
+    ctx.restore();
+    return;
+  }
+
+  const workstation = getPropSprite("workstation");
+  if (workstation) {
+    const px = desk.x * TILE - 12;
+    const py = desk.y * TILE - 14;
+    fillRectPx(
+      px + 10,
+      py + WORKSTATION_PROP_SIZE - 8,
+      WORKSTATION_PROP_SIZE - 20,
+      5,
+      "rgba(14,18,27,0.20)",
+    );
+    ctx.save();
+    if (desk.mirror) {
+      ctx.scale(-1, 1);
+      ctx.drawImage(
+        workstation,
+        -(px + WORKSTATION_PROP_SIZE),
+        py,
+        WORKSTATION_PROP_SIZE,
+        WORKSTATION_PROP_SIZE,
+      );
+    } else {
+      ctx.drawImage(workstation, px, py, WORKSTATION_PROP_SIZE, WORKSTATION_PROP_SIZE);
+    }
+    ctx.restore();
+    return;
+  }
+
   const px = desk.x * TILE;
   const py = desk.y * TILE;
   const width = desk.w * TILE;
@@ -926,12 +1432,22 @@ function drawDesk(desk, agent) {
 
   fillRectPx(px + 24, py + 8, 18, 12, palette.monitorDark);
   fillRectPx(px + 26, py + 10, 14, 8, palette.monitor);
+  fillRectPx(px + 26, py + 10, 14, 2, "#d6fbff");
+  fillRectPx(px + 28, py + 12, 8, 1, "rgba(255,255,255,0.35)");
+  fillRectPx(px + 27, py + 14, 10, 1, "rgba(9, 29, 36, 0.55)");
+  fillRectPx(px + 28, py + 16, 9, 1, "rgba(24, 53, 60, 0.48)");
   fillRectPx(px + 28, py + 20, 10, 3, palette.metal);
   fillRectPx(px + 20, py + 26, 16, 3, "#c9c4bc");
+  fillRectPx(px + 21, py + 27, 14, 1, "#f6f1eb");
   fillRectPx(px + 8, py + 26, 10, 7, palette.paper);
   fillRectPx(px + 10, py + 28, 6, 1, palette.paperLine);
+  fillRectPx(px + 10, py + 30, 5, 1, palette.paperLine);
   fillRectPx(px + 44, py + 24, 6, 8, palette.mug);
   fillRectPx(px + 47, py + 22, 2, 2, palette.mug);
+  fillRectPx(px + 38, py + 26, 7, 2, "#5d6478");
+  fillRectPx(px + 39, py + 28, 5, 1, "#9ea6ba");
+  fillRectPx(px + 46, py + 29, 4, 1, "rgba(255,255,255,0.20)");
+  fillRectPx(px + 25, py + 7, 20, 16, "rgba(129, 230, 255, 0.07)");
 
   drawDeskChair(desk.seat, agent.chairColor);
 }
@@ -941,8 +1457,10 @@ function drawDeskChair(seat, color) {
   const py = seat.y * TILE + 4;
   fillRectPx(px + 2, py, TILE - 12, 5, palette.outline);
   fillRectPx(px + 3, py + 1, TILE - 14, 3, color);
+  fillRectPx(px + 4, py + 1, TILE - 16, 1, "rgba(255,255,255,0.22)");
   fillRectPx(px, py + 6, TILE - 8, TILE - 12, palette.shadow);
   fillRectPx(px + 2, py + 8, TILE - 12, TILE - 16, color);
+  fillRectPx(px + 3, py + 9, TILE - 14, 2, "rgba(255,255,255,0.16)");
   fillRectPx(px + 4, py + TILE - 10, 2, 5, palette.outline);
   fillRectPx(px + TILE - 10, py + TILE - 10, 2, 5, palette.outline);
 }
@@ -950,28 +1468,50 @@ function drawDeskChair(seat, color) {
 function drawConferenceChair(seat, color) {
   const px = seat.x * TILE;
   const py = seat.y * TILE;
-  const seatX = px + 4;
-  const seatY = py + 7;
+  const seatW = 18;
+  const seatH = 14;
+  const back = 8;
 
-  fillRectPx(seatX, seatY, TILE - 8, TILE - 12, palette.shadow);
-  fillRectPx(seatX + 1, seatY + 1, TILE - 10, TILE - 14, color);
-
-  if (seat.facing === "south") {
-    fillRectPx(seatX + 1, py + 2, TILE - 10, 5, palette.outline);
-    fillRectPx(seatX + 2, py + 3, TILE - 12, 3, color);
-  } else if (seat.facing === "north") {
-    fillRectPx(seatX + 1, py + TILE - 7, TILE - 10, 5, palette.outline);
-    fillRectPx(seatX + 2, py + TILE - 6, TILE - 12, 3, color);
-  } else if (seat.facing === "east") {
-    fillRectPx(px + TILE - 7, seatY + 1, 5, TILE - 14, palette.outline);
-    fillRectPx(px + TILE - 6, seatY + 2, 3, TILE - 16, color);
-  } else {
-    fillRectPx(px + 2, seatY + 1, 5, TILE - 14, palette.outline);
-    fillRectPx(px + 3, seatY + 2, 3, TILE - 16, color);
+  if (seat.facing === "east") {
+    fillRectPx(px + 1, py + 4, back, 20, palette.outline);
+    fillRectPx(px + 2, py + 5, back - 2, 18, color);
+    fillRectPx(px + 9, py + 7, seatW, seatH, palette.shadow);
+    fillRectPx(px + 10, py + 8, seatW - 2, seatH - 2, color);
+    fillRectPx(px + 11, py + 9, seatW - 6, 2, "rgba(255,255,255,0.18)");
+    fillRectPx(px + 12, py + 22, 2, 4, palette.outline);
+    fillRectPx(px + 23, py + 22, 2, 4, palette.outline);
+    return;
   }
 
-  fillRectPx(seatX + 2, py + TILE - 4, 2, 3, palette.outline);
-  fillRectPx(seatX + TILE - 14, py + TILE - 4, 2, 3, palette.outline);
+  if (seat.facing === "west") {
+    fillRectPx(px + 21, py + 4, back, 20, palette.outline);
+    fillRectPx(px + 22, py + 5, back - 2, 18, color);
+    fillRectPx(px + 3, py + 7, seatW, seatH, palette.shadow);
+    fillRectPx(px + 4, py + 8, seatW - 2, seatH - 2, color);
+    fillRectPx(px + 5, py + 9, seatW - 6, 2, "rgba(255,255,255,0.18)");
+    fillRectPx(px + 7, py + 22, 2, 4, palette.outline);
+    fillRectPx(px + 18, py + 22, 2, 4, palette.outline);
+    return;
+  }
+
+  if (seat.facing === "south") {
+    fillRectPx(px + 3, py + 1, 20, back, palette.outline);
+    fillRectPx(px + 4, py + 2, 18, back - 2, color);
+    fillRectPx(px + 5, py + 10, 16, 14, palette.shadow);
+    fillRectPx(px + 6, py + 11, 14, 12, color);
+    fillRectPx(px + 8, py + 12, 10, 2, "rgba(255,255,255,0.18)");
+    fillRectPx(px + 8, py + 24, 2, 4, palette.outline);
+    fillRectPx(px + 18, py + 24, 2, 4, palette.outline);
+    return;
+  }
+
+  fillRectPx(px + 3, py + 22, 20, back, palette.outline);
+  fillRectPx(px + 4, py + 23, 18, back - 2, color);
+  fillRectPx(px + 5, py + 6, 16, 14, palette.shadow);
+  fillRectPx(px + 6, py + 7, 14, 12, color);
+  fillRectPx(px + 8, py + 8, 10, 2, "rgba(255,255,255,0.18)");
+  fillRectPx(px + 8, py + 20, 2, 4, palette.outline);
+  fillRectPx(px + 18, py + 20, 2, 4, palette.outline);
 }
 
 function drawRoundedVerticalTable() {
@@ -980,28 +1520,51 @@ function drawRoundedVerticalTable() {
   const width = table.w * TILE;
   const height = table.h * TILE;
 
+  fillRectPx(px + 10, py + height - 2, width - 20, 4, "rgba(33, 22, 16, 0.30)");
   fillRectPx(px + 8, py, width - 16, height, palette.tableDark);
   fillRectPx(px, py + 8, width, height - 16, palette.tableDark);
 
   fillRectPx(px + 10, py + 2, width - 20, height - 4, palette.table);
   fillRectPx(px + 2, py + 10, width - 4, height - 20, palette.table);
   fillRectPx(px + 16, py + 8, width - 32, height - 16, palette.tableHighlight);
+  fillRectPx(px + 14, py + 12, width - 28, 3, "rgba(255,255,255,0.16)");
+  fillRectPx(px + 10, py + height / 2, width - 20, 2, "rgba(97, 55, 32, 0.14)");
+  fillRectPx(px + 16, py + 22, width - 32, 2, "rgba(255,255,255,0.08)");
+  fillRectPx(px + 16, py + height - 24, width - 32, 2, "rgba(74,42,24,0.12)");
 
   const papers = [
-    { x: px + 22, y: py + 20 },
-    { x: px + width - 36, y: py + 24 },
-    { x: px + 22, y: py + 48 },
-    { x: px + width - 36, y: py + 52 },
-    { x: px + width / 2 - 8, y: py + height - 22 },
+    { x: px + 20, y: py + 18, w: 16, h: 12 },
+    { x: px + width - 38, y: py + 22, w: 16, h: 12 },
+    { x: px + 22, y: py + 52, w: 16, h: 12 },
+    { x: px + width - 40, y: py + 56, w: 16, h: 12 },
+    { x: px + 22, y: py + 88, w: 16, h: 12 },
+    { x: px + width - 40, y: py + 92, w: 16, h: 12 },
+    { x: px + width / 2 - 22, y: py + 16, w: 18, h: 12 },
+    { x: px + width / 2 + 6, y: py + 16, w: 18, h: 12 },
+    { x: px + width / 2 - 24, y: py + height - 28, w: 18, h: 12 },
+    { x: px + width / 2 + 8, y: py + height - 28, w: 18, h: 12 },
   ];
 
   papers.forEach((paper) => {
-    fillRectPx(paper.x, paper.y, 14, 10, palette.paper);
-    fillRectPx(paper.x + 3, paper.y + 3, 8, 1, palette.paperLine);
-    fillRectPx(paper.x + 3, paper.y + 6, 6, 1, palette.paperLine);
+    fillRectPx(paper.x, paper.y, paper.w, paper.h, palette.paper);
+    fillRectPx(paper.x + 3, paper.y + 3, paper.w - 6, 1, palette.paperLine);
+    fillRectPx(paper.x + 3, paper.y + 6, paper.w - 8, 1, palette.paperLine);
+    fillRectPx(paper.x + paper.w - 3, paper.y + 1, 1, paper.h - 2, "#385c99");
   });
 
+  fillRectPx(px + width / 2 - 16, py + height / 2 - 34, 32, 18, "#6f7e97");
+  fillRectPx(px + width / 2 - 14, py + height / 2 - 32, 28, 14, "#aab8d3");
+  fillRectPx(px + width / 2 - 11, py + height / 2 - 29, 22, 2, "#e8eefb");
+  fillRectPx(px + width / 2 - 8, py + height / 2 - 16, 16, 3, "#3d546f");
+  fillRectPx(px + width / 2 - 6, py + height / 2 - 12, 12, 2, "#90a1bc");
+  fillRectPx(px + 46, py + 24, 10, 3, "#dca679");
+  fillRectPx(px + width - 56, py + 28, 10, 3, "#dca679");
+
   fillRectPx(px + width / 2 - 3, py + height / 2 - 3, 6, 6, "#9b6c4b");
+  fillRectPx(px + width / 2 - 6, py + height / 2 - 10, 12, 4, "#6a7d8a");
+  fillRectPx(px + width / 2 - 2, py + height / 2 - 8, 4, 8, "#9cb6c6");
+  fillRectPx(px + 20, py + height - 4, 4, 7, "rgba(61,36,24,0.24)");
+  fillRectPx(px + width - 24, py + height - 4, 4, 7, "rgba(61,36,24,0.24)");
 }
 
 function drawConferenceDecor() {
@@ -1021,6 +1584,7 @@ function drawResearchProps() {
   drawStorageBay();
   drawPrinterStation(11, 6);
   drawPrinterStation(14, 6);
+  drawPrinterStation(10, 1);
   drawDoor(24, 2);
   drawPlanter(22, 2, 1);
   drawWaterCooler(25, 5);
@@ -1031,6 +1595,10 @@ function drawOfficePartitions() {
   drawOfficePartition(16, 5, 11, 1);
   drawOfficePartition(5, 1, 1, 11);
   drawOfficePartition(22, 1, 1, 11);
+  drawGlassBooth(5, 4);
+  drawGlassBooth(21, 4);
+  drawGlassBooth(11, 8);
+  drawGlassBooth(14, 8);
 }
 
 function drawTopWindows() {
@@ -1048,6 +1616,18 @@ function drawFloor() {
   drawTopWindows();
   drawConferenceDecor();
   drawResearchProps();
+}
+
+function drawAmbientLight() {
+  const shafts = [3, 8, 13, 18, 23];
+  shafts.forEach((x) => {
+    fillRectPx(x * TILE + 6, TILE, 18, 10 * TILE, "rgba(124, 203, 255, 0.045)");
+    fillRectPx(x * TILE + 10, TILE + 8, 10, 10 * TILE - 8, "rgba(255,255,255,0.035)");
+  });
+
+  fillRectPx(9 * TILE, 12 * TILE, 10 * TILE, 7 * TILE, "rgba(255, 209, 158, 0.035)");
+  fillRectPx(2 * TILE, 2 * TILE, 24 * TILE, 8 * TILE, "rgba(255,255,255,0.018)");
+  fillRectPx(8 * TILE, 11 * TILE, 12 * TILE, 8 * TILE, "rgba(255, 196, 132, 0.03)");
 }
 
 function drawHair(agent, px, py) {
@@ -1106,12 +1686,16 @@ function drawHair(agent, px, py) {
     default:
       fillRectPx(px + 2, py + 0, 11, 4, hair);
   }
+
+  fillRectPx(px + 4, py + 2, 3, 1, "rgba(255,255,255,0.18)");
+  fillRectPx(px + 8, py + 3, 2, 1, "rgba(255,255,255,0.12)");
 }
 
 function drawTorso(agent, px, py, seated) {
   const bodyY = py + 11;
   fillRectPx(px + 3, bodyY, 10, 8, palette.outline);
   fillRectPx(px + 4, bodyY + 1, 8, seated ? 7 : 6, agent.outfit);
+  fillRectPx(px + 5, bodyY + 1, 6, 1, "rgba(255,255,255,0.14)");
 
   if (agent.topStyle === "vest") {
     fillRectPx(px + 6, bodyY + 1, 4, seated ? 7 : 6, "#f6f7fb");
@@ -1130,6 +1714,7 @@ function drawTorso(agent, px, py, seated) {
     fillRectPx(px + 5, bodyY + 2, 6, 2, agent.accent);
   }
 
+  fillRectPx(px + 4, bodyY + 7, 8, 1, "rgba(37,42,53,0.22)");
   fillRectPx(px + 1, bodyY + 2, 2, 5, agent.skin);
   fillRectPx(px + 13, bodyY + 2, 2, 5, agent.skin);
 }
@@ -1198,12 +1783,24 @@ function drawSeatedAgent(agent, px, py) {
   fillRectPx(px + 4, py + 19, 4, 2, "#232833");
 }
 
+function drawWalkingSprite(agent, px, py) {
+  const direction = agent.currentFacing ?? "south";
+  const crop = getSpriteCrop(direction);
+  const drawWidth = Math.round(((crop.sw * PIXELLAB_SPRITE_SIZE) / crop.sh) * 1.3);
+  const drawX = Math.round(px + 8 - drawWidth / 2);
+  const drawY = Math.round(py - 2);
+
+  fillRectPx(drawX + 6, drawY + PIXELLAB_SPRITE_SIZE - 5, Math.max(16, drawWidth - 12), 3, "rgba(27, 24, 33, 0.30)");
+  return Boolean(drawPixellabCharacter(agent, direction, drawX, drawY, PIXELLAB_SPRITE_SIZE, 1.3));
+}
+
 function drawAgent(agent, time) {
-  const seatedAtDesk = phase === "research" && !agent.hasDeparted;
   const seatedAtConference = agent.hasArrived && phase !== "transition";
-  const seated = seatedAtDesk || seatedAtConference;
-  agent.currentFacing = seatedAtDesk ? "north" : seatedAtConference ? agent.seat.facing : null;
-  const bob = phase === "research" ? Math.sin(time * 0.006 + agent.bounceSeed) * 1.5 : 0;
+  const seated = seatedAtConference;
+  if (seatedAtConference) {
+    agent.currentFacing = agent.seat.facing;
+  }
+  const bob = phase === "transition" ? 0 : Math.sin(time * 0.004 + agent.bounceSeed) * 1.1;
   const stepFrame = agent.hasDeparted && !agent.hasArrived ? Math.floor(time / 120) % 2 : 0;
   const seatedOffset =
     seated && agent.currentFacing
@@ -1219,9 +1816,27 @@ function drawAgent(agent, time) {
   const py = Math.round(agent.position.y * TILE + TILE / 2 - (seated ? 10 : 12) + bob + seatedOffset.y);
 
   if (seated) {
-    drawSeatedAgent(agent, px, py);
+    const direction = agent.currentFacing;
+    const seatPx = agent.seat.x * TILE;
+    const seatPy = agent.seat.y * TILE;
+    const drawX =
+      direction === "east"
+        ? seatPx + 8
+        : direction === "west"
+          ? seatPx - 14
+          : seatPx - 4;
+    const drawY =
+      direction === "south"
+        ? seatPy + 8
+        : direction === "north"
+          ? seatPy - 4
+          : seatPy + 1;
+
+    drawScaledSeatedAgent(agent, direction, drawX, drawY, CONFERENCE_OCCUPANT_SCALE);
     return;
   }
+
+  if (drawWalkingSprite(agent, px, py)) return;
 
   fillRectPx(px + 4, py + 24, 8, 3, "rgba(27, 24, 33, 0.36)");
   fillRectPx(px + 3, py + 4, 10, 10, palette.outline);
@@ -1261,16 +1876,42 @@ function drawBubble(agent) {
   const lines = wrapText(agent.bubble, 96);
   const width = Math.max(...lines.map((line) => ctx.measureText(line).width), 48) + 16;
   const height = lines.length * 12 + 14;
-  const centerX = agent.position.x * TILE + TILE / 2;
-  const baseY = agent.position.y * TILE - 18;
-  const x = clamp(centerX - width / 2, 8, canvas.width - width - 8);
-  const y = clamp(baseY - height, 8, canvas.height - height - 12);
+  const desk = phase === "research" ? agent.desk : null;
+  const centerX = desk
+    ? Math.round((desk.x + desk.w / 2) * TILE)
+    : agent.position.x * TILE + TILE / 2;
+  const baseY = desk ? desk.y * TILE + 10 : agent.position.y * TILE - 18;
+  const facing = phase === "research" ? agent.desk?.officeFacing : agent.seat?.facing;
+  let x = clamp(centerX - width / 2, 8, canvas.width - width - 8);
+  let y = clamp(baseY - height, 8, canvas.height - height - 12);
+  let tailX = centerX - 1;
 
+  if (phase === "research" && desk) {
+    const laneOffset = desk.mirror ? 18 : -18;
+    x = clamp(centerX - width / 2 + laneOffset, 8, canvas.width - width - 8);
+    y = clamp(baseY - height - 10, 8, canvas.height - height - 12);
+    tailX = desk.mirror ? x + 12 : x + width - 12;
+  } else if (facing === "east") {
+    x = clamp(centerX - width - 24, 8, canvas.width - width - 8);
+    y = clamp(y - 6, 8, canvas.height - height - 12);
+    tailX = x + width - 12;
+  } else if (facing === "west") {
+    x = clamp(centerX + 18, 8, canvas.width - width - 8);
+    y = clamp(y - 6, 8, canvas.height - height - 12);
+    tailX = x + 10;
+  } else if (facing === "south") {
+    y = clamp(y - 10, 8, canvas.height - height - 12);
+  } else if (facing === "north") {
+    y = clamp(y - 12, 8, canvas.height - height - 12);
+  }
+
+  fillRectPx(x + 3, y + 3, width, height, "rgba(10, 15, 24, 0.26)");
   fillRectPx(x, y, width, height, palette.bubbleBorder);
   fillRectPx(x + 2, y + 2, width - 4, height - 4, palette.bubbleFill);
   fillRectPx(x + 2, y + 2, width - 4, 4, agent.color);
-  fillRectPx(centerX - 3, y + height - 1, 6, 3, palette.bubbleBorder);
-  fillRectPx(centerX - 1, y + height + 2, 2, 5, palette.bubbleBorder);
+  fillRectPx(x + 6, y + 7, width - 12, 1, "rgba(255,255,255,0.10)");
+  fillRectPx(tailX - 2, y + height - 1, 6, 3, palette.bubbleBorder);
+  fillRectPx(tailX, y + height + 2, 2, 5, palette.bubbleBorder);
 
   ctx.fillStyle = palette.bubbleText;
   ctx.textBaseline = "top";
@@ -1280,53 +1921,233 @@ function drawBubble(agent) {
 }
 
 function drawSceneLabels() {
-  fillRectPx(TILE, TILE, 8 * TILE, 18, palette.labelBg);
-  fillRectPx((COLS - 10) * TILE, TILE, 9 * TILE, 18, palette.labelBg);
-  fillRectPx(TILE + 2, TILE + 2, 8 * TILE - 4, 2, "#74cfff");
-  fillRectPx((COLS - 10) * TILE + 2, TILE + 2, 9 * TILE - 4, 2, "#ffcf78");
+  const title = phase === "research" ? "RESEARCH WING" : "BOARDROOM";
+  const accent = phase === "research" ? "#74cfff" : "#ffcf78";
 
+  fillRectPx(TILE, TILE, 10 * TILE, 18, palette.labelBg);
+  fillRectPx(TILE + 2, TILE + 2, 10 * TILE - 4, 2, accent);
   ctx.fillStyle = palette.labelText;
   ctx.font = "10px Courier New";
-  ctx.fillText("RESEARCH WING", TILE + 8, TILE + 5);
-  ctx.fillText("BOARDROOM", (COLS - 10) * TILE + 8, TILE + 5);
+  ctx.fillText(title, TILE + 8, TILE + 5);
 }
 
-function drawConference() {
-  conferenceSeats.forEach((seat, index) => {
-    drawConferenceChair(seat, agentSpecs[index].chairColor);
-  });
+function drawOfficeOccupant(agent) {
+  if (getOfficePodSprite(agent.id)) return;
+  const desk = agent.desk;
+  const facing = desk.officeFacing;
+  const seatPx = desk.seat.x * TILE;
+  const seatPy = desk.seat.y * TILE;
+  const drawX = facing === "east" ? seatPx - 12 : seatPx - 20;
+  const drawY = seatPy - 24;
+  drawScaledSeatedAgent(agent, facing, drawX, drawY, OFFICE_OCCUPANT_SCALE);
+}
+
+function drawConferenceTableProp() {
   drawRoundedVerticalTable();
 }
 
-function drawViewport() {
-  const camera = phase === "research" ? officeCamera : conferenceCamera;
-  displayCtx.clearRect(0, 0, canvas.width, canvas.height);
-  displayCtx.imageSmoothingEnabled = false;
-  displayCtx.drawImage(
-    sceneCanvas,
-    camera.x,
-    camera.y,
-    camera.width,
-    camera.height,
-    0,
-    0,
-    canvas.width,
-    canvas.height,
-  );
+function drawOfficeTypingPulse(agent, now) {
+  const desk = agent.desk;
+  const baseX = desk.x * TILE;
+  const baseY = desk.y * TILE;
+  const flicker = 1 + ((Math.floor(now / 140 + agent.bounceSeed * 3) % 3) * 2);
+  const monitorX = desk.mirror ? baseX + 58 : baseX + 18;
+  const keyboardX = desk.mirror ? baseX + 42 : baseX + 30;
+
+  fillRectPx(monitorX, baseY + 16, 12, 2, "rgba(129,230,255,0.18)");
+  fillRectPx(monitorX + 2, baseY + 20, 8, 1, "rgba(255,255,255,0.20)");
+  fillRectPx(keyboardX, baseY + 44, flicker + 4, 2, "#f7d68d");
+  fillRectPx(keyboardX + 10, baseY + 44, flicker, 2, "#f3f5fc");
+}
+
+function drawOfficeTalkCue(now) {
+  const pair = getResearchPair();
+  const [leftId, rightId] = pair.members;
+  const leftAgent = getAgentById(leftId);
+  const rightAgent = getAgentById(rightId);
+  if (!leftAgent || !rightAgent) return;
+
+  const leftDesk = leftAgent.desk;
+  const rightDesk = rightAgent.desk;
+  const dotsY = leftDesk.y * TILE + 56;
+  const dotsX = Math.round(((leftDesk.x + rightDesk.x + rightDesk.w) * TILE) / 2) - 10;
+  const pulse = Math.floor((Math.sin(now * 0.012) + 1) * 2);
+
+  fillRectPx(dotsX, dotsY, 5, 5, "#fff3d5");
+  fillRectPx(dotsX + 9, dotsY - pulse, 5, 5, "#fff3d5");
+  fillRectPx(dotsX + 18, dotsY, 5, 5, "#fff3d5");
+  fillRectPx(dotsX + 1, dotsY + 1, 3, 3, "#41313b");
+  fillRectPx(dotsX + 10, dotsY + 1 - pulse, 3, 3, "#41313b");
+  fillRectPx(dotsX + 19, dotsY + 1, 3, 3, "#41313b");
+}
+
+function drawOfficeActivity(now) {
+  agents.forEach((agent) => {
+    if (agent.activity === "typing") {
+      drawOfficeTypingPulse(agent, now);
+    }
+  });
+
+  drawOfficeTalkCue(now);
+}
+
+function drawDebateCue(agent, seat, now, drawX, drawY, width, height) {
+  if (!agent.isSpeaking && !agent.isResponding) return;
+
+  const pulse = Math.floor((Math.sin(now * 0.012 + agent.bounceSeed) + 1) * 2);
+  const cueColor = agent.isSpeaking ? "#7ddfff" : "#ffd27f";
+  const barWidth = Math.max(8, Math.round(width * 0.24));
+  const barHeight = agent.isSpeaking ? 3 : 2;
+  const shadowWidth = Math.max(20, width - 24);
+
+  fillRectPx(drawX + 10, drawY + height - 6, shadowWidth, 3, "rgba(17, 21, 29, 0.24)");
+
+  if (seat.facing === "east") {
+    fillRectPx(table.x * TILE - 10 - pulse, seat.y * TILE + 10, barWidth + pulse, barHeight, cueColor);
+    return;
+  }
+
+  if (seat.facing === "west") {
+    fillRectPx((table.x + table.w) * TILE - barWidth + pulse, seat.y * TILE + 10, barWidth + pulse, barHeight, cueColor);
+    return;
+  }
+
+  if (seat.facing === "south") {
+    fillRectPx(table.x * TILE + table.w * TILE / 2 - 12, table.y * TILE - 8 - pulse, 24, barHeight + 1, cueColor);
+    return;
+  }
+
+  fillRectPx(table.x * TILE + table.w * TILE / 2 - 12, (table.y + table.h) * TILE + 4 + pulse, 24, barHeight + 1, cueColor);
+}
+
+function drawGeneratedConferenceSeat(agent, seat, now) {
+  const sprite = getConferenceSeatSprite(agent.id);
+  if (!sprite) return false;
+
+  const width = Math.round(sprite.naturalWidth * 1.08);
+  const height = Math.round(sprite.naturalHeight * 1.08);
+  const tableLeft = table.x * TILE;
+  const tableRight = (table.x + table.w) * TILE;
+  const tableTop = table.y * TILE;
+  const tableBottom = (table.y + table.h) * TILE;
+  const focusOffset = agent.isSpeaking ? 4 : agent.isResponding ? 2 : 0;
+  let drawX = 0;
+  let drawY = 0;
+
+  if (seat.facing === "east") {
+    drawX = tableLeft - width + 18 + focusOffset;
+    drawY = Math.round(seat.y * TILE - height / 2 + 14);
+  } else if (seat.facing === "west") {
+    drawX = tableRight - 18 - focusOffset;
+    drawY = Math.round(seat.y * TILE - height / 2 + 14);
+  } else if (seat.facing === "south") {
+    drawX = Math.round(tableLeft + (table.w * TILE - width) / 2);
+    drawY = tableTop - height + 18 + focusOffset;
+  } else {
+    drawX = Math.round(tableLeft + (table.w * TILE - width) / 2);
+    drawY = tableBottom - 12 - focusOffset;
+  }
+
+  const shouldFlip = seat.facing === "west" && flippedConferenceAgents.has(agent.id);
+  ctx.save();
+  if (shouldFlip) {
+    ctx.scale(-1, 1);
+    ctx.drawImage(sprite, -(drawX + width), drawY, width, height);
+  } else {
+    ctx.drawImage(sprite, drawX, drawY, width, height);
+  }
+  ctx.restore();
+  drawDebateCue(agent, seat, now, drawX, drawY, width, height);
+  return true;
+}
+
+function drawOfficeScene(now) {
+  fillRectPx(0, 0, canvas.width, canvas.height, palette.bg);
+
+  for (let y = 1; y < ROWS - 1; y += 1) {
+    for (let x = 1; x < COLS - 1; x += 1) {
+      const mainLane = y >= 7 && y <= 9;
+      const crossLane = x >= 16 && x <= 17;
+      if (mainLane || crossLane) {
+        drawWoodTile(x, y, false);
+      } else {
+        drawStoneTile(x, y);
+      }
+    }
+  }
+
+  drawBorderWalls();
+  drawTopWindows();
+  drawStorageBay();
+  drawFrame(2, 1, 2, 2, [palette.frameArtA, "#89f0ff", "#6bb17f"]);
+  drawFrame(24, 1, 2, 2, [palette.frameArtC, "#ffd27f", "#d25d55"]);
+  drawPrinterStation(2, 15);
+  drawPrinterStation(22, 15);
+  drawPlanter(2, 15, 1);
+  drawPlanter(24, 15, 1);
+  drawWaterCooler(25, 7);
+  drawCabinet(1, 6, 2, 2);
+  drawDoor(1, 8);
+  drawDoor(24, 8);
+
+  desks.forEach((desk, index) => drawDesk(desk, agents[index]));
+  drawPerDeskPartitions();
+  agents.forEach((agent) => drawOfficeOccupant(agent));
+  drawOfficeActivity(now);
+  drawSceneLabels();
+
+  agents.forEach(drawBubble);
+}
+
+function drawConferenceScene(now) {
+  fillRectPx(0, 0, canvas.width, canvas.height, palette.bg);
+
+  for (let y = 1; y < ROWS - 1; y += 1) {
+    for (let x = 1; x < COLS - 1; x += 1) {
+      drawWoodTile(x, y, true);
+    }
+  }
+
+  drawBorderWalls();
+  drawTopWindows();
+  drawFrame(3, 2, 3, 2, [palette.frameArtA, "#89f0ff", "#6bb17f"]);
+  drawFrame(22, 2, 3, 2, [palette.frameArtC, "#ffd27f", "#d25d55"]);
+  drawClock(13, 2);
+  drawPrinterStation(2, 4);
+  drawPrinterStation(22, 4);
+  drawPlanter(2, 13, 1);
+  drawPlanter(24, 13, 1);
+  const hasGeneratedConferenceSeats = agents.every((agent) => getConferenceSeatSprite(agent.id));
+  if (hasGeneratedConferenceSeats) {
+    conferenceSeats.forEach((seat, index) => {
+      if (seat.facing !== "north") {
+        drawGeneratedConferenceSeat(agents[index], seat, now);
+      }
+    });
+    drawConferenceTableProp();
+    const bottomIndex = conferenceSeats.findIndex((seat) => seat.facing === "north");
+    if (bottomIndex >= 0) {
+      drawGeneratedConferenceSeat(agents[bottomIndex], conferenceSeats[bottomIndex], now);
+    }
+  } else {
+    drawConferenceTableProp();
+    conferenceSeats.forEach((seat, index) => drawConferenceChair(seat, agents[index].chairColor));
+    [...agents]
+      .sort((a, b) => a.position.y - b.position.y)
+      .forEach((agent) => drawAgent(agent, now));
+  }
+  drawSceneLabels();
+
+  agents.forEach(drawBubble);
 }
 
 function render(now) {
-  drawFloor();
-  desks.forEach((desk, index) => drawDesk(desk, agents[index]));
-  drawConference();
-  drawSceneLabels();
+  if (phase === "research") {
+    drawOfficeScene(now);
+    return;
+  }
 
-  [...agents]
-    .sort((a, b) => a.position.y - b.position.y)
-    .forEach((agent) => drawAgent(agent, now));
-
-  agents.forEach(drawBubble);
-  drawViewport();
+  drawConferenceScene(now);
 }
 
 function getSceneState() {
@@ -1379,6 +2200,10 @@ function replay() {
 
 replayButton.addEventListener("click", replay);
 
+preloadPixellabSprites();
+preloadPropSprites();
+preloadSpriteMap(generatedOfficeManifest, officePodSprites);
+preloadSpriteMap(generatedConferenceManifest, conferenceSeatSprites);
 createRoster();
 buildWorld();
 timelineNow = performance.now();
