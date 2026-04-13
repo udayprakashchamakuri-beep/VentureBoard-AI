@@ -1501,7 +1501,7 @@ async function summarizeAttachment(file) {
       return {
         ...summary,
         kind: "image",
-        summary: `Image attachment (${dimensions.width}×${dimensions.height}) added for business context.`,
+        summary: `Image attachment (${dimensions.width}x${dimensions.height}) added.`,
       };
     }
 
@@ -1511,7 +1511,7 @@ async function summarizeAttachment(file) {
       return {
         ...summary,
         kind: "pdf",
-        summary: `PDF attachment with about ${pdfInsight.pageCount} pages added for business context.`,
+        summary: `PDF attachment with about ${pdfInsight.pageCount} pages added.`,
         excerpt: pdfInsight.excerpt,
       };
     }
@@ -1520,14 +1520,14 @@ async function summarizeAttachment(file) {
     return {
       ...summary,
       kind: "document",
-      summary: "Document attachment added for business context.",
+      summary: "Document attachment added.",
       excerpt: text,
     };
   } catch (_error) {
     return {
       ...summary,
       kind: file.type.startsWith("image/") ? "image" : "document",
-      summary: "Attachment added for business context.",
+      summary: "Attachment added.",
       excerpt: "",
     };
   }
@@ -2018,7 +2018,7 @@ function isAttachmentAnalysisPrompt(text) {
 }
 
 function attachmentLooksBusinessRelevant(attachment) {
-  const searchable = [attachment?.name, attachment?.summary, attachment?.excerpt]
+  const searchable = [attachment?.name, attachment?.excerpt]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
@@ -2084,6 +2084,12 @@ function buildWebsiteHelpAnswer(message) {
   }
 
   if (/(image|pdf|attach|attachment|upload|file)/.test(prompt)) {
+    if (/(analyze|review|check|look at|read|use).*(image|pdf|attachment|file|document)/.test(prompt)) {
+      return [
+        "I can use uploaded files as supporting context when they are clearly tied to a business case, but I should not pretend to understand a random image or file on its own.",
+        "If you want a real business review, tell me what the file is, what business it relates to, and what decision you want help with.",
+      ].join(" ");
+    }
     return [
       "You can add supporting files to give the agents more context. PDFs and text-like files can be summarized into the case, and images are attached as reference material for the review flow.",
       "That works best when the file clearly supports a business decision, like a pitch deck, pricing sheet, brochure, store photo, market note, or business plan. If the image or file does not look clearly business-related yet, VentureBoard should answer directly instead of launching the full advisory review.",
@@ -3086,3 +3092,4 @@ function getAgentExplainer(name) {
 }
 
 export default App;
+
