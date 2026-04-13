@@ -65,6 +65,157 @@ if (scenarioPanelCopy) {
   scenarioPanelCopy.textContent = buildScenarioCopy(query.get("audience"), scenarioHeading);
 }
 
+function titleCase(value) {
+  return String(value || "")
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function shortBubble(value) {
+  const clean = String(value || "")
+    .replace(/[^a-z0-9\s/&-]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+  if (!clean) return "REVIEW";
+  return clean.length > 22 ? `${clean.slice(0, 22).trim()}…` : clean;
+}
+
+function inferBusinessContext(promptText, scenarioText) {
+  const source = `${scenarioText || ""} ${promptText || ""}`.replace(/\s+/g, " ").trim();
+  const lower = source.toLowerCase();
+
+  const locationMatch = lower.match(/\b(hyderabad|bangalore|bengaluru|mumbai|delhi|pune|chennai|kolkata)\b/);
+  const location = locationMatch ? titleCase(locationMatch[1]) : "";
+
+  const baseContext = {
+    offerLabel: location ? `new business in ${location}` : "new business idea",
+    buyerGroup: location ? `${location} customers` : "target buyers",
+    corePain: "a painful, frequent customer problem",
+    valueMoment: "repeat customer pull",
+    pricingAnchor: "clear willingness to pay",
+    executionAnchor: "a simple first version",
+    riskAnchor: "weak repeat demand",
+    demandSignal: location ? `${location} demand` : "market demand",
+    pricingSignal: "price acceptance",
+    proofSignal: "early proof",
+    opsSignal: "delivery load",
+    category: "business idea",
+  };
+
+  if (/gaming|arena|esports|creator|stream/i.test(source)) {
+    return {
+      ...baseContext,
+      offerLabel: location ? `gaming arena and creator studio in ${location}` : "gaming arena and creator studio",
+      buyerGroup: location ? `students, gamers, and young professionals in ${location}` : "students, gamers, and creators",
+      corePain: "finding a social gaming space worth visiting repeatedly",
+      valueMoment: "nightly footfall and repeat memberships",
+      pricingAnchor: "hourly pricing, memberships, and event revenue",
+      executionAnchor: "seat utilization, staffing, and power backup",
+      riskAnchor: "weak weekday traffic after the launch buzz fades",
+      demandSignal: "night demand",
+      pricingSignal: "ticket price",
+      proofSignal: "repeat visits",
+      opsSignal: "seat usage",
+      category: "gaming arena",
+    };
+  }
+
+  if (/hospital|clinic|medical|insurance approval|prior auth|health/i.test(source)) {
+    return {
+      ...baseContext,
+      offerLabel: "hospital workflow software",
+      buyerGroup: "hospital operations and reimbursement teams",
+      corePain: "slow, manual approval work that delays care and cash collection",
+      valueMoment: "faster approval cycles and fewer manual handoffs",
+      pricingAnchor: "time saved per approval and contract payback",
+      executionAnchor: "integration effort, compliance, and support depth",
+      riskAnchor: "long enterprise sales cycles and trust barriers",
+      demandSignal: "buyer urgency",
+      pricingSignal: "contract value",
+      proofSignal: "pilot ROI",
+      opsSignal: "integration load",
+      category: "hospital software",
+    };
+  }
+
+  if (/tutoring|tuition|coaching|education|school/i.test(source)) {
+    return {
+      ...baseContext,
+      offerLabel: location ? `education business in ${location}` : "education business",
+      buyerGroup: "parents and students",
+      corePain: "finding credible learning outcomes worth paying for",
+      valueMoment: "enrollment growth and strong retention",
+      pricingAnchor: "course pricing and renewals",
+      executionAnchor: "teacher quality and consistent delivery",
+      riskAnchor: "seasonal demand and poor retention",
+      demandSignal: "enrollment pull",
+      pricingSignal: "course price",
+      proofSignal: "student outcomes",
+      opsSignal: "teacher load",
+      category: "education business",
+    };
+  }
+
+  if (/restaurant|food|cafe|kitchen|tiffin/i.test(source)) {
+    return {
+      ...baseContext,
+      offerLabel: location ? `food business in ${location}` : "food business",
+      buyerGroup: "local diners and repeat delivery customers",
+      corePain: "finding food that is convenient, reliable, and worth reordering",
+      valueMoment: "repeat orders and strong contribution margin",
+      pricingAnchor: "order value and repeat frequency",
+      executionAnchor: "kitchen throughput and service consistency",
+      riskAnchor: "thin margins and weak repeat behavior",
+      demandSignal: "repeat orders",
+      pricingSignal: "order value",
+      proofSignal: "local traction",
+      opsSignal: "kitchen load",
+      category: "food business",
+    };
+  }
+
+  if (/ev|charging|battery|mobility/i.test(source)) {
+    return {
+      ...baseContext,
+      offerLabel: "mobility infrastructure business",
+      buyerGroup: "drivers and fleet operators",
+      corePain: "reliable access, uptime, and convenient charging",
+      valueMoment: "high utilization and repeat sessions",
+      pricingAnchor: "session economics and utilization",
+      executionAnchor: "site rollout and hardware uptime",
+      riskAnchor: "capital intensity and partner delays",
+      demandSignal: "site demand",
+      pricingSignal: "session margin",
+      proofSignal: "utilization proof",
+      opsSignal: "uptime load",
+      category: "mobility business",
+    };
+  }
+
+  if (/saas|software|app|automation|ai/i.test(source)) {
+    return {
+      ...baseContext,
+      offerLabel: "software business",
+      buyerGroup: "operators with repetitive workflow pain",
+      corePain: "time-consuming work they want automated without losing control",
+      valueMoment: "time saved, fewer errors, and clear payback",
+      pricingAnchor: "contract value and payback",
+      executionAnchor: "implementation and support load",
+      riskAnchor: "switching friction and weak proof",
+      demandSignal: "buyer pain",
+      pricingSignal: "ACV fit",
+      proofSignal: "pilot proof",
+      opsSignal: "support load",
+      category: "software business",
+    };
+  }
+
+  return baseContext;
+}
+
 const palette = {
   bg: "#13161f",
   outline: "#2f2730",
@@ -158,8 +309,8 @@ const conferenceEntries = [
 const agentSpecs = [
   {
     id: "ceo",
-    name: "Mara",
-    role: "CEO",
+    name: "CEO Agent",
+    role: "Chief Executive Officer",
     color: "#77f7c6",
     chairColor: "#d35757",
     skin: "#f2c8a0",
@@ -168,15 +319,14 @@ const agentSpecs = [
     accent: "#f3f5fc",
     hairStyle: "swept",
     topStyle: "vest",
-    research: ["Framing the wedge", "Syncing strategy", "Reviewing signal"],
-    callout: "Narrow wedge first",
-    debate:
-      "We should lead with a narrow wedge where the founder can sell manually and learn fast.",
+    research: ["Framing the decision", "Reviewing the strongest signal", "Choosing the wedge"],
+    callout: "DECIDE THE WEDGE",
+    debate: "We should narrow the scope to one clear buyer and one measurable win before we scale.",
   },
   {
     id: "sales",
-    name: "Ivo",
-    role: "Sales",
+    name: "Sales Strategy Agent",
+    role: "Sales Strategy",
     color: "#42cfff",
     chairColor: "#4c84d0",
     skin: "#efbd93",
@@ -185,14 +335,13 @@ const agentSpecs = [
     accent: "#ffbb79",
     hairStyle: "waves",
     topStyle: "jacket",
-    research: ["Buyer pain scan", "Budget owner check", "Urgency scoring"],
-    callout: "Find burning pain",
-    debate:
-      "Outbound can work if we target operators with acute workflow chaos and a short payback story.",
+    research: ["Checking buyer pain", "Finding the budget owner", "Scoring urgency"],
+    callout: "CHECK BUYER PAIN",
+    debate: "This can sell if the first buyer feels the problem every week and sees payback fast.",
   },
   {
     id: "marketing",
-    name: "Sol",
+    name: "Marketing Agent",
     role: "Marketing",
     color: "#7aa9ff",
     chairColor: "#6b8dff",
@@ -202,14 +351,14 @@ const agentSpecs = [
     accent: "#253d76",
     hairStyle: "afro",
     topStyle: "jacket",
-    research: ["Channel fit", "Positioning test", "Category language"],
-    callout: "Own the category",
-    debate: "The positioning should promise operational calm, not generic AI automation.",
+    research: ["Testing channels", "Sharpening the positioning", "Checking audience language"],
+    callout: "LOCK THE STORY",
+    debate: "The message has to sound like a clear outcome, not vague innovation language.",
   },
   {
     id: "product",
-    name: "June",
-    role: "Product",
+    name: "Startup Builder Agent",
+    role: "Startup Builder",
     color: "#ffb26b",
     chairColor: "#3db8a7",
     skin: "#ebb88e",
@@ -218,14 +367,13 @@ const agentSpecs = [
     accent: "#f4d77d",
     hairStyle: "bob",
     topStyle: "blouse",
-    research: ["Workflow review", "Activation path", "Feature ranking"],
-    callout: "One loop only",
-    debate:
-      "The MVP only needs one critical loop done exceptionally well, not a broad command center on day one.",
+    research: ["Scoping version one", "Ranking the first loop", "Checking build complexity"],
+    callout: "BUILD LESS FIRST",
+    debate: "Version one should solve one painful loop well instead of shipping a broad platform.",
   },
   {
     id: "finance",
-    name: "Noor",
+    name: "Finance Agent",
     role: "Finance",
     color: "#ffd671",
     chairColor: "#8e67d8",
@@ -235,15 +383,14 @@ const agentSpecs = [
     accent: "#9ba3ca",
     hairStyle: "silver",
     topStyle: "coat",
-    research: ["Runway stress", "ACV floor", "Margin profile"],
-    callout: "Protect margin",
-    debate:
-      "The plan is investable if implementation stays light and the first segment can support high ACV.",
+    research: ["Checking runway", "Modeling unit economics", "Stress-testing the margin"],
+    callout: "PROTECT CASH",
+    debate: "This only works if the first version keeps margins healthy and payback stays reasonable.",
   },
   {
     id: "ops",
-    name: "Keon",
-    role: "Operations",
+    name: "Supply Chain Agent",
+    role: "Supply Chain",
     color: "#f0a6ff",
     chairColor: "#e4b33a",
     skin: "#eab488",
@@ -252,15 +399,14 @@ const agentSpecs = [
     accent: "#2d6da8",
     hairStyle: "spike",
     topStyle: "shirt",
-    research: ["Team load", "Process depth", "Delivery risk"],
-    callout: "Keep ops lean",
-    debate:
-      "Operational lift needs to stay low or the product becomes a services-heavy trap.",
+    research: ["Mapping delivery load", "Checking process depth", "Sizing the ops risk"],
+    callout: "KEEP OPS LEAN",
+    debate: "The plan breaks if delivery becomes too custom or too people-heavy too early.",
   },
   {
     id: "research",
-    name: "Aya",
-    role: "Research",
+    name: "Market Research Agent",
+    role: "Market Research",
     color: "#7ef0b6",
     chairColor: "#c95d8c",
     skin: "#efc59e",
@@ -269,15 +415,14 @@ const agentSpecs = [
     accent: "#bff6d9",
     hairStyle: "bun",
     topStyle: "jacket",
-    research: ["Market shifts", "Competitor edges", "Unmet jobs"],
-    callout: "Space still open",
-    debate:
-      "There is room if we avoid broad productivity claims and own one painful workflow deeply.",
+    research: ["Scanning local demand", "Checking competitors", "Looking for unmet needs"],
+    callout: "CHECK DEMAND",
+    debate: "There is room if the demand is real and we target a job buyers already pay to solve.",
   },
   {
     id: "legal",
-    name: "Tess",
-    role: "Legal",
+    name: "Risk Agent",
+    role: "Risk",
     color: "#c0d3ff",
     chairColor: "#4f73c8",
     skin: "#e7b896",
@@ -286,15 +431,14 @@ const agentSpecs = [
     accent: "#f5f7fb",
     hairStyle: "crop",
     topStyle: "coat",
-    research: ["Policy scan", "Procurement drag", "Compliance load"],
-    callout: "Trust matters",
-    debate:
-      "Enterprise trust will depend on a clean security narrative and limited data exposure in the first release.",
+    research: ["Listing failure modes", "Scanning compliance risk", "Checking trust blockers"],
+    callout: "MAP THE RISKS",
+    debate: "The biggest danger is scaling before the team proves trust, demand, and execution fit.",
   },
   {
     id: "customer",
-    name: "Rian",
-    role: "Customer",
+    name: "Hiring Agent",
+    role: "Hiring",
     color: "#ff8aa0",
     chairColor: "#69b85c",
     skin: "#f1c6a0",
@@ -303,15 +447,14 @@ const agentSpecs = [
     accent: "#ffd9a0",
     hairStyle: "long",
     topStyle: "dress",
-    research: ["User calls", "Language cues", "Request ranking"],
-    callout: "Speak customer",
-    debate:
-      "Customers will buy relief from repetition if the product speaks in their daily operating language.",
+    research: ["Checking talent needs", "Sizing the first team", "Sequencing critical hires"],
+    callout: "STAFF LIGHTLY",
+    debate: "The first hires should support delivery and learning, not create a heavy cost base too soon.",
   },
   {
     id: "investor",
-    name: "Vale",
-    role: "Investor Lens",
+    name: "Pricing Agent",
+    role: "Pricing",
     color: "#9af4ff",
     chairColor: "#df8b49",
     skin: "#eac19a",
@@ -320,23 +463,162 @@ const agentSpecs = [
     accent: "#7de1ff",
     hairStyle: "mop",
     topStyle: "coat",
-    research: ["Downside case", "Moat shape", "Timing risk"],
-    callout: "Show repeatability",
-    debate:
-      "The opportunity is attractive if the founder proves repeated wins in one vertical before expanding.",
+    research: ["Testing price points", "Checking willingness to pay", "Reviewing discount risk"],
+    callout: "VALIDATE PRICE",
+    debate: "Pricing has to match the value buyers feel quickly, or the offer will look easy to delay.",
   },
 ];
 
-const finalVerdict =
+let finalVerdict =
   "Launch a 90-day founder-led pilot in one B2B operations vertical, sell a painful workflow outcome, and delay broad platform expansion until usage proves a repeatable wedge. The AI story should feel like operational clarity, not magic.";
+let finalVerdictTitle = "Proceed with a focused pilot";
+let deliveryBubble = "PROVE THE WEDGE";
 
-const researchChatPairs = [
+let researchChatPairs = [
   { members: ["sales", "marketing"], lines: ["ICP CHECK", "CHANNEL FIT"] },
   { members: ["ops", "research"], lines: ["FLOW BLOCK", "OPS LOAD"] },
   { members: ["ceo", "sales"], lines: ["WEDGE FIRST", "BUYER PAIN"] },
-  { members: ["legal", "customer"], lines: ["TRUST GATE", "USER LANGUAGE"] },
+  { members: ["legal", "investor"], lines: ["RISK GATE", "PRICE TEST"] },
 ];
 const flippedConferenceAgents = new Set(["ops", "legal", "customer"]);
+
+function buildAgentPromptContent(context) {
+  return {
+    ceo: {
+      research: [
+        `Choosing the wedge for ${context.offerLabel}`,
+        `Checking if ${context.buyerGroup} will move now`,
+        `Framing the call around ${context.valueMoment}`,
+      ],
+      callout: shortBubble(`Lead with ${context.valueMoment}`),
+      debate: `${context.offerLabel} should start with one buyer group, one use case, and one measurable win before we scale spend.`,
+    },
+    sales: {
+      research: [
+        `Testing whether ${context.buyerGroup} already feel ${context.corePain}`,
+        `Checking how fast buyers can see ${context.valueMoment}`,
+        `Finding the clearest payback story`,
+      ],
+      callout: shortBubble(`Sell the ${context.valueMoment}`),
+      debate: `I can sell ${context.offerLabel} if the first buyers feel real urgency and the payback story is obvious.`,
+    },
+    marketing: {
+      research: [
+        `Checking what language makes ${context.buyerGroup} pay attention`,
+        `Testing whether ${context.demandSignal} is easy to communicate`,
+        `Looking for the strongest positioning angle`,
+      ],
+      callout: shortBubble(`${context.demandSignal} story`),
+      debate: `The message should promise ${context.valueMoment} for ${context.buyerGroup}, not a vague improvement story.`,
+    },
+    product: {
+      research: [
+        `Scoping the first version of ${context.offerLabel}`,
+        `Ranking the one loop that proves ${context.valueMoment}`,
+        `Cutting build work that does not change the decision`,
+      ],
+      callout: shortBubble(`Build the first loop`),
+      debate: `Version one only needs the smallest experience that proves ${context.valueMoment} without bloating the product.`,
+    },
+    finance: {
+      research: [
+        `Modeling ${context.pricingAnchor}`,
+        `Checking if the unit economics stay healthy`,
+        `Stress-testing the plan against ${context.riskAnchor}`,
+      ],
+      callout: shortBubble(`Check ${context.pricingSignal}`),
+      debate: `${context.offerLabel} only works if ${context.pricingAnchor} stays healthy and the cash burn does not outrun learning.`,
+    },
+    ops: {
+      research: [
+        `Mapping ${context.executionAnchor}`,
+        `Checking how much delivery load the team can absorb`,
+        `Looking for the main execution blocker`,
+      ],
+      callout: shortBubble(`Control ${context.opsSignal}`),
+      debate: `The idea gets fragile when ${context.executionAnchor} becomes too people-heavy or too custom for the founding team.`,
+    },
+    research: {
+      research: [
+        `Scanning ${context.demandSignal} for ${context.offerLabel}`,
+        `Checking who else is solving ${context.corePain}`,
+        `Looking for proof that buyers already pay to fix this`,
+      ],
+      callout: shortBubble(`Scan ${context.demandSignal}`),
+      debate: `There is room for ${context.offerLabel} if ${context.buyerGroup} already treat ${context.corePain} as a must-solve problem.`,
+    },
+    legal: {
+      research: [
+        `Listing the ways ${context.offerLabel} could fail`,
+        `Checking whether trust or compliance slows adoption`,
+        `Ranking the biggest stop signals`,
+      ],
+      callout: shortBubble(`Map ${context.riskAnchor}`),
+      debate: `The biggest danger is scaling before the team proves trust, adoption, and an answer to ${context.riskAnchor}.`,
+    },
+    customer: {
+      research: [
+        `Sizing the first team needed to deliver ${context.offerLabel}`,
+        `Checking whether early hires increase learning speed`,
+        `Cutting roles that can wait until ${context.valueMoment} is proven`,
+      ],
+      callout: shortBubble(`Hire after proof`),
+      debate: `The first hires should help the founder deliver and learn faster, not create a heavy fixed-cost structure too early.`,
+    },
+    investor: {
+      research: [
+        `Testing ${context.pricingSignal} for ${context.buyerGroup}`,
+        `Checking where discount pressure could show up`,
+        `Looking for a price tied to ${context.valueMoment}`,
+      ],
+      callout: shortBubble(`Test ${context.pricingSignal}`),
+      debate: `Pricing has to reflect the value of ${context.valueMoment}, or buyers will postpone the decision and compare cheaper alternatives.`,
+    },
+  };
+}
+
+function buildResearchPairs(context) {
+  return [
+    {
+      members: ["sales", "marketing"],
+      lines: [shortBubble(context.demandSignal), shortBubble("CHANNEL FIT")],
+    },
+    {
+      members: ["product", "research"],
+      lines: [shortBubble("FIRST VERSION"), shortBubble(context.proofSignal)],
+    },
+    {
+      members: ["finance", "investor"],
+      lines: [shortBubble(context.pricingSignal), shortBubble(context.pricingAnchor)],
+    },
+    {
+      members: ["ops", "legal"],
+      lines: [shortBubble(context.opsSignal), shortBubble(context.riskAnchor)],
+    },
+  ];
+}
+
+function buildFinalVerdict(context) {
+  return `Focus ${context.offerLabel} on one buyer segment first, prove ${context.valueMoment}, and do not scale until the team has evidence on ${context.pricingAnchor}, ${context.executionAnchor}, and ${context.riskAnchor}.`;
+}
+
+function applyPromptDrivenContent() {
+  const context = inferBusinessContext(query.get("prompt"), query.get("scenario"));
+  const content = buildAgentPromptContent(context);
+
+  agentSpecs.forEach((spec) => {
+    const override = content[spec.id];
+    if (!override) return;
+    spec.research = override.research;
+    spec.callout = override.callout;
+    spec.debate = override.debate;
+  });
+
+  finalVerdict = buildFinalVerdict(context);
+  finalVerdictTitle = `Decide ${context.offerLabel}`;
+  deliveryBubble = shortBubble(`Prove ${context.valueMoment}`);
+  researchChatPairs = buildResearchPairs(context);
+}
 
 const PIXELLAB_SPRITE_SIZE = 74;
 const OFFICE_OCCUPANT_SCALE = 2;
@@ -670,7 +952,7 @@ function setInitialVerdict() {
 
 function setFinalVerdict() {
   verdictBox.innerHTML = `
-    <h3>Proceed with a narrow founder-led pilot</h3>
+    <h3>${finalVerdictTitle}</h3>
     <p>${finalVerdict}</p>
   `;
 }
@@ -742,6 +1024,7 @@ function createAgents() {
 }
 
 function resetSceneState(now = performance.now()) {
+  applyPromptDrivenContent();
   createAgents();
   transcriptItems.length = 0;
   renderTranscript();
@@ -755,7 +1038,7 @@ function resetSceneState(now = performance.now()) {
   researchCycle = 0;
   activeResearchPairIndex = 0;
   activeResponderIndex = -1;
-  countdown.textContent = "00:15";
+  countdown.textContent = formatCountdown(RESEARCH_DURATION_MS);
   buildWorld("office");
   applyResearchBeat();
   syncRoster();
@@ -922,7 +1205,7 @@ function startDelivery(now) {
 
   const ceo = agents[0];
   ceo.isSpeaking = true;
-  ceo.bubble = "PILOT ONE WORKFLOW";
+  ceo.bubble = deliveryBubble;
   ceo.status = "Delivering final recommendation";
   syncRoster();
 }
