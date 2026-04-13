@@ -252,9 +252,9 @@ function App() {
   }
 
   async function runAnalysis(payload, options = {}) {
-    const { closeConsole = false, focusAgentNames = [] } = options;
+    const { closeConsole = false, focusAgentNames = [], attachments: attachedFiles = [] } = options;
     const reviewStartedAt = Date.now();
-    const promptCategory = getPromptCategory(payload.business_problem, payload);
+    const promptCategory = getPromptCategory(payload.business_problem, payload, attachedFiles);
     if (closeConsole) {
       setConsoleOpen(false);
     }
@@ -393,7 +393,10 @@ function App() {
     setComposerOpen(false);
     setComposerMode("fresh");
     setFocusedAgentNames([]);
-    await runAnalysis(buildAnalysisPayload(normalizedForm, formChatMessages, audienceMode, attachments), { closeConsole: true });
+    await runAnalysis(buildAnalysisPayload(normalizedForm, formChatMessages, audienceMode, attachments), {
+      closeConsole: true,
+      attachments,
+    });
   }
 
   async function handleQuickChatSubmit(rawMessage, options = {}) {
@@ -420,6 +423,7 @@ function App() {
 
     await runAnalysis(buildAnalysisPayload(derivedForm, nextMessages, audienceMode, attachments), {
       focusAgentNames: mode === "continue" ? focusedAgentNames : [],
+      attachments,
     });
   }
 
@@ -2009,13 +2013,38 @@ function looksLikeWebsiteQuestion(message) {
   ].some((signal) => text.includes(signal));
 }
 
-function getPromptCategory(message, form = {}) {
+function isAttachmentAnalysisPrompt(text) {
+  return /(analyze|review|check|look at|read|use).*(image|pdf|attachment|file|document)/.test(text);
+}
+
+function attachmentLooksBusinessRelevant(attachment) {
+  const searchable = [attachment?.name, attachment?.summary, attachment?.excerpt]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (!searchable) {
+    return false;
+  }
+
+  return /\b(sales|revenue|profit|pricing|market|customer|business|startup|company|investment|financial|invoice|report|dashboard|analytics|pitch|plan|shop|store|menu|catalog|brochure)\b/.test(
+    searchable,
+  );
+}
+
+function getPromptCategory(message, form = {}, attachments = []) {
   const text = extractPrimaryPromptText(message).toLowerCase();
   if (!text) {
     return "general";
   }
   if (looksLikeWebsiteQuestion(text)) {
     return "website";
+  }
+  if (isAttachmentAnalysisPrompt(text) && attachments.length) {
+    const supported = attachments.some((attachment) => attachmentLooksBusinessRelevant(attachment));
+    if (!supported) {
+      return "website";
+    }
   }
   if (isBusinessDecisionPrompt(text, form)) {
     return "business";
@@ -2057,7 +2086,7 @@ function buildWebsiteHelpAnswer(message) {
   if (/(image|pdf|attach|attachment|upload|file)/.test(prompt)) {
     return [
       "You can add supporting files to give the agents more context. PDFs and text-like files can be summarized into the case, and images are attached as reference material for the review flow.",
-      "That works best when the file actually supports a business decision, like a pitch deck, pricing sheet, brochure, store photo, market note, or business plan. If you only say something like 'analyze this image' without connecting it to a business question, VentureBoard should answer directly instead of launching the full advisory review.",
+      "That works best when the file clearly supports a business decision, like a pitch deck, pricing sheet, brochure, store photo, market note, or business plan. If the image or file does not look clearly business-related yet, VentureBoard should answer directly instead of launching the full advisory review.",
     ].join(" ");
   }
 
