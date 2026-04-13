@@ -253,6 +253,7 @@ function App() {
   async function runAnalysis(payload, options = {}) {
     const { closeConsole = false, focusAgentNames = [] } = options;
     const reviewStartedAt = Date.now();
+    const websiteQuestion = looksLikeWebsiteQuestion(payload.business_problem);
     if (closeConsole) {
       setConsoleOpen(false);
     }
@@ -264,6 +265,10 @@ function App() {
     setSelectedAgentName(focusAgentNames[0] || "");
 
     try {
+      if (websiteQuestion) {
+        setResult(buildNonBusinessPromptResult(payload.business_problem, payload.selected_agent_names ?? []));
+        return;
+      }
       setResult(createEmptyResult(payload.company_name));
       try {
         await runStreamingAnalysis(payload);
@@ -331,7 +336,7 @@ function App() {
           throw new Error(payloadLine.error || "Unknown streaming error.");
         }
         if (payloadLine.type === "final") {
-          setResult(payloadLine.result);
+          setResult(normalizeAnalysisResult(payloadLine.result, payload));
           try {
             await reader.cancel();
           } catch (_error) {
@@ -360,7 +365,7 @@ function App() {
     }
 
     const nextResult = await response.json();
-    setResult(nextResult);
+    setResult(normalizeAnalysisResult(nextResult, payload));
   }
 
   async function handleSubmit(event) {
@@ -1700,6 +1705,61 @@ async function fetchWithRetry(url, options, { timeoutMs = 12000, retries = 0 } =
   }
 
   throw lastError ?? new Error("Request failed.");
+}
+
+function looksLikeGenericRemoteResult(result, payload) {
+  if (!result || !payload) {
+    return false;
+  }
+
+  const prompt = extractPrimaryPromptText(payload.business_problem).toLowerCase();
+  const serialized = JSON.stringify(result || "").toLowerCase();
+  const genericMarkers = [
+    "ceo agent had the strongest influence",
+    "finance and risk jointly rejected the current plan",
+    "avoid betting the entire plan on one channel, partner, or enterprise logo",
+    "the team ended up at move forward with changes",
+  ];
+  const matchedMarkers = genericMarkers.filter((marker) => serialized.includes(marker)).length;
+  if (matchedMarkers < 2) {
+    return false;
+  }
+
+  if (
+    /what can you do|how can you help|how does this work|what does this website do|what does this site do|what can i ask|accuracy|performance|reliable|trustworthy/.test(
+      prompt,
+    )
+  ) {
+    return true;
+  }
+
+  const location = extractPromptLocation(prompt);
+  const investmentTarget = extractInvestmentTarget(prompt);
+  const hasLocalBusinessCue = /\bfruit juice|juice shop|juice stall|juice center|smoothie shop|shop|store|cafe|restaurant|salon|clinic|gym|center|centre\b/.test(
+    prompt,
+  );
+
+  if (investmentTarget) {
+    return !serialized.includes(investmentTarget.toLowerCase());
+  }
+
+  if (location && hasLocalBusinessCue) {
+    return !serialized.includes(location.toLowerCase());
+  }
+
+  return hasLocalBusinessCue;
+}
+
+function normalizeAnalysisResult(nextResult, payload) {
+  if (looksLikeWebsiteQuestion(payload?.business_problem || "")) {
+    return buildNonBusinessPromptResult(payload.business_problem, payload.selected_agent_names ?? []);
+  }
+
+  if (looksLikeGenericRemoteResult(nextResult, payload)) {
+    return buildLocalFallbackAnalysis(payload);
+  }
+
+  return nextResult;
 }
 
 function extractPrimaryPromptText(message) {
