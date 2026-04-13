@@ -92,7 +92,7 @@ class FeatherlessClient:
                 "Answer this user question about VentureBoard AI.\n"
                 "Make the answer specific to the product. Mention that it can review startup ideas, local businesses, investment questions, pricing, launch timing, market demand, hiring, and execution risk.\n"
                 "If the user asks what they can do with the product, explain the kinds of business questions they can ask and what the output will look like.\n"
-                "If the user asks about accuracy or reliability, say it is a decision-support tool that combines multi-agent reasoning with research when available and should not replace final legal, medical, or financial advice.\n\n"
+                "If the user asks about accuracy or reliability, do not give a fake fixed percentage. Say the quality depends on how concrete the prompt is, that it is strongest when the user gives a specific business idea, location, target customer, budget, pricing, runway, or company name, and that it should not replace final legal, medical, financial, or investment advice.\n\n"
                 f"Question: {prompt}"
             ),
             fallback=fallback,

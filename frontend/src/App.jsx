@@ -1992,8 +1992,8 @@ function buildWebsiteHelpAnswer(message) {
 
   if (/(accuracy|accurate|reliable|trustworthy|trust)/.test(prompt)) {
     return [
-      "VentureBoard is best used as a decision-support tool, not as blind automation. It combines a multi-agent board review with live research when the backend is available, then turns that into one memo, risks, customer reaction, and next steps.",
-      "The strongest results come when you give a concrete business idea, location, target customer, budget, pricing, runway, or company name. You should still treat the output as structured guidance and verify high-stakes financial, legal, or investment calls before acting.",
+      "VentureBoard does not have one honest fixed accuracy percentage, because the quality depends on what you ask and how much concrete information you give. It is most useful as a decision-support tool that helps you think clearly, spot risks, and compare options.",
+      "The answers are usually much stronger when you give a specific business idea, location, target customer, pricing, budget, runway, or company name. For high-stakes legal, financial, or investment decisions, you should treat the output as structured guidance and still verify the final call yourself.",
     ].join(" ");
   }
 

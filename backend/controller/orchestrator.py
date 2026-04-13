@@ -432,8 +432,9 @@ class EnterpriseOrchestrator:
         text = prompt.lower().strip()
         if any(keyword in text for keyword in ["accuracy", "accurate", "reliable", "trust", "trustworthy"]):
             return (
-                "VentureBoard is a decision-support tool. It combines a multi-agent board review with research when the research services are available, then turns that into one decision memo, risks, customer reactions, and next steps. "
-                "It is strongest when you give a concrete business idea, company, location, pricing, budget, or runway. You should still verify high-stakes financial, legal, or medical decisions before acting."
+                "VentureBoard does not have one honest fixed accuracy percentage, because the quality depends on the question and the detail you provide. "
+                "It is strongest when you give a concrete business idea, company, location, pricing, budget, or runway, and it should be used as decision support rather than blind automation. "
+                "You should still verify high-stakes financial, legal, medical, or investment decisions before acting."
             )
         if any(keyword in text for keyword in ["performance", "fast", "speed", "slow"]):
             return (
