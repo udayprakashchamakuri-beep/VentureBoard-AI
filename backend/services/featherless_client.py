@@ -78,6 +78,27 @@ class FeatherlessClient:
             max_tokens=260,
         )
 
+    def answer_product_prompt(self, prompt: str, fallback: str) -> str:
+        if not self.is_configured():
+            return fallback
+
+        return self._chat_completion(
+            system_prompt=(
+                "You are the product assistant for VentureBoard AI, a business decision workspace. "
+                "Answer clearly and directly. Explain what the product can do, how it works, what kinds of questions it is good at, "
+                "and be honest about limits or accuracy when asked. Keep the tone practical and helpful."
+            ),
+            prompt=(
+                "Answer this user question about VentureBoard AI.\n"
+                "Make the answer specific to the product. Mention that it can review startup ideas, local businesses, investment questions, pricing, launch timing, market demand, hiring, and execution risk.\n"
+                "If the user asks about accuracy or reliability, say it is a decision-support tool that combines multi-agent reasoning with research when available and should not replace final legal, medical, or financial advice.\n\n"
+                f"Question: {prompt}"
+            ),
+            fallback=fallback,
+            temperature=0.25,
+            max_tokens=320,
+        )
+
     def _chat_completion(
         self,
         system_prompt: str,

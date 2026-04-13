@@ -1024,13 +1024,17 @@ class StrategicReasoner:
         return combined
 
     def _build_research_queries(self, request: AnalyzeRequest) -> List[Tuple[str, str]]:
+        primary_prompt = extract_primary_prompt(request.business_problem)
+        lower_problem = primary_prompt.lower()
         topic_seed = self._research_subject(request)
         if not topic_seed:
             return []
 
         region = "" if not request.region or request.region.lower() == "global" else request.region
         scope = f"{topic_seed} {region}".strip()
-        lower_problem = extract_primary_prompt(request.business_problem).lower()
+        investment_target = self._extract_investment_target(primary_prompt)
+        business_type = self._extract_business_type(primary_prompt)
+        location_hint = self._extract_location_hint(primary_prompt) or region
         local_business = any(
             keyword in lower_problem
             for keyword in [
@@ -1054,6 +1058,26 @@ class StrategicReasoner:
             for keyword in ["healthcare", "fintech", "insurance", "payments", "compliance", "privacy", "regulated"]
         )
 
+        if investment_target:
+            target = investment_target
+            return [
+                ("demand", f"{target} revenue growth outlook client demand guidance"),
+                ("competition", f"{target} competitors market share peer comparison infosys cognizant accenture"),
+                ("pricing", f"{target} valuation pe ratio target price analyst outlook"),
+                ("location", f"{target} deal wins geographic revenue mix order book"),
+                ("risk", f"{target} key risks margin pressure attrition client concentration outlook"),
+            ]
+
+        if business_type and location_hint:
+            local_scope = f"{business_type} {location_hint}".strip()
+            return [
+                ("demand", f"{local_scope} customer demand footfall local preferences market size"),
+                ("competition", f"{local_scope} competitors nearby pricing alternatives"),
+                ("pricing", f"{local_scope} pricing menu rates gross margin"),
+                ("location", f"{local_scope} traffic schools offices residential demand"),
+                ("risk", f"{local_scope} permits hygiene licenses seasonality operating costs"),
+            ]
+
         queries: List[Tuple[str, str]] = [
             ("demand", f"{scope} customer demand market size trends"),
             ("competition", f"{scope} competitors alternatives market leaders"),
@@ -1073,9 +1097,79 @@ class StrategicReasoner:
         return queries[:5]
 
     def _research_subject(self, request: AnalyzeRequest) -> str:
-        subject = " ".join(filter(None, [request.industry or "", extract_primary_prompt(request.business_problem)]))
+        primary_prompt = extract_primary_prompt(request.business_problem)
+        investment_target = self._extract_investment_target(primary_prompt)
+        if investment_target:
+            return investment_target[:160]
+
+        business_type = self._extract_business_type(primary_prompt)
+        location_hint = self._extract_location_hint(primary_prompt)
+        if business_type and location_hint:
+            return f"{business_type} {location_hint}".strip()[:160]
+        if business_type:
+            return business_type[:160]
+
+        generic_company = {"your business case", "autonomous venture", "board decision review"}
+        company_name = (request.company_name or "").strip()
+        if company_name and company_name.lower() not in generic_company:
+            return company_name[:160]
+
+        subject = " ".join(filter(None, [request.industry or "", primary_prompt]))
         subject = re.sub(r"\s+", " ", subject).strip()
         return subject[:160]
+
+    def _extract_location_hint(self, prompt: str) -> str:
+        cleaned = re.sub(r"\s+", " ", prompt).strip()
+        match = re.search(
+            r"\b(?:in|at|near)\s+([A-Za-z][A-Za-z\s-]{2,40}?)(?:[?.!,]|$|\s+(?:what|should|can|will|would|do|does|for)\b)",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+        return match.group(1).strip() if match else ""
+
+    def _extract_investment_target(self, prompt: str) -> str:
+        cleaned = re.sub(r"\s+", " ", prompt).strip()
+        match = re.search(
+            r"\b(?:invest|investment|buy|bought|put money|put my money|park money)\b.*?\b(?:in|into)\s+([A-Za-z0-9.&\-\s]{2,50}?)(?:[?.!,]|$|\s+(?:what|should|worth|good|think|right|now|today)\b)",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+        if not match:
+            return ""
+        target = re.sub(r"\s+", " ", match.group(1)).strip(" .,!?:;-")
+        if not target:
+            return ""
+        if " " not in target and len(target) <= 5:
+            return target.upper()
+        return " ".join(word.upper() if len(word) <= 4 else word.capitalize() for word in target.split())
+
+    def _extract_business_type(self, prompt: str) -> str:
+        lower = prompt.lower()
+        patterns = [
+            ("fruit juice shop", r"\bfruit juice shop\b|\bjuice shop\b|\bjuice stall\b|\bjuice center\b|\bsmoothie shop\b"),
+            ("tea stall", r"\btea stall\b"),
+            ("gaming center", r"\bgame center\b|\bgaming center\b|\barcade\b"),
+            ("restaurant", r"\brestaurant\b"),
+            ("cafe", r"\bcafe\b|\bcoffee shop\b"),
+            ("tuition center", r"\btuition center\b|\bcoaching center\b|\btutoring center\b"),
+            ("salon", r"\bsalon\b|\bbeauty parlor\b"),
+            ("clinic", r"\bclinic\b"),
+            ("gym", r"\bgym\b|\bfitness center\b"),
+            ("poultry farm", r"\bpoultry farm\b"),
+            ("store", r"\bstore\b|\bshop\b"),
+        ]
+        for label, pattern in patterns:
+            if re.search(pattern, lower):
+                return label
+        match = re.search(
+            r"\b(?:start|open|launch|build|run)\s+(?:a|an|my|our)?\s*([A-Za-z][A-Za-z\s-]{2,40}?)(?:\s+(?:in|at|near)\b|[?.!,]|$)",
+            prompt,
+            flags=re.IGNORECASE,
+        )
+        if not match:
+            return ""
+        candidate = re.sub(r"\s+", " ", match.group(1)).strip(" .,!?:;-")
+        return candidate.lower()
 
     def _apply_external_research(
         self,

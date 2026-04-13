@@ -163,6 +163,8 @@ class EnterpriseOrchestrator:
         text = primary_prompt.lower().strip()
         if not text:
             return False
+        if self._is_product_help_prompt(primary_prompt):
+            return False
 
         strong_business_patterns = [
             r"\b(i want to|we want to|i am planning to|we are planning to|planning to|thinking of)\s+(start|open|launch|build|run|expand|grow|buy|sell)\b",
@@ -265,18 +267,30 @@ class EnterpriseOrchestrator:
         active_definitions,
         active_agents,
     ) -> AnalyzeResponse:
-        direct_answer = self.featherless_client.answer_general_prompt(
-            prompt=extract_primary_prompt(request.business_problem),
-            fallback=(
-                "This demo is mainly built for business decisions. For a general question like this, "
-                "please try again in a moment or ask a business-focused question."
-            ),
+        primary_prompt = extract_primary_prompt(request.business_problem)
+        product_help = self._is_product_help_prompt(primary_prompt)
+        fallback = self._build_product_help_fallback(primary_prompt) if product_help else (
+            "I can answer questions about how VentureBoard works, and I can run business reviews for startup ideas, local businesses, pricing, launch timing, risk, growth, and investment questions. "
+            "For unrelated trivia or biography questions, switch back to a business or product question and I can help."
         )
-        sample_prompts = [
-            "Should I open a game center near a college?",
-            "What pricing model should I use for my tutoring startup?",
-            "How risky is it to launch with only 8 months of cash left?",
-        ]
+        direct_answer = (
+            self.featherless_client.answer_product_prompt(prompt=primary_prompt, fallback=fallback)
+            if product_help
+            else self.featherless_client.answer_general_prompt(prompt=primary_prompt, fallback=fallback)
+        )
+        sample_prompts = (
+            [
+                "Can you review a local business idea in my town?",
+                "Can you tell me whether investing in a company like TCS looks attractive?",
+                "Can you compare launch now vs wait six months for my startup?",
+            ]
+            if product_help
+            else [
+                "Should I open a game center near a college?",
+                "What pricing model should I use for my tutoring startup?",
+                "How risky is it to launch with only 8 months of cash left?",
+            ]
+        )
         turn = AgentTurn(
             agent_name="General Assistant",
             role="Direct model answer",
@@ -285,8 +299,12 @@ class EnterpriseOrchestrator:
             message=direct_answer,
             stance="MODIFY",
             confidence=94,
-            topics=["general answer"],
-            key_points=["Answered directly with the language model"],
+            topics=["product help" if product_help else "general answer"],
+            key_points=(
+                ["Explained what VentureBoard can do", "Suggested the next best questions to ask"]
+                if product_help
+                else ["Answered directly with the language model"]
+            ),
             assumptions=[],
             references=[],
             challenged_agents=[],
@@ -298,14 +316,20 @@ class EnterpriseOrchestrator:
             research_points=[],
         )
         return AnalyzeResponse(
-            company_name=request.company_name or "Business decision review",
+            company_name=request.company_name or ("VentureBoard AI product guide" if product_help else "Business decision review"),
             agent_definitions=active_definitions,
             conversation=[turn],
             round_summaries=[
                 RoundSummary(
                     round=1,
-                    synopsis="The latest prompt was answered directly because it is not a business-advice request.",
-                    consensus_points=["The app used the language model directly instead of the business advisory debate."],
+                    synopsis=(
+                        "The latest prompt was answered as a VentureBoard product-help question."
+                        if product_help
+                        else "The latest prompt was answered directly because it is not a business-advice request."
+                    ),
+                    consensus_points=[
+                        "The app answered directly instead of running the business advisory debate."
+                    ],
                     conflict_points=[],
                     open_questions=sample_prompts,
                     numeric_highlights={"average_confidence": 94},
@@ -316,10 +340,20 @@ class EnterpriseOrchestrator:
                 decision="MODIFY",
                 confidence=94,
                 key_reasons=[
-                    "This prompt was treated as a general question instead of a business case.",
+                    (
+                        "This prompt was treated as a VentureBoard product question."
+                        if product_help
+                        else "This prompt was treated as a direct-answer question instead of a business case."
+                    ),
                     "The system used the language model directly to answer it.",
                 ],
-                risks=["If you want advisor debate, ask a business question about launch, pricing, demand, costs, risks, or growth."],
+                risks=[
+                    (
+                        "For the strongest result, give a concrete business idea, company name, location, pricing, runway, or target customer."
+                        if product_help
+                        else "If you want advisor debate, ask a business question about launch, pricing, demand, costs, risks, or growth."
+                    )
+                ],
                 recommended_actions=sample_prompts,
             ),
             actions=ActionPlan(
@@ -344,7 +378,7 @@ class EnterpriseOrchestrator:
                 top_influencer="General Assistant",
                 conflicts=[],
                 final_reasoning_summary=(
-                    "The request was classified as a general question, so the app skipped the advisor debate and returned a direct model answer."
+                    "The request was classified for direct answer mode, so the app skipped the advisor debate and returned a direct model answer."
                 ),
                 reasoning_trace=[
                     ReasoningTraceItem(
@@ -368,6 +402,45 @@ class EnterpriseOrchestrator:
                 memory_used=False,
                 passed=True,
             ),
+        )
+
+    def _is_product_help_prompt(self, prompt: str) -> bool:
+        text = prompt.lower().strip()
+        if not text:
+            return False
+        product_signals = [
+            "what can you do",
+            "how can you help",
+            "what does this website do",
+            "what does this site do",
+            "how does this work",
+            "how accurate",
+            "accuracy",
+            "performance",
+            "how fast",
+            "what can i ask",
+            "what questions can i ask",
+            "what is ventureboard",
+            "how should i use this",
+            "what can this do",
+        ]
+        return any(signal in text for signal in product_signals)
+
+    def _build_product_help_fallback(self, prompt: str) -> str:
+        text = prompt.lower().strip()
+        if any(keyword in text for keyword in ["accuracy", "accurate", "reliable", "trust", "trustworthy"]):
+            return (
+                "VentureBoard is a decision-support tool. It combines a multi-agent board review with research when the research services are available, then turns that into one decision memo, risks, customer reactions, and next steps. "
+                "It is strongest when you give a concrete business idea, company, location, pricing, budget, or runway. You should still verify high-stakes financial, legal, or medical decisions before acting."
+            )
+        if any(keyword in text for keyword in ["performance", "fast", "speed", "slow"]):
+            return (
+                "VentureBoard can take a little time when the question needs research because it tries to pull live demand, pricing, competitor, and risk signals before the memo is shown. "
+                "It is built to review startup ideas, local businesses, investment questions, pricing, launch timing, hiring, and execution risk."
+            )
+        return (
+            "VentureBoard helps you pressure-test a business move before you commit. You can ask about starting a business, opening a local shop, pricing, launch timing, hiring, market demand, execution risk, or whether a company or investment idea looks strong enough to pursue. "
+            "It turns that into a CEO-style memo, risks, customer reaction, action plan, and agent conversation. It works best when you include the business idea, location, audience, pricing, budget, runway, or company name you want reviewed."
         )
 
     def _run_scenarios(

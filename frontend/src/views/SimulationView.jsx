@@ -377,17 +377,13 @@ function getTurnRiskLine(turn) {
 function buildDirectAssistantNotice(message) {
   const clean = toPlainText(message ?? "");
   const fallback =
-    "This question is not related to a business case, so the advisor dashboard was skipped. Ask about launch timing, pricing, customers, costs, hiring, risk, or growth if you want a business review.";
+    "Ask what VentureBoard can review, or send a business question about launch timing, pricing, local demand, investment, hiring, risk, or growth.";
 
   if (!clean) {
     return fallback;
   }
 
-  if (/not related to business|general question|business case/i.test(clean)) {
-    return clean;
-  }
-
-  return `This question is not related to a business case. ${clean}`;
+  return clean;
 }
 
 function trimToSentences(text, count = 2) {
@@ -1446,7 +1442,7 @@ function SimulationView({
                     </div>
                     <div>
                       <strong>General Assistant</strong>
-                      <span>Business review skipped</span>
+                      <span>Direct answer</span>
                     </div>
                   </div>
                   <p>{directAnswerText}</p>

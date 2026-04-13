@@ -12,9 +12,9 @@ import RiskView from "./views/RiskView";
 import SimulationView from "./views/SimulationView";
 
 const DEMO_AUTH_DISABLED = (import.meta.env.VITE_DEMO_AUTH_DISABLED ?? "true") === "true";
-const STREAM_TIMEOUT_MS = 6500;
-const ANALYSIS_TIMEOUT_MS = 9000;
-const FETCH_RETRIES = 0;
+const STREAM_TIMEOUT_MS = 25000;
+const ANALYSIS_TIMEOUT_MS = 45000;
+const FETCH_RETRIES = 1;
 const AUDIENCE_MODE_STORAGE_KEY = "ventureboard-audience-mode";
 const IMMERSIVE_REVIEW_MIN_MS = 22000;
 
@@ -1702,8 +1702,136 @@ async function fetchWithRetry(url, options, { timeoutMs = 12000, retries = 0 } =
   throw lastError ?? new Error("Request failed.");
 }
 
+function extractPrimaryPromptText(message) {
+  const rawText = String(message || "").trim();
+  if (!rawText) {
+    return "";
+  }
+
+  const transcriptMatches = Array.from(
+    rawText.matchAll(/Message\s+\d+(?:\s+to\s+[^:]+)?:\s*(.*?)(?=\nMessage\s+\d+(?:\s+to\s+[^:]+)?:|\n\nAdditional background:|$)/gis),
+  )
+    .map((match) => match[1]?.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
+  return transcriptMatches.at(-1) || rawText;
+}
+
+function looksLikeWebsiteQuestion(message) {
+  const text = extractPrimaryPromptText(message).toLowerCase();
+  if (!text) {
+    return false;
+  }
+
+  return [
+    "what can you do",
+    "how can you help",
+    "how does this work",
+    "what does this website do",
+    "what does this site do",
+    "what is ventureboard",
+    "how accurate",
+    "accuracy",
+    "performance",
+    "how fast",
+    "how reliable",
+    "how trustworthy",
+    "what kind of questions",
+    "what business questions",
+    "how should i use this",
+    "what can i ask",
+  ].some((signal) => text.includes(signal));
+}
+
+function buildWebsiteHelpAnswer(message) {
+  const prompt = extractPrimaryPromptText(message).toLowerCase();
+
+  if (/(accuracy|accurate|reliable|trustworthy|trust)/.test(prompt)) {
+    return [
+      "VentureBoard is best used as a decision-support tool, not as blind automation. It combines a multi-agent board review with live research when the backend is available, then turns that into one memo, risks, customer reaction, and next steps.",
+      "The strongest results come when you give a concrete business idea, location, target customer, budget, pricing, runway, or company name. You should still treat the output as structured guidance and verify high-stakes financial, legal, or investment calls before acting.",
+    ].join(" ");
+  }
+
+  if (/(performance|fast|speed|slow)/.test(prompt)) {
+    return [
+      "VentureBoard is designed to take a little time when the question needs research. It can review startup ideas, local business openings, investment theses, pricing questions, launch timing, market demand, and execution risk.",
+      "If the backend research path is available, the answer can take longer because it is trying to pull real demand, pricing, competitor, and risk signals before the memo is shown.",
+    ].join(" ");
+  }
+
+  return [
+    "VentureBoard helps you pressure-test a business move before you commit. You can ask about starting a business, opening a local shop, pricing, launch timing, hiring, market demand, or whether a company or investment idea looks strong enough to pursue.",
+    "It will turn that into a CEO-style memo, risk view, customer reaction, action plan, and conversation between the specialist agents. It works best when you include the business idea, location, audience, price, budget, runway, or company name you want reviewed.",
+  ].join(" ");
+}
+
+function extractPromptLocation(text) {
+  const prompt = extractPrimaryPromptText(text);
+  const match = prompt.match(/\b(?:in|at|near)\s+([A-Za-z][A-Za-z\s-]{2,40}?)(?:[?.!,]|$|\s+(?:what|should|can|will|would|do|does|for)\b)/i);
+  return match?.[1]?.trim() || "";
+}
+
+function extractInvestmentTarget(text) {
+  const prompt = extractPrimaryPromptText(text);
+  const match = prompt.match(
+    /\b(?:invest|investment|buy|bought|put money|put my money|park money)\b.*?\b(?:in|into)\s+([A-Za-z0-9.&\-\s]{2,50}?)(?:[?.!,]|$|\s+(?:what|should|worth|good|think|right|now|today)\b)/i,
+  );
+  return match?.[1]?.trim() || "";
+}
+
+function toTitleCase(text) {
+  return String(text || "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => (word.length <= 3 ? word.toUpperCase() : word[0].toUpperCase() + word.slice(1).toLowerCase()))
+    .join(" ");
+}
+
+function inferFallbackContext(payload) {
+  const prompt = extractPrimaryPromptText(payload.business_problem);
+  const lower = prompt.toLowerCase();
+  const location = extractPromptLocation(prompt);
+  const investmentTarget = extractInvestmentTarget(prompt);
+
+  if (investmentTarget) {
+    return {
+      kind: "public-equity",
+      title: `${toTitleCase(investmentTarget)} investment case`,
+      company: toTitleCase(investmentTarget),
+      prompt,
+      location,
+    };
+  }
+
+  if (/\bfruit juice|juice shop|juice center|juice stall|smoothie shop\b/.test(lower)) {
+    return {
+      kind: "juice-shop",
+      title: location ? `Fruit juice shop in ${toTitleCase(location)}` : "Fruit juice shop business",
+      location: toTitleCase(location),
+      prompt,
+    };
+  }
+
+  if (/\bstore|shop|cafe|restaurant|salon|clinic|center|centre|farm|stall|agency|franchise|gym|arcade\b/.test(lower)) {
+    return {
+      kind: "local-business",
+      title: location ? `Local business in ${toTitleCase(location)}` : "Local business case",
+      location: toTitleCase(location),
+      prompt,
+    };
+  }
+
+  return {
+    kind: "generic-business",
+    title: payload.company_name || "Your business case",
+    prompt,
+    location: toTitleCase(location),
+  };
+}
+
 function isBusinessDecisionPrompt(message, form = {}) {
-  const text = String(message || "").toLowerCase();
+  const text = extractPrimaryPromptText(message).toLowerCase();
   if (!text.trim()) {
     return false;
   }
@@ -1764,6 +1892,10 @@ function isBusinessDecisionPrompt(message, form = {}) {
     return false;
   }
 
+  if (looksLikeWebsiteQuestion(text)) {
+    return false;
+  }
+
   if (businessSignals.some((signal) => text.includes(signal))) {
     return true;
   }
@@ -1808,16 +1940,28 @@ function mergeStreamEvent(current, eventPayload) {
 
 function buildNonBusinessPromptResult(message, selectedAgentNames = []) {
   const addressedAgents = ["General Assistant"];
-  const samplePrompts = [
-    "Should I open a game center near a college?",
-    "What pricing model should I use for my tutoring startup?",
-    "How risky is it to launch with only 8 months of cash left?",
-  ];
-  const redirectMessage =
-    "This workspace is built for business decisions, not general biography or trivia questions. Ask about a business idea, pricing, market demand, launch risk, hiring, or growth strategy and the advisors will help.";
+  const websiteQuestion = looksLikeWebsiteQuestion(message);
+  const samplePrompts = websiteQuestion
+    ? [
+        "Can you review a local business idea in my town?",
+        "Can you tell me whether investing in a company like TCS looks attractive?",
+        "Can you compare launch now vs wait six months for my startup?",
+      ]
+    : [
+        "Should I open a game center near a college?",
+        "What pricing model should I use for my tutoring startup?",
+        "How risky is it to launch with only 8 months of cash left?",
+      ];
+  const redirectMessage = websiteQuestion
+    ? buildWebsiteHelpAnswer(message)
+    : "I can answer questions about how VentureBoard works, and I can run business reviews for startup ideas, local businesses, pricing, launch timing, risk, growth, and investment questions. For unrelated trivia or biography questions, switch back to a business or product question and I can help.";
+  const companyName = websiteQuestion ? "VentureBoard AI product guide" : "Direct answer";
+  const keyPoints = websiteQuestion
+    ? ["Explain what VentureBoard can do", "Suggest the next best business questions to ask"]
+    : ["Answered directly", "Guided the user back toward the product scope"];
 
   return {
-    company_name: "Board decision review",
+    company_name: companyName,
     agent_definitions: [],
     conversation: addressedAgents.map((agentName) => ({
       agent_name: agentName,
@@ -1827,8 +1971,8 @@ function buildNonBusinessPromptResult(message, selectedAgentNames = []) {
       message: redirectMessage,
       stance: "MODIFY",
       confidence: 94,
-      topics: ["question fit"],
-      key_points: ["Ask a business question", "Include your idea, market, cost, or risk"],
+      topics: [websiteQuestion ? "product help" : "question fit"],
+      key_points: keyPoints,
       assumptions: [],
       references: [],
       challenged_agents: [],
@@ -1842,8 +1986,10 @@ function buildNonBusinessPromptResult(message, selectedAgentNames = []) {
     round_summaries: [
       {
         round: 1,
-        synopsis: "The latest prompt sits outside the business-decision scope of this workspace.",
-        consensus_points: ["Redirect to a business-focused question."],
+        synopsis: websiteQuestion
+          ? "The latest prompt was answered as a VentureBoard product-help question."
+          : "The latest prompt was answered directly, outside the main business-decision path.",
+        consensus_points: [websiteQuestion ? "The app explained how the workspace helps with business decisions." : "Redirect to a business-focused or product-help question."],
         conflict_points: [],
         open_questions: samplePrompts,
         numeric_highlights: { average_confidence: 94 },
@@ -1854,10 +2000,14 @@ function buildNonBusinessPromptResult(message, selectedAgentNames = []) {
       decision: "MODIFY",
       confidence: 94,
       key_reasons: [
-        "This workspace works best when the prompt is about a business decision or startup plan.",
-        `The last prompt looked like a general question: "${String(message).trim().slice(0, 120)}${String(message).trim().length > 120 ? "..." : ""}"`,
+        websiteQuestion
+          ? "The prompt was answered as a VentureBoard product-help question."
+          : "This workspace works best for business decisions and product-help questions.",
+        `Latest prompt: "${extractPrimaryPromptText(message).trim().slice(0, 120)}${extractPrimaryPromptText(message).trim().length > 120 ? "..." : ""}"`,
       ],
-      risks: ["General-knowledge prompts produce weak advisor output because the app is tuned for business cases."],
+      risks: websiteQuestion
+        ? ["For the best results, give a concrete business idea, company name, location, pricing, or runway so the advisors can research it."]
+        : ["Unrelated trivia prompts do not use the full advisory workflow, so the output is intentionally lighter."],
       recommended_actions: samplePrompts,
     },
     actions: {
@@ -1870,7 +2020,9 @@ function buildNonBusinessPromptResult(message, selectedAgentNames = []) {
       marketing_strategy: {
         audience: "Demo user",
         positioning: "Business decision workspace",
-        core_message: "Ask about a business idea, market, pricing, costs, risks, or launch timing.",
+        core_message: websiteQuestion
+          ? "Ask what VentureBoard can review, or send a business idea, company, location, market, or risk question."
+          : "Ask about a business idea, market, pricing, costs, risks, launch timing, or how the product works.",
         channels: [],
         ad_angles: [],
       },
@@ -1890,7 +2042,9 @@ function buildNonBusinessPromptResult(message, selectedAgentNames = []) {
       top_influencer: addressedAgents[0],
       conflicts: [],
       final_reasoning_summary:
-        "The request was redirected because it looks like a general question instead of a business decision. The app is now guiding the user toward a better prompt.",
+        websiteQuestion
+          ? "The request was handled as a product-help question, so the app answered directly instead of running the full board debate."
+          : "The request was outside the main business-decision flow, so the app answered directly and guided the user back toward business or product-help prompts.",
       reasoning_trace: [
         {
           agent_name: "General Assistant",
@@ -1957,7 +2111,7 @@ function buildLocalFallbackAnalysis(payload) {
   }));
 
   return {
-    company_name: payload.company_name,
+    company_name: summary.title || payload.company_name,
     agent_definitions: [],
     conversation,
     round_summaries: [roundSummary],
@@ -1999,7 +2153,9 @@ function buildLocalFallbackAnalysis(payload) {
 }
 
 function estimateFallbackSummary(payload) {
-  const text = String(payload.business_problem || "").toLowerCase();
+  const prompt = extractPrimaryPromptText(payload.business_problem);
+  const text = prompt.toLowerCase();
+  const context = inferFallbackContext(payload);
   const runway = Number(payload.known_metrics?.runway_months || 0);
   const grossMargin = Number(payload.known_metrics?.gross_margin || 0);
   const pricePoint = Number(payload.known_metrics?.price_point || 0);
@@ -2007,6 +2163,93 @@ function estimateFallbackSummary(payload) {
   const priceSensitive = /\bprice-sensitive|price sensitive|budget-conscious|cheap|discount\b/.test(text);
   const heavySetup = /\bupfront|fit-?out|equipment|rent|staff|setup|capex|capital\b/.test(text);
   const strongDemand = /\bstrong student traffic|foot traffic|hostels|college|busy area|repeat visits\b/.test(text);
+
+  if (context.kind === "public-equity") {
+    const company = context.company || "This company";
+    return {
+      title: context.title,
+      decision: "MODIFY",
+      confidence: 76,
+      topInfluencer: "Finance Agent",
+      mainReason: `${company} looks like a serious company to study, but the answer depends more on valuation, earnings quality, and your holding period than on hype.`,
+      supportReason: `The key question is not whether ${company} is real, but whether you are buying it at a sensible price for the growth and risk you are taking.`,
+      risks: [
+        `${company} can still disappoint if client spending slows, margins tighten, or deal momentum weakens.`,
+        "A good company can still be a weak investment if you buy it after too much optimism is already priced in.",
+        "Concentration risk matters if this becomes a large share of your capital.",
+      ],
+      nextSteps: [
+        `Compare ${company}'s current valuation with its own recent history and with close peers before committing.`,
+        `Check the latest revenue growth, large-deal momentum, margin trend, and management guidance for ${company}.`,
+        "Decide your position size, time horizon, and downside limit before you invest any money.",
+      ],
+      conflicts: [
+        "Quality and stability may be attractive, but the return can still be mediocre if the entry valuation is too rich.",
+        "The downside is less about whether the company exists and more about growth slowing faster than investors expect.",
+      ],
+      openQuestions: [
+        `Is ${company} trading above or below its usual valuation range?`,
+        `What is the next 12-18 month growth and margin outlook for ${company}?`,
+        "How much of your portfolio should depend on one company call?",
+      ],
+      explainability:
+        "This backup investment readout leans on the company cue in your prompt and shifts the memo toward valuation, earnings quality, and downside control instead of startup launch advice.",
+      estimatedMetrics: {
+        expected_roi_pct: 11,
+        estimated_payback_months: 24,
+        projected_annual_revenue: 0,
+        launch_budget: 0,
+        price_point: pricePoint || 0,
+        gross_margin_pct: grossMargin || 29,
+        expected_customers_12m: 0,
+      },
+    };
+  }
+
+  if (context.kind === "juice-shop") {
+    const locationText = context.location ? ` in ${context.location}` : "";
+    const decision = heavySetup || runway && runway < 10 ? "MODIFY" : "GO";
+    return {
+      title: context.title,
+      decision,
+      confidence: decision === "GO" ? 74 : 79,
+      topInfluencer: heavySetup ? "Finance Agent" : "Market Research Agent",
+      mainReason: `A fruit juice shop${locationText} can work if the location has real repeat footfall, prices fit local spending power, and wastage stays under control.`,
+      supportReason: context.location
+        ? `${context.location} looks more like a repeat-traffic local business than a scale story, so site choice, seasonality, and daily execution matter more than a big brand plan.`
+        : "This type of business wins on repeat local traffic, freshness, and disciplined daily operations, not on a flashy launch.",
+      risks: [
+        "Walk-in demand may look decent at first but still be too weak on normal weekdays to support rent and staff.",
+        "Perishable inventory, inconsistent quality, and hygiene issues can damage trust quickly in a small local market.",
+        "If pricing is too high for the area or too low for margins, the shop can stay busy without becoming healthy.",
+      ],
+      nextSteps: [
+        `Spend time on the ground${locationText} and shortlist the two or three highest-footfall sites before signing anything long-term.`,
+        "Test a tight starter menu, local price points, and daily sales assumptions before investing in a full setup.",
+        "Model rent, wastage, and raw-material swings so you know how many glasses per day you need to break even.",
+      ],
+      conflicts: [
+        "Demand may exist, but a weak site or poor repeat traffic can still turn a simple business into a cash drain.",
+        "The product is straightforward, but profit can disappear fast if pricing, wastage, and rent are not balanced tightly.",
+      ],
+      openQuestions: [
+        "Which exact street, school, hospital, or market cluster will give the strongest repeat walk-in traffic?",
+        "How many glasses per day are needed to cover rent, labor, and fruit wastage comfortably?",
+        "What price bands already work in nearby juice shops or snack outlets?",
+      ],
+      explainability:
+        "This backup local-business review leans on the location, product type, and store economics in your prompt so the recommendation focuses on footfall, pricing, and spoilage instead of generic startup advice.",
+      estimatedMetrics: {
+        expected_roi_pct: 24,
+        estimated_payback_months: 16,
+        projected_annual_revenue: 1450000,
+        launch_budget: 550000,
+        price_point: pricePoint || 55,
+        gross_margin_pct: grossMargin || 58,
+        expected_customers_12m: 18000,
+      },
+    };
+  }
 
   let score = 0;
   if (strongDemand) score += 2;
@@ -2026,6 +2269,7 @@ function estimateFallbackSummary(payload) {
   const topInfluencer = heavySetup ? "Finance Agent" : strongDemand ? "Market Research Agent" : "CEO Agent";
 
   return {
+    title: context.title,
     decision,
     confidence,
     topInfluencer,
@@ -2109,8 +2353,44 @@ function buildLocalFallbackTurn({ agentName, payload, summary, round, confidence
 }
 
 function buildFallbackAgentLine(agentName, payload, summary) {
-  const lower = String(payload.business_problem || "").toLowerCase();
+  const prompt = extractPrimaryPromptText(payload.business_problem);
+  const lower = prompt.toLowerCase();
+  const context = inferFallbackContext(payload);
   const localVenue = /\bgame center|gaming|arcade|college|campus\b/.test(lower);
+
+  if (context.kind === "public-equity") {
+    const company = context.company || "the company";
+    const companyTemplates = {
+      "CEO Agent": `I would not treat ${company} like a yes-or-no business launch. The real question is whether the current price gives you enough upside for the risk and time horizon.`,
+      "Startup Builder Agent": `${company} is already a mature company, so the edge is not building fast. The edge is entering only when the market is mispricing the business.`,
+      "Market Research Agent": `Study what is happening to tech spending, deal wins, and outsourcing demand around ${company} before building conviction.`,
+      "Finance Agent": `I care most about valuation, free cash generation, margin trend, and whether ${company} can still grow enough to justify the price you are paying.`,
+      "Marketing Agent": `The story around ${company} may sound strong, but investor narratives matter less than whether the numbers keep proving the case.`,
+      "Pricing Agent": `For a listed company, pricing translates into valuation discipline. Even a strong company becomes a weak buy if the entry price is stretched.`,
+      "Supply Chain Agent": `${company}'s delivery quality, client concentration, and execution consistency matter because they shape how durable earnings really are.`,
+      "Hiring Agent": `Leadership quality, attrition, and bench strength matter because talent execution is part of what protects ${company}'s margins.`,
+      "Risk Agent": `The main risk is not that ${company} is fake. The main risk is slower growth, multiple compression, or concentration hurting returns after you buy.`,
+      "Sales Strategy Agent": `Watch for large deal momentum and client spending appetite. Those signals will tell you more about ${company}'s near-term strength than broad market talk.`,
+    };
+    return companyTemplates[agentName] || companyTemplates["CEO Agent"];
+  }
+
+  if (context.kind === "juice-shop") {
+    const location = context.location ? ` in ${context.location}` : "";
+    const juiceTemplates = {
+      "CEO Agent": `I would move only after locking a strong site${location} and proving the daily sales needed to cover rent, staff, and wastage.`,
+      "Startup Builder Agent": "Keep the first version simple: a focused menu, a small setup, and a site that teaches you quickly whether repeat traffic is real.",
+      "Market Research Agent": `Before launch, visit the competing juice and snack points${location}, map peak hours, and learn what local buyers already pay for cold drinks and fresh juice.`,
+      "Finance Agent": "This looks workable only if rent, wastage, and daily throughput stay balanced. A small-town shop can stay busy and still underperform if the unit economics are loose.",
+      "Marketing Agent": "Lead with freshness, speed, and a clear local signature offer instead of a broad menu. Repeat traffic and word of mouth will matter more than fancy branding.",
+      "Pricing Agent": "Test a few price bands with real shoppers nearby. The best price is the one that keeps the drink affordable without letting margin disappear into fruit and labor costs.",
+      "Supply Chain Agent": "Fruit quality, spoilage, and prep speed are the operating core of this business. If inventory discipline is weak, profit will leak quickly.",
+      "Hiring Agent": "Start with a small team that can handle cleanliness, prep, and peak-hour service without overstaffing the shop from day one.",
+      "Risk Agent": "The biggest risk is choosing the wrong site or overbuilding before repeat traffic is proven. Hygiene and consistency are the second big watch-outs.",
+      "Sales Strategy Agent": "Think like a neighborhood repeat-visit business. School traffic, office commuters, and evening footfall matter more than a one-time opening buzz.",
+    };
+    return juiceTemplates[agentName] || juiceTemplates["CEO Agent"];
+  }
 
   const localTemplates = {
     "CEO Agent": "I would move carefully here. The best path is a smaller first launch with clear goals for demand, repeat visits, and monthly break-even.",
@@ -2142,6 +2422,102 @@ function buildFallbackAgentLine(agentName, payload, summary) {
 }
 
 function buildLocalFallbackActions(payload, summary) {
+  const context = inferFallbackContext(payload);
+  if (context.kind === "public-equity") {
+    return {
+      execution_plan: summary.nextSteps.map((step, index) => ({
+        step,
+        owner: index === 0 ? "Finance Agent" : index === 1 ? "Risk Agent" : "CEO Agent",
+        timeline: index === 0 ? "Now" : index === 1 ? "Next 1-2 days" : "Before entry",
+        success_metric:
+          index === 0
+            ? "You know whether valuation is rich, fair, or attractive."
+            : index === 1
+              ? "You understand the main downside triggers and portfolio risk."
+              : "You have a clear entry size and thesis before investing.",
+      })),
+      marketing_strategy: {
+        audience: "Investor reviewing a public-market company",
+        positioning: "Quality of business versus quality of entry price",
+        core_message: "Treat this like a conviction and valuation call, not a blind brand bet.",
+        channels: [],
+        ad_angles: [],
+      },
+      financial_plan: {
+        assumptions: [
+          { name: "Position sizing", value: "Define before entry", rationale: "Avoid concentration risk in a single company call." },
+          { name: "Valuation check", value: "Compare against recent history and peers", rationale: "A strong company can still be a poor buy at the wrong price." },
+        ],
+        monthly_costs: [],
+        revenue_projection: [],
+        roi_estimate: "Use downside, valuation, and holding period as the core frame instead of startup payback math.",
+      },
+      hiring_plan: {
+        roles: [],
+        hiring_sequence: ["No hiring plan needed because this is an investment diligence question, not an operating buildout."],
+      },
+    };
+  }
+
+  if (context.kind === "juice-shop") {
+    return {
+      execution_plan: summary.nextSteps.map((step, index) => ({
+        step,
+        owner: index === 0 ? "CEO Agent" : index === 1 ? "Market Research Agent" : "Finance Agent",
+        timeline: index === 0 ? "Week 1" : index === 1 ? "Weeks 1-2" : "Weeks 2-4",
+        success_metric:
+          index === 0
+            ? "Shortlist the strongest site options before locking rent."
+            : index === 1
+              ? "Validate footfall, pricing, and repeat demand with real local buyers."
+              : "Know the daily sales needed to cover rent, labor, and wastage.",
+      })),
+      marketing_strategy: {
+        audience: context.location ? `Walk-in shoppers in ${context.location}` : "Neighborhood walk-in shoppers",
+        positioning: "Fresh, convenient, repeatable local juice offer",
+        core_message: "Win on freshness, speed, local price fit, and repeat traffic instead of launching too big.",
+        channels: [
+          {
+            channel: "Street visibility and local partnerships",
+            objective: "Drive daily walk-ins from schools, offices, and nearby residential pockets",
+            message: "Show a focused menu, clear prices, and one or two signature drinks",
+            budget_share_pct: 45,
+          },
+          {
+            channel: "WhatsApp and local repeat offers",
+            objective: "Turn first visits into repeat buying",
+            message: "Use simple combo offers and loyalty-style repeat nudges",
+            budget_share_pct: 30,
+          },
+        ],
+        ad_angles: ["Fresh and fast for the area", "Affordable repeat purchase, not one-time trial"],
+      },
+      financial_plan: {
+        assumptions: [
+          { name: "Starter setup budget", value: `${summary.estimatedMetrics.launch_budget}`, rationale: "Keeps the first launch small enough to learn safely." },
+          { name: "Starter price point", value: `${summary.estimatedMetrics.price_point}`, rationale: "Used to pressure-test local affordability and margin." },
+        ],
+        monthly_costs: [
+          { category: "Rent and utilities", monthly_cost: 35000 },
+          { category: "Fruit, cups, and wastage", monthly_cost: 42000 },
+          { category: "Staffing", monthly_cost: 26000 },
+        ],
+        revenue_projection: [
+          { milestone: "Month 3", customers: 1800, revenue: 210000 },
+          { milestone: "Month 12", customers: summary.estimatedMetrics.expected_customers_12m, revenue: summary.estimatedMetrics.projected_annual_revenue },
+        ],
+        roi_estimate: "Early viability depends on repeat walk-ins, spoilage control, and keeping the site economics disciplined.",
+      },
+      hiring_plan: {
+        roles: [
+          { role: "Counter and prep lead", timing: "Opening", reason: "Controls service speed, hygiene, and consistency during peak hours.", estimated_monthly_cost: 14000 },
+          { role: "Support staff", timing: "After demand is stable", reason: "Add only once the shop proves enough volume to justify the extra labor.", estimated_monthly_cost: 12000 },
+        ],
+        hiring_sequence: ["Open lean with one strong operator.", "Add help only after repeat traffic becomes predictable."],
+      },
+    };
+  }
+
   return {
     execution_plan: summary.nextSteps.map((step, index) => ({
       step,
