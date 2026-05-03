@@ -16,6 +16,7 @@ class FeatherlessClient:
         self.model = os.getenv("FEATHERLESS_MODEL", "")
         self.base_url = os.getenv("FEATHERLESS_BASE_URL", "https://api.featherless.ai/v1").rstrip("/")
         self.timeout = float(os.getenv("FEATHERLESS_TIMEOUT", "4"))
+        self.auth_scheme = (os.getenv("FEATHERLESS_AUTH_SCHEME", "bearer").strip().lower() or "bearer")
 
     def is_configured(self) -> bool:
         return bool(self.api_key and self.model)
@@ -123,7 +124,7 @@ class FeatherlessClient:
             url=f"{self.base_url}/chat/completions",
             data=json.dumps(payload).encode("utf-8"),
             headers={
-                "Authorization": f"Bearer {self.api_key}",
+                "Authorization": self._authorization_header(),
                 "Content-Type": "application/json",
             },
             method="POST",
@@ -153,3 +154,8 @@ class FeatherlessClient:
                     parts.append(item.get("text", ""))
             return "".join(parts)
         return None
+
+    def _authorization_header(self) -> str:
+        if self.auth_scheme in {"raw", "plain", "direct"}:
+            return self.api_key
+        return f"Bearer {self.api_key}"
