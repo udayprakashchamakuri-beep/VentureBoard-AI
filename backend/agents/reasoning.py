@@ -41,6 +41,12 @@ class BusinessSignals:
     derived_metrics: Dict[str, float]
     evidence: List[str]
     external_research: BrightDataResearch = field(default_factory=BrightDataResearch)
+    business_type: str = ""
+    location_hint: str = ""
+    local_business: bool = False
+    place_evidence_level: int = 0
+    has_place_specific_evidence: bool = False
+    place_evidence_summary: str = ""
 
     def snapshot(self) -> Dict[str, int]:
         return {
@@ -69,6 +75,11 @@ class StrategicReasoner:
             return self.signal_cache[cache_key]
 
         primary_prompt = extract_primary_prompt(request.business_problem)
+        business_type = self._extract_business_type(primary_prompt)
+        location_hint = self._extract_location_hint(primary_prompt) or (
+            "" if not request.region or request.region.lower() == "global" else request.region
+        )
+        local_business = self._is_local_business_prompt(primary_prompt, business_type, location_hint)
         problem = " ".join(
             [
                 primary_prompt,
@@ -274,6 +285,22 @@ class StrategicReasoner:
             evidence=evidence,
         )
 
+        place_evidence = self._assess_local_evidence(
+            external_research=external_research,
+            local_business=local_business,
+            business_type=business_type,
+            location_hint=location_hint,
+        )
+        if local_business:
+            if place_evidence["has_place_specific_evidence"]:
+                evidence.append(str(place_evidence["summary"]))
+            else:
+                market_attractiveness -= 10
+                financial_viability -= 8
+                sales_friction += 7
+                operational_complexity += 5
+                evidence.append(str(place_evidence["summary"]))
+
         market_attractiveness = self._clamp(market_attractiveness)
         growth_potential = self._clamp(growth_potential)
         financial_viability = self._clamp(financial_viability)
@@ -315,6 +342,12 @@ class StrategicReasoner:
             derived_metrics=derived_metrics,
             evidence=evidence,
             external_research=external_research,
+            business_type=business_type,
+            location_hint=location_hint,
+            local_business=local_business,
+            place_evidence_level=int(place_evidence["level"]),
+            has_place_specific_evidence=bool(place_evidence["has_place_specific_evidence"]),
+            place_evidence_summary=str(place_evidence["summary"]),
         )
         self.signal_cache[cache_key] = signals
         return signals
@@ -332,9 +365,13 @@ class StrategicReasoner:
         signals = self.analyze_request(request)
         latest_turns = self._latest_turns(full_history)
         insights = self._build_agent_insights(profile.definition.name, signals, request, latest_turns, conflicts)
+        gap_insight = self._local_evidence_gap_insight(profile.definition.name, signals)
+        if gap_insight:
+            insights = [gap_insight, *insights]
         selected = self._select_insights(insights, agent_memory, round_number)
         stance_score = profile.bias + mean(item.score for item in selected)
         stance, confidence = self._score_to_stance(stance_score, round_number)
+        confidence = self._adjust_confidence_for_evidence(confidence, profile.definition.name, signals)
         reference_names, challenged_agents = self._pick_references(profile, full_history, latest_turns, conflicts)
         estimated_metrics = self._build_estimated_metrics(profile.definition.name, signals)
         calculations = self._build_calculations(profile.definition.name, estimated_metrics)
@@ -622,7 +659,11 @@ class StrategicReasoner:
                     topic="launch_shape",
                     text=f"With combined operational and compliance load at {round((ops + risk) / 2)}/100, the operation should scale in layers, not all at once.",
                     score=(60 - ((ops + risk) / 2)) / 180,
-                    action="Pilot one geography or one workflow before expanding operational scope.",
+                    action=(
+                        "Pilot one site and one narrow operating window before expanding operational scope."
+                        if signals.local_business
+                        else "Pilot one geography or one workflow before expanding operational scope."
+                    ),
                     assumption="Assuming the launch can be segmented without losing strategic value.",
                     positions={"scope": "narrow"},
                 ),
@@ -670,7 +711,11 @@ class StrategicReasoner:
                     topic="concentration",
                     text=f"Sales friction at {sales}/100 increases concentration risk because a small number of deals or partners may dominate early outcomes.",
                     score=(52 - sales) / 160,
-                    action="Avoid betting the entire plan on one channel, partner, or enterprise logo.",
+                    action=(
+                        "Avoid relying on one storefront lane, one partner, or one narrow customer pocket until repeat local demand is proven."
+                        if signals.local_business
+                        else "Avoid betting the entire plan on one channel, partner, or enterprise logo."
+                    ),
                     assumption="Assuming concentration risk is elevated in the first phase.",
                     positions={"channel": "diversified"},
                 ),
@@ -838,7 +883,24 @@ class StrategicReasoner:
     def _detect_channel(self, text: str) -> str:
         if any(keyword in text for keyword in ["enterprise", "b2b", "procurement", "it team", "account executive"]):
             return "B2B"
-        if any(keyword in text for keyword in ["consumer", "d2c", "retail", "shopper", "subscriber"]):
+        if any(
+            keyword in text
+            for keyword in [
+                "consumer",
+                "d2c",
+                "retail",
+                "shopper",
+                "subscriber",
+                "shop",
+                "store",
+                "stall",
+                "cafe",
+                "restaurant",
+                "juice",
+                "walk-in",
+                "footfall",
+            ]
+        ):
             return "B2C"
         return "Hybrid"
 
@@ -868,9 +930,16 @@ class StrategicReasoner:
         numeric_metrics: Dict[str, float],
         external_research: BrightDataResearch,
     ) -> Dict[str, float]:
+        primary_prompt = extract_primary_prompt(request.business_problem)
+        local_business = self._is_local_business_prompt(
+            primary_prompt,
+            self._extract_business_type(primary_prompt),
+            (request.region or "").strip() or self._extract_location_hint(primary_prompt),
+        )
         runway = numeric_metrics.get("runway_months", 12.0)
         gross_margin_pct = numeric_metrics.get("gross_margin", 62.0)
-        price_point = numeric_metrics.get("price_point", 12999.0 if channel == "B2B" else 249.0)
+        default_price_point = 79.0 if local_business and channel != "B2B" else (12999.0 if channel == "B2B" else 249.0)
+        price_point = numeric_metrics.get("price_point", default_price_point)
         budget_change_pct = numeric_metrics.get("scenario_budget_change_pct", 0.0)
 
         if channel == "B2B":
@@ -890,8 +959,9 @@ class StrategicReasoner:
         win_rate_pct = self._clamp(18 + (market_attractiveness + pricing_power - sales_friction - differentiation_pressure) / 3, 8, 62)
         monthly_leads = max(24, round(expected_customers / max(win_rate_pct / 100, 0.08)))
         launch_budget = max(
-            24000.0,
-            price_point * (2.2 if channel == "B2B" else 40.0) * (1 + (operational_complexity + compliance_risk) / 250),
+            120000.0 if local_business and channel != "B2B" else 24000.0,
+            price_point * (2.2 if channel == "B2B" else (1800.0 if local_business else 40.0))
+            * (1 + (operational_complexity + compliance_risk) / 250),
         )
         launch_budget *= 1 + (budget_change_pct / 100) * 0.5
         monthly_revenue = (expected_customers * price_point) / 12
@@ -1034,25 +1104,8 @@ class StrategicReasoner:
         scope = f"{topic_seed} {region}".strip()
         investment_target = self._extract_investment_target(primary_prompt)
         business_type = self._extract_business_type(primary_prompt)
-        location_hint = self._extract_location_hint(primary_prompt) or region
-        local_business = any(
-            keyword in lower_problem
-            for keyword in [
-                "near",
-                "college",
-                "campus",
-                "store",
-                "shop",
-                "restaurant",
-                "cafe",
-                "gym",
-                "arcade",
-                "game center",
-                "gaming center",
-                "salon",
-                "lounge",
-            ]
-        )
+        location_hint = region or self._extract_location_hint(primary_prompt)
+        local_business = self._is_local_business_prompt(primary_prompt, business_type, location_hint)
         regulated = any(
             keyword in lower_problem
             for keyword in ["healthcare", "fintech", "insurance", "payments", "compliance", "privacy", "regulated"]
@@ -1072,9 +1125,13 @@ class StrategicReasoner:
             local_scope = f"{business_type} {location_hint}".strip()
             return [
                 ("demand", f"{local_scope} customer demand footfall local preferences market size"),
+                ("demand", f"{local_scope} rush hours students offices families evening demand"),
                 ("competition", f"{local_scope} competitors nearby pricing alternatives"),
+                ("competition", f"{local_scope} google maps justdial zomato swiggy nearby shops"),
                 ("pricing", f"{local_scope} pricing menu rates gross margin"),
+                ("pricing", f"{local_scope} menu prices cost per glass combos"),
                 ("location", f"{local_scope} traffic schools offices residential demand"),
+                ("location", f"{local_scope} bus stand market road foot traffic visibility"),
                 ("risk", f"{local_scope} permits hygiene licenses seasonality operating costs"),
             ]
 
@@ -1121,11 +1178,11 @@ class StrategicReasoner:
     def _extract_location_hint(self, prompt: str) -> str:
         cleaned = re.sub(r"\s+", " ", prompt).strip()
         match = re.search(
-            r"\b(?:in|at|near)\s+([A-Za-z][A-Za-z\s-]{2,40}?)(?:[?.!,]|$|\s+(?:what|should|can|will|would|do|does|for)\b)",
+            r"\b(?:in|at|near)\s+([A-Za-z][A-Za-z\s,\-]{2,60}?)(?:[?.!]|$|\s+(?:what|should|can|will|would|do|does|for)\b)",
             cleaned,
             flags=re.IGNORECASE,
         )
-        return match.group(1).strip() if match else ""
+        return re.sub(r"\s+", " ", match.group(1)).strip(" ,") if match else ""
 
     def _extract_investment_target(self, prompt: str) -> str:
         cleaned = re.sub(r"\s+", " ", prompt).strip()
@@ -1170,6 +1227,83 @@ class StrategicReasoner:
             return ""
         candidate = re.sub(r"\s+", " ", match.group(1)).strip(" .,!?:;-")
         return candidate.lower()
+
+    def _is_local_business_prompt(self, prompt: str, business_type: str, location_hint: str) -> bool:
+        lower_prompt = prompt.lower()
+        local_keywords = [
+            "near",
+            "college",
+            "campus",
+            "store",
+            "shop",
+            "stall",
+            "restaurant",
+            "cafe",
+            "juice",
+            "gym",
+            "arcade",
+            "game center",
+            "gaming center",
+            "salon",
+            "lounge",
+            "walk-in",
+            "footfall",
+            "in my town",
+            "in my area",
+        ]
+        return bool(location_hint and (business_type or any(keyword in lower_prompt for keyword in local_keywords)))
+
+    def _assess_local_evidence(
+        self,
+        external_research: BrightDataResearch,
+        local_business: bool,
+        business_type: str,
+        location_hint: str,
+    ) -> Dict[str, object]:
+        if not local_business:
+            return {
+                "level": 0,
+                "has_place_specific_evidence": False,
+                "summary": "",
+            }
+
+        local_topics = ["demand", "competition", "pricing", "location", "risk"]
+        topic_counts = {topic: len(external_research.get(topic)) for topic in local_topics}
+        coverage = sum(1 for count in topic_counts.values() if count > 0)
+        location_tokens = [
+            token.lower()
+            for token in re.split(r"[\s,]+", location_hint or "")
+            if len(token.strip()) >= 3
+        ]
+        title_blob = " ".join(
+            f"{hit.title} {hit.snippet}"
+            for hit in external_research.all_hits()
+        ).lower()
+        explicit_location_mentions = sum(1 for token in location_tokens if token in title_blob)
+        has_place_specific_evidence = bool(
+            coverage >= 3
+            and topic_counts.get("location", 0) > 0
+            and (topic_counts.get("pricing", 0) > 0 or topic_counts.get("competition", 0) > 0)
+            and (explicit_location_mentions > 0 or len(location_tokens) == 0)
+        )
+        level = min(5, coverage + (1 if explicit_location_mentions > 0 else 0))
+
+        if has_place_specific_evidence:
+            summary = (
+                f"Recent local-market research produced place-specific signals for {business_type or 'this business'} in {location_hint}, "
+                "including local demand, nearby competition, and on-the-ground pricing cues."
+            )
+        else:
+            summary = (
+                f"The current web research is still too thin to make a high-confidence call on {business_type or 'this business'} in {location_hint}. "
+                "Local demand, nearby competition, and realistic pricing still need place-specific proof."
+            )
+
+        return {
+            "level": level,
+            "has_place_specific_evidence": has_place_specific_evidence,
+            "summary": summary,
+        }
 
     def _apply_external_research(
         self,
@@ -1339,6 +1473,16 @@ class StrategicReasoner:
             "topic_counts": topic_counts,
             "source_counts": source_counts,
             "sample_titles": sample_titles,
+            "context": {
+                "business_type": signals.business_type,
+                "location_hint": signals.location_hint,
+                "local_business": signals.local_business,
+            },
+            "evidence_quality": {
+                "place_evidence_level": signals.place_evidence_level,
+                "has_place_specific_evidence": signals.has_place_specific_evidence,
+                "summary": signals.place_evidence_summary,
+            },
             "idea_profile": self._build_startup_idea_profile(
                 agent_name=agent_name,
                 request=request,
@@ -1346,6 +1490,46 @@ class StrategicReasoner:
                 visible_topics=visible_topics,
             ),
         }
+
+    def _local_evidence_gap_insight(self, agent_name: str, signals: BusinessSignals) -> Insight | None:
+        if not signals.local_business or signals.has_place_specific_evidence:
+            return None
+
+        location = signals.location_hint or "the target location"
+        business_type = signals.business_type or "this business"
+        score_map = {
+            "CEO Agent": -0.42,
+            "Market Research Agent": -0.48,
+            "Finance Agent": -0.38,
+            "Risk Agent": -0.4,
+            "Supply Chain Agent": -0.32,
+        }
+        action_map = {
+            "CEO Agent": f"Treat the next move as a site-validation sprint in {location}, not as an approval to launch broadly.",
+            "Market Research Agent": f"Run ground-truth checks in {location}: footfall counts, nearby competitor mapping, and 15 buyer conversations before making a strong recommendation.",
+            "Finance Agent": f"Do not lock a confident revenue or payback forecast until pricing and daily demand are verified in {location}.",
+            "Risk Agent": f"Keep the recommendation provisional until permits, hygiene requirements, and local operating constraints are verified in {location}.",
+            "Supply Chain Agent": f"Verify sourcing, spoilage risk, and day-part demand in {location} before scaling the operating plan.",
+        }
+        default_action = f"Get place-specific evidence from {location} before committing to a confident launch plan."
+        return Insight(
+            topic="local_evidence_gap",
+            text=f"We still do not have enough place-specific proof on demand, competition, and pricing for {business_type} in {location}.",
+            score=score_map.get(agent_name, -0.28),
+            action=action_map.get(agent_name, default_action),
+            assumption="Assuming a local business can fail even with a good category if the actual street-level demand is wrong.",
+            positions={"evidence_mode": "on-the-ground-validation"},
+        )
+
+    def _adjust_confidence_for_evidence(self, confidence: int, agent_name: str, signals: BusinessSignals) -> int:
+        if not signals.local_business or signals.has_place_specific_evidence:
+            return confidence
+
+        stronger_doubt_agents = {"CEO Agent", "Market Research Agent", "Finance Agent", "Risk Agent"}
+        penalty = 16 if agent_name in stronger_doubt_agents else 10
+        if signals.place_evidence_level <= 1:
+            penalty += 4
+        return max(52, confidence - penalty)
 
     def _build_startup_idea_profile(
         self,

@@ -51,6 +51,7 @@ class DecisionEngine:
         supply_turn = latest_turns.get("Supply Chain Agent")
         hiring_turn = latest_turns.get("Hiring Agent")
         critical_conflicts = [conflict for conflict in conflicts if conflict.impact == "High"]
+        local_context = self._extract_local_context(latest_turns)
 
         if normalized >= 0.24 and avg_roi >= 18 and avg_payback <= 18:
             decision = "GO"
@@ -79,13 +80,26 @@ class DecisionEngine:
             decision = "MODIFY"
             risks.append("Hiring believes org capacity is too tight for a broad expansion without a narrower first phase.")
 
-        key_reasons.append(
-            self._build_plain_language_summary(
-                normalized=normalized,
-                avg_roi=avg_roi,
-                avg_payback=avg_payback,
+        if local_context["is_local_business"] and not local_context["has_place_evidence"]:
+            key_reasons.append(
+                f"The board cannot make a high-confidence local-market call yet because demand, nearby competition, and pricing in {local_context['location']} are not verified with place-specific evidence."
             )
-        )
+            risks.append(
+                f"Local evidence gap: {local_context['summary']}"
+            )
+            recommended_actions.append(
+                f"Verify footfall, nearby competitors, and realistic price points on the ground in {local_context['location']} before treating this as a confident launch decision."
+            )
+            if decision == "GO":
+                decision = "MODIFY"
+        else:
+            key_reasons.append(
+                self._build_plain_language_summary(
+                    normalized=normalized,
+                    avg_roi=avg_roi,
+                    avg_payback=avg_payback,
+                )
+            )
 
         for summary in round_summaries[-2:]:
             for point in summary.consensus_points[:2]:
@@ -131,6 +145,8 @@ class DecisionEngine:
                 ),
             )
         )
+        if local_context["is_local_business"] and not local_context["has_place_evidence"]:
+            confidence = min(confidence, 61 if local_context["evidence_level"] >= 2 else 57)
 
         return FinalDecision(
             decision=decision,
@@ -161,3 +177,24 @@ class DecisionEngine:
             f"The team felt {sentiment} overall. Based on the current assumptions, {return_text}, "
             f"and it would take about {avg_payback:.1f} months to earn the upfront money back."
         )
+
+    def _extract_local_context(self, latest_turns: Dict[str, AgentTurn]) -> Dict[str, object]:
+        for turn in latest_turns.values():
+            snapshot = turn.research_snapshot or {}
+            context = snapshot.get("context") or {}
+            evidence = snapshot.get("evidence_quality") or {}
+            if context.get("local_business"):
+                return {
+                    "is_local_business": True,
+                    "location": str(context.get("location_hint") or "the target location"),
+                    "has_place_evidence": bool(evidence.get("has_place_specific_evidence")),
+                    "evidence_level": int(evidence.get("place_evidence_level") or 0),
+                    "summary": str(evidence.get("summary") or "Local demand and competition were not verified with place-specific evidence."),
+                }
+        return {
+            "is_local_business": False,
+            "location": "",
+            "has_place_evidence": False,
+            "evidence_level": 0,
+            "summary": "",
+        }
