@@ -39,10 +39,22 @@ class AutonomousMonitorService:
         self._stop_event = Event()
         self._cycle_lock = Lock()
         self._thread: Optional[Thread] = None
+        self._available = True
+        self._init_error: str | None = None
 
     def initialize(self) -> None:
-        self.store.initialize()
-        self.store.seed_watch_profiles(default_watch_profiles())
+        try:
+            self.store.initialize()
+            self.store.seed_watch_profiles(default_watch_profiles())
+            self._available = True
+            self._init_error = None
+        except Exception as exc:
+            self._available = False
+            self._init_error = str(exc)
+            if os.getenv("VERCEL"):
+                logger.exception("autonomy.initialize_failed serverless_disable=true error=%s", exc)
+                return
+            raise
 
     @property
     def background_enabled(self) -> bool:
@@ -52,6 +64,8 @@ class AutonomousMonitorService:
         return raw.lower() == "true"
 
     def scheduler_mode(self) -> str:
+        if not self._available:
+            return "disabled"
         if self.background_enabled:
             return "background worker"
         if os.getenv("VERCEL"):
@@ -59,6 +73,8 @@ class AutonomousMonitorService:
         return "manual mode"
 
     def start(self) -> None:
+        if not self._available:
+            return
         if not self.background_enabled or self._thread and self._thread.is_alive():
             return
         self._stop_event.clear()
@@ -71,9 +87,23 @@ class AutonomousMonitorService:
             self._thread.join(timeout=2)
 
     def is_running(self) -> bool:
-        return bool(self._thread and self._thread.is_alive())
+        return bool(self._available and self._thread and self._thread.is_alive())
 
     def get_status(self) -> AutonomyStatusResponse:
+        if not self._available:
+            return AutonomyStatusResponse(
+                scheduler_mode=self.scheduler_mode(),
+                background_running=False,
+                poll_interval_seconds=self.poll_interval_seconds,
+                next_run_hint=(
+                    "Autonomy is temporarily unavailable on this deployment. "
+                    f"Reason: {self._init_error or 'storage initialization failed.'}"
+                ),
+                watch_profiles=[],
+                recent_actions=[],
+                open_tasks=[],
+                recent_runs=[],
+            )
         recent_runs = self.store.recent_runs()
         last_run = recent_runs[0] if recent_runs else None
         next_run_hint = (
@@ -95,6 +125,10 @@ class AutonomousMonitorService:
         )
 
     def run_cycle(self, trigger_source: str = "manual") -> MonitorCycleResult:
+        if not self._available:
+            raise RuntimeError(
+                f"Autonomy is unavailable on this deployment: {self._init_error or 'storage initialization failed.'}"
+            )
         if not self._cycle_lock.acquire(blocking=False):
             raise RuntimeError("The autonomous monitor is already running a cycle.")
 
