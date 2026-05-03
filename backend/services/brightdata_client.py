@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from html import unescape
 from typing import Dict, Iterable, List, Sequence, Tuple
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse
 from urllib.request import Request, urlopen
 
 from backend.config.env import load_local_env
@@ -72,9 +72,10 @@ class BrightDataClient:
         self.country = os.getenv("BRIGHTDATA_COUNTRY", "us")
         self.timeout = float(os.getenv("BRIGHTDATA_TIMEOUT", "2.5"))
         self.response_format = os.getenv("BRIGHTDATA_RESPONSE_FORMAT", "json").strip() or "json"
+        self._resolved_zone = self.zone.strip()
 
     def is_configured(self) -> bool:
-        return bool(self.api_key and self.endpoint and self.zone)
+        return bool(self.api_key and self.endpoint and self._ensure_zone())
 
     def fetch_market_context(self, query: str) -> List[str]:
         research = self.fetch_market_research([("general", query)])
@@ -121,8 +122,12 @@ class BrightDataClient:
         return deduped
 
     def _run_query(self, topic: str, query: str) -> List[BrightDataHit]:
+        active_zone = self._ensure_zone()
+        if not active_zone:
+            return []
+
         payload = {
-            "zone": self.zone,
+            "zone": active_zone,
             "url": f"https://www.google.com/search?q={quote_plus(query)}&gl={self.country}&hl=en",
         }
         if self.response_format:
@@ -294,3 +299,74 @@ class BrightDataClient:
         text = unescape(re.sub(r"<[^>]+>", " ", value))
         text = re.sub(r"\s+", " ", text).strip()
         return text[:320]
+
+    def _ensure_zone(self) -> str:
+        if self._resolved_zone:
+            return self._resolved_zone
+        self._resolved_zone = self._discover_zone()
+        return self._resolved_zone
+
+    def _discover_zone(self) -> str:
+        discovery_url = self._zone_discovery_url()
+        if not discovery_url:
+            return ""
+
+        request = Request(
+            url=discovery_url,
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            method="GET",
+        )
+
+        try:
+            with urlopen(request, timeout=self.timeout) as response:
+                raw_body = response.read().decode("utf-8", errors="ignore")
+        except (HTTPError, URLError, TimeoutError):
+            return ""
+
+        try:
+            payload = json.loads(raw_body)
+        except json.JSONDecodeError:
+            return ""
+
+        zones = self._extract_zone_names(payload)
+        if not zones:
+            return ""
+
+        preferred_keywords = ("serp", "search", "web", "unblocker", "browser")
+        for keyword in preferred_keywords:
+            for zone_name in zones:
+                if keyword in zone_name.lower():
+                    return zone_name
+        return zones[0]
+
+    def _zone_discovery_url(self) -> str:
+        parsed = urlparse(self.endpoint)
+        if not parsed.scheme or not parsed.netloc:
+            return ""
+        return f"{parsed.scheme}://{parsed.netloc}/zone/get_active_zones"
+
+    def _extract_zone_names(self, payload) -> List[str]:
+        candidates: List[str] = []
+        if isinstance(payload, list):
+            raw_items = payload
+        elif isinstance(payload, dict):
+            raw_items = (
+                payload.get("zones")
+                or payload.get("active_zones")
+                or payload.get("results")
+                or payload.get("data")
+                or []
+            )
+        else:
+            raw_items = []
+
+        for item in raw_items:
+            if isinstance(item, str):
+                zone_name = item.strip()
+            elif isinstance(item, dict):
+                zone_name = str(item.get("name") or item.get("zone") or "").strip()
+            else:
+                zone_name = ""
+            if zone_name and zone_name not in candidates:
+                candidates.append(zone_name)
+        return candidates
